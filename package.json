@@ -1,0 +1,59 @@
+{
+  "name": "townsquare",
+  "version": "2.16.2",
+  "description": "Blood on the Clocktower Town Square",
+  "author": "Steffen Baumgart",
+  "scripts": {
+    "serve": "vue-cli-service serve --https",
+    "build": "vue-cli-service build ./src/main.js",
+    "lint": "vue-cli-service lint",
+    "lint-ci": "vue-cli-service lint --no-fix --max-warnings=0",
+    "postbuild": "node generate-sitemap.js"
+  },
+  "main": "App.vue",
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^1.2.32",
+    "@fortawesome/free-brands-svg-icons": "^5.15.1",
+    "@fortawesome/free-solid-svg-icons": "^5.15.1",
+    "@fortawesome/vue-fontawesome": "^0.1.10",
+    "@vue/cli-service": "^5.0.8",
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "cropperjs": "^1.6.2",
+    "express": "^4.19.2",
+    "glob": "^13.0.0",
+    "multer": "^1.4.5-lts.1",
+    "openssl": "^2.0.0",
+    "path": "^0.12.7",
+    "prom-client": "^13.0.0",
+    "sass": "^1.30.0",
+    "sass-loader": "^8.0.2",
+    "serve": "^14.2.3",
+    "sharp": "^0.33.5",
+    "sitemap": "^9.0.0",
+    "vue": "^2.6.12",
+    "vue-template-compiler": "^2.7.15",
+    "vuex": "^3.6.0",
+    "ws": "^7.4.6"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-eslint": "^5.0.8",
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "eslint": "^8.53.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "eslint-plugin-vue": "^9.18.1",
+    "prettier": "^3.0.3",
+    "sitemap-generator": "^8.5.1"
+  },
+  "keywords": [
+    "botc",
+    "townsquare",
+    "vue",
+    "scss"
+  ],
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/limpy01/townsquare"
+  }
+}
