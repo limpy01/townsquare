@@ -8,18 +8,6 @@ module.exports = {
       template: 'public/index.html',
       filename: 'index.html',
       chunks: ['chunk-vendors', 'chunk-common', 'index']
-    },
-    manual: {
-      entry: 'src/manual/manual.js',
-      template: 'public/manual.html',
-      filename: 'manual.html',
-      chunks: ['chunk-vendors', 'chunk-common', 'manual']
-    },
-    donation: {
-      entry: 'src/donation/donation.js',
-      template: 'public/donation.html',
-      filename: 'donation.html',
-      chunks: ['chunk-vendors', 'chunk-common', 'donation']
     }
   },
   productionSourceMap: false
