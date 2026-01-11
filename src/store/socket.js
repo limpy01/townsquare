@@ -20,25 +20,14 @@ class LiveSession {
     }
   }
 
-  async safeConnect(url) {
-    try {
-      const httpUrl = 'https://botcgrimoire.top/';
-      const response = await fetch(httpUrl, { method: 'HEAD', mode: 'no-cors' });
-      return response ? new WebSocket(url) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   /**
    * Open a new session for the passed channel.
    * @param channel
    * @private
    */
-  async _open(channel) {
+  _open(channel) {
     this.disconnect();
-    this._socket = await this.safeConnect(
-    // this._socket = new WebSocket(
+    this._socket = new WebSocket(
       this._wss +
         channel +
         "/" +
@@ -2312,24 +2301,13 @@ class LiveLobby {
     this._pings = {}; // map of player IDs to ping
   }
 
-  async safeConnect(url) {
-    try {
-      // Change wss:// to https:// for a quick ping
-      const httpUrl = 'https://botcgrimoire.top/';
-      const response = await fetch(httpUrl, { method: 'HEAD', mode: 'no-cors' });
-      return response ? new WebSocket(url) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   /**
    * Open a new session for lobby.
    * @private
    */
-  async _open() {
+  _open() {
     this.disconnect();
-    this._socket = await this.safeConnect(
+    this._socket = new WebSocket(
       this._wss + 
       this._store.state.session.playerId
     );
