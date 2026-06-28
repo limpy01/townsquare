@@ -2,6 +2,7 @@ class LiveSession {
   constructor(store) {
     this._wss = "wss://ws.botcgrimoire.top:443/ws/";
     // this._wss = "ws://localhost:8081/"; // uncomment if using local server with NODE_ENV=development
+    // this._wss = "ws://192.168.1.2:8081/"; // uncomment if using local server with NODE_ENV=development
     this._socket = null;
     this._isSpectator = true;
     this._isAlive = true;
@@ -32,7 +33,8 @@ class LiveSession {
         channel +
         "/" +
         this._store.state.session.playerId + 
-        (!this._isSpectator ? "/host" : "")
+        (!this._isSpectator ? "/host" : "") + 
+        (!this._isSpectator ? "?auth=" + this._store.state.session.stSecret : "")
     );
     if (this._socket === null) {
       this._store.commit("session/setReconnecting", true);
@@ -518,6 +520,23 @@ class LiveSession {
       this._store.commit(
         "session/setPlayerId",
         playerId
+      )
+    }
+    if (!this._store.state.session.stSecret) {
+      let stSecret;
+      // 禁止host、_host和player作为playerId
+      while (!stSecret || stSecret === "host" || stSecret === "_host" || stSecret === "player" || stSecret === "default") {
+        const array = new Uint8Array(32);
+        window.crypto.getRandomValues(array);
+        // Convert to a URL-safe string (Base64URL)
+        stSecret = btoa(String.fromCharCode(...array))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+      }
+      this._store.commit(
+        "session/setStSecret",
+        stSecret
       );
     }
     this._pings = {};
@@ -934,7 +953,6 @@ class LiveSession {
         }).catch(() => {
           return null;
         });
-        this.disconnect();
         this._store.commit("toggleModal", "edition");
       }
     }
@@ -2238,7 +2256,7 @@ class LiveSession {
   }
 
   /**
-   * Send out timer.
+   * Send out timer. ST only
    * @param payload
    */
   setTimer(payload) {
@@ -2255,7 +2273,7 @@ class LiveSession {
   }
 
   /**
-   * Send out starting timer.
+   * Send out starting timer. ST only
    * @param payload
    */
   startTimer(payload) {
@@ -2271,7 +2289,7 @@ class LiveSession {
   }
 
   /**
-   * Send out starting timer.
+   * Send out starting timer. ST only
    * @param payload
    */
   stopTimer(payload) {
@@ -2291,6 +2309,7 @@ class LiveLobby {
   constructor(store) {
     this._wss = "wss://ws.botcgrimoire.top:443/lobby/";
     // this._wss = "ws://localhost:8082/"; // uncomment if using local server with NODE_ENV=development
+    // this._wss = "ws://192.168.1.2:8082/"; // uncomment if using local server with NODE_ENV=development
     this._socket = null;
     this._isSpectator = true;
     this._isAlive = true;
@@ -2298,6 +2317,7 @@ class LiveLobby {
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._reconnectTimer = null;
+    this._reconnectInterval = null;
     this._pings = {}; // map of player IDs to ping
   }
 
@@ -2312,7 +2332,7 @@ class LiveLobby {
       this._store.state.session.playerId
     );
     if (this._socket === null) {
-      this._store.commit("session/setReconnecting", true);
+      this._store.commit("lobby/setReconnecting", true);
       this._reconnectTimer = setTimeout(
         () => this.connect(),
         3 * 1000
@@ -2321,30 +2341,26 @@ class LiveLobby {
     }
     this._socket.addEventListener("message", this._handleMessage.bind(this));
     this._socket.onopen = this._onOpen.bind(this);
-    this._socket.onclose = err => {
+    this._socket.onclose = () => {
       this._socket = null;
       clearTimeout(this._pingTimer);
       this._pingTimer = null;
-      if (err.code !== 1000) {
-        // connection interrupted, reconnect after 3 seconds
-        this._reconnectTimer = setTimeout(
-          () => this.connect(),
-          3 * 1000
-        );
-      } else {
-        this._store.commit("session/setSessionId", "");
-        if (err.reason) {
-          this.showInputModal({
-            inputType: "alert",
-            inputModal: "text",
-            inputData: {
-              name: [err.reason],
-            }
-          }).catch(() => {
-            return null;
-          });
-        }
-      }
+      // connection interrupted, reconnect after 3 seconds if not in a session & user is using
+      this._reconnectTimer = setTimeout(
+        () => {
+          this._reconnectInterval = setInterval(
+            () => {
+              if (this._store.state.lobby.allowReconnect) {
+                clearInterval(this._reconnectInterval);
+                this._reconnectInterval = null;
+                this.connect();
+              }
+            },
+            3 * 1000
+          );
+        },
+        3 * 1000
+      );
     };
   }
 
@@ -2417,12 +2433,7 @@ class LiveLobby {
       );
     }
     this._pings = {};
-    this._store.commit("session/setPlayerCount", 0);
-    this._store.commit("session/setPing", 0);
-    this._isSpectator = this._store.state.session.isSpectator;
-    if (this._store.state.session.claimedSeat >= 0) {
-      this._store.commit("session/setTalking", {seatNum: this._store.state.session.claimedSeat, isTalking: false});
-    }
+    this._store.commit("lobby/setPing", 0);
     this._open();
   }
 
@@ -2431,14 +2442,11 @@ class LiveLobby {
    */
   disconnect() {
     this._pings = {};
-    this._store.commit("session/setPlayerCount", 0);
-    this._store.commit("session/setPing", 0);
-    this._store.commit("session/setReconnecting", false);
+    this._store.commit("lobby/setPing", 0);
+    this._store.commit("lobby/setReconnecting", false);
     clearTimeout(this._reconnectTimer);
+    clearInterval(this._reconnectInterval);
     if (this._socket) {
-      if (this._isSpectator) {
-        this._sendDirect("host", "bye", this._store.state.session.playerId);
-      }
       this._socket.close(1000);
       this._socket = null;
     }
@@ -2451,7 +2459,7 @@ class LiveLobby {
    */
   setRooms(params) {
     if (!Array.isArray(params)) return;
-    this._store.state.session.rooms = params;
+    this._store.state.lobby.rooms = params;
   }
 
   /**
@@ -2461,8 +2469,8 @@ class LiveLobby {
    */
   addRoom(params) {
     if (typeof params != "string") return;
-    if (this._store.state.session.rooms.includes(params)) return;
-    this._store.state.session.rooms.push(params);
+    if (this._store.state.lobby.rooms.includes(params)) return;
+    this._store.state.lobby.rooms.push(params);
   }
 
   /**
@@ -2472,7 +2480,7 @@ class LiveLobby {
    */
   removeRoom(params) {
     if (typeof params != "string") return;
-    this._store.state.session.rooms = this._store.state.session.rooms.filter(room => room != params);
+    this._store.state.lobby.rooms = this._store.state.lobby.rooms.filter(room => room != params);
   }
 }
 

@@ -15,6 +15,21 @@
       <font-awesome-icon icon="cloud-moon" />
       {{ edition.name || "Custom Script" }}
     </h3>
+    <div
+      v-if="!session.isSpectator"
+      class="check-box"
+      @click="toggleVacantSeats()"
+    >
+      <span>显示空座位提示</span> &nbsp;
+      <em>
+        <font-awesome-icon
+          :icon="[
+            'fas',
+            isShowVacant ? 'check-square' : 'square'
+          ]"
+        />
+      </em>
+    </div>
     <div class="night">
       <ul class="first">
         <li class="headline">首夜</li>
@@ -29,10 +44,11 @@
               <br />
               <small
                 v-for="(player, index) in role.players"
+                v-show="isShowVacant || player.id"
                 :class="{ dead: player.isDead }"
                 :key="index"
                 >{{
-                  player.name + (role.players.length > index + 1 ? "," : "")
+                    (player.index+1) + "." + (player.name ? player.name : "空座位") + (role.players.length > index + 1 ? "," : "") + (player.another ? player.another : "")
                 }}</small
               >
             </span>
@@ -81,10 +97,11 @@
               <br />
               <small
                 v-for="(player, index) in role.players"
+                v-show="isShowVacant || player.id"
                 :class="{ dead: player.isDead }"
                 :key="index"
                 >{{
-                  player.name + (role.players.length > index + 1 ? "," : "")
+                  (player.index+1) + "." + (player.name ? player.name : "空座位") + (role.players.length > index + 1 ? "," : "") + (player.another ? player.another : "")
                 }}</small
               >
             </span>
@@ -108,6 +125,43 @@ export default {
   },
   computed: {
     rolesFirstNight: function() {
+      // 打开行动顺序时先给所有座位加上座位号，同时检索是其他类型的token
+      this.players.forEach(player => {
+        player.index = this.players.indexOf(player);
+        let another = "";
+        player.reminders.forEach(reminder => {
+          switch (reminder.name) {
+            case "是学徒":
+              another = another + "（学徒）";
+              break;
+            case "是叫花子":
+              another = another + "（叫花子）";
+              break;
+            case "是酒鬼":
+              another = another + "（酒鬼）";
+              break;
+            case "是疯子":
+              another = another + "（疯子）"
+              break;
+            case "是哲学家":
+              another = another + "（哲学家）"
+              break;
+            case "是炼金术士":
+              another = another + "（炼金术士）"
+              break;
+            case "是炼金术士（旧）":
+              another = another + "（炼金术士）"
+              break;
+            case "是正牙医生":
+              another = another + "（正牙医生）"
+              break;
+            case "是悟道者":
+              another = another + "（悟道者）"
+              break;
+          }
+        });
+        player.another = another;
+      });
       const rolesFirstNight = [];
       // add minion / demon infos to night order sheet
       if (this.players.length > 6) {
@@ -178,10 +232,18 @@ export default {
       });
       return rolesOtherNight;
     },
-    ...mapState(["roles", "modals", "edition", "grimoire", "firstNight", "otherNight"]),
+    ...mapState(["roles", "session", "modals", "edition", "grimoire", "firstNight", "otherNight"]),
     ...mapState("players", ["players", "fabled"])
   },
+  data() {
+    return {
+      isShowVacant: false
+    };
+  },
   methods: {
+    toggleVacantSeats() {
+      this.isShowVacant = !this.isShowVacant;
+    },
     ...mapMutations(["toggleModal"])
   }
 };
@@ -381,6 +443,21 @@ ul {
       text-align: left;
       border-right: 0;
     }
+  }
+}
+
+.check-box {
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  width: fit-content; 
+
+  margin-left: auto;
+  margin-right: auto;
+  
+  cursor: pointer; 
+  &:hover {
+    color: red;
   }
 }
 

@@ -67,6 +67,15 @@
         <font-awesome-icon icon="people-arrows" />
         关闭复盘并随机分配
       </div>
+      <div
+        class="button"
+        @click="drawRoles()"
+        :class="{
+          disabled: selectedRoles > nonTravelers || !selectedRoles
+        }"
+      >
+        抽取角色（线下）
+      </div>
       <div class="button" @click="selectRandomRoles">
         <font-awesome-icon icon="random" />
         随机角色
@@ -182,6 +191,25 @@ export default {
           }
         });
         this.$store.commit("toggleModal", "roles");
+      }
+    },
+    drawRoles() {
+      if (this.selectedRoles <= this.nonTravelers && this.selectedRoles) {
+        // generate list of selected roles and randomize it
+        const roles = Object.values(this.roleSelection)
+          .map(roles =>
+            roles
+              // duplicate roles selected more than once and filter unselected
+              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], [])
+          )
+          // flatten into a single array
+          .reduce((a, b) => [...a, ...b], [])
+          .map(a => [Math.random(), a])
+          .sort((a, b) => a[0] - b[0])
+          .map(a => a[1]);
+        this.$store.commit("session/setDrawRoles", roles);
+        this.$store.commit("toggleModal", "roles");
+        this.$store.commit("toggleModal", "draw");
       }
     },
     ...mapMutations(["toggleModal"])

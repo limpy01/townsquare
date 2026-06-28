@@ -4,14 +4,13 @@ import persistence from "./persistence";
 import socket from "./socket";
 import players from "./modules/players";
 import session from "./modules/session";
+import lobby from "./modules/lobby";
 import editionJSON from "../editions.json";
 import rolesJSON from "../roles.json";
 import fabledJSON from "../fabled.json";
 import jinxesJSON from "../hatred.json";
 
 Vue.use(Vuex);
-
-const LATEST_VERSION_URL = 'https://botcgrimoire.top/dynamic/version.txt';
 
 // helper functions
 const getRolesByEdition = (edition = editionJSON[0]) => {
@@ -104,12 +103,14 @@ const customRole = {
 export default new Vuex.Store({
   modules: {
     players,
-    session
+    session,
+    lobby
   },
   state: {
-    version: "3.2.3",
+    version: "3.3.1",
     latestVersion: "",
     lastVersion: "",
+    floatingNotice: "",
     grimoire: {
       isNight: false,
       isNightOrder: true,
@@ -133,6 +134,7 @@ export default new Vuex.Store({
       reminder: false,
       role: false,
       roles: false,
+      draw: false,
       voteHistory: false,
       input: false,
       groupChat: false
@@ -204,6 +206,9 @@ export default new Vuex.Store({
     },
     setLastVersion(state, val) {
       state.lastVersion = val;
+    },
+    setFloatingNotice(state, val) {
+      state.floatingNotice = val;
     },
     setAudioThreshold: set("audioThreshold"),
     toggleMuted: toggle("isMuted"),
@@ -353,14 +358,25 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    async checkVersion() {
+    async fetchInit() {
       try {
-        const response = await fetch(LATEST_VERSION_URL);
+        // const response = await fetch('http://localhost:3000/api/init');
+        const response = await fetch('https://api.botcgrimoire.top/dynamic/init');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const latestVersion = await response.text();
-        this.commit("setLatestVersion", latestVersion.trim());
+        const message = await response.text();
+        const payload = JSON.parse(message).payload;
+        if (!!payload && typeof payload === 'object') {
+          const propertyList = ['version', 'floatingNotice'];
+          const mutationMapping = {
+            'version': 'setLatestVersion',
+            'floatingNotice': 'setFloatingNotice'
+          }
+          for (const property of propertyList) {
+            if (payload[property]) this.commit(mutationMapping[property], payload[property]);
+          }
+        }
         if (this.state.version != this.state.latestVersion || this.state.latestVersion != this.state.lastVersion) this.commit("toggleModal", "version");
       } catch (e) {
         return null;

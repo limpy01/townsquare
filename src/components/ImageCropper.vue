@@ -11,14 +11,17 @@
         />
         <div v-if="image" class="canvas">
           <img :src="image" ref="image" alt="Image to crop" />
-          <div>
-            <button @click="startCropping">裁剪</button>
-            <button @click="startMoving">移动</button>
-            <button @click="cropImage">预览</button>
-            <button @click="sendImage">确定</button>
-            <button @click="closeCropping">关闭</button>
+          <div v-if="warning" style="color: red">
+            <span>{{ warning }}</span>
           </div>
-          <div v-if="croppedImage">
+          <div>
+            <button @click="startCropping" :disabled="disabled.startCropping">裁剪</button>
+            <button @click="startMoving" :disabled="disabled.startMoving">移动</button>
+            <button @click="cropImage" :disabled="disabled.cropImage">预览</button>
+            <button @click="sendImage" :disabled="disabled.sendImage">确定</button>
+            <button @click="closeCropping" :disabled="disabled.closeCropping">关闭</button>
+          </div>
+          <div v-if="croppedImage && preview">
             <img :src="croppedImage" alt="Cropped Image" />
           </div>
         </div>
@@ -39,7 +42,15 @@ export default {
       image: null,
       croppedImage: null,
       cropper: null,
-      cropping: false
+      cropping: false,
+      preview: false,
+      warning: "",
+      disabled: {
+        startCropping: false,
+        startMoving: false,
+        cropImage: false,
+        sendImage: false
+      }
     };
   },
   computed: {
@@ -59,18 +70,6 @@ export default {
       });
     },
     async uploadAvatar() {
-      if (!this.session.sessionId) {
-        await this.showInputModal({
-          inputType: "alert",
-          inputModal: "text",
-          inputData: {
-            name: ["头像上传成功！"],
-          }
-        }).catch(() => {
-          return null;
-        });
-        return;
-      }
       this.$refs.upload.click();
     },
     onFileChange(event) {
@@ -108,14 +107,68 @@ export default {
       this.cropper.clear();
     },
     cropImage() {
-      const canvas = this.cropper.getCroppedCanvas();
-      this.croppedImage = canvas.toDataURL('image/webp');
+      this.preview = true;
+      this.warning = "";
+      const canvas = this.cropper.getCroppedCanvas({
+        width: 512,
+        height: 512,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high'
+      });
+      this.croppedImage = canvas.toDataURL('image/webp', 0.85);
     },
-    sendImage() {
-      const canvas = this.cropper.getCroppedCanvas();
-      this.croppedImage = canvas.toDataURL('image/webp')
-      this.$store.commit("session/setPlayerAvatar", this.croppedImage);
-      this.closeCropping();
+    async sendImage() {
+      this.preview = false;
+      this.warning = "";
+      for (const button in this.disabled) {
+        this.disabled[button] = true;
+      }
+      const canvas = this.cropper.getCroppedCanvas({
+        width: 512,
+        height: 512,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high'
+      });
+      this.croppedImage = canvas.toDataURL('image/webp', 0.85)
+      const maxBase64Length = 1 * 1024 * 1024 * (4 / 3);
+      if (this.croppedImage.length > maxBase64Length) {
+        this.warning = "图片过大，请选择更小的图片进行上传！"
+      } else {
+        // this.$store.commit("session/setPlayerAvatar", this.croppedImage);
+        try {
+          const response = await fetch("https://api.botcgrimoire.top/upload/avatar", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              playerId: this.session.playerId,
+              uploadContent: this.croppedImage
+            })
+          });
+          const result = await response.json();
+          if (!response.ok || result.status !== "success") {
+            this.warning = "图片上传失败！请重试！";
+          } else {
+            this.$store.commit("session/updatePlayerAvatar", result.avatarUrl);
+            this.closeCropping();
+            await this.showInputModal({
+              inputType: "alert",
+              inputModal: "text",
+              inputData: {
+                name: ["头像上传成功！"],
+              }
+            }).catch(() => {
+              return null;
+            });
+          }
+        } catch (e) {
+          this.warning = "图片上传失败！请重试！";
+          for (const button in this.disabled) {
+            this.disabled[button] = false;
+          }
+        }
+      }
     },
     closeCropping() {
       this.cropping = false;
@@ -123,6 +176,8 @@ export default {
       this.image = null;
       this.croppedImage = null;
       this.cropper = null;
+      this.warning = "";
+      this.preview = false;
     }
   },
 };

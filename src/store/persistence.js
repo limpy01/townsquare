@@ -5,7 +5,7 @@ module.exports = store => {
     // (document.title = `Blood on the Clocktower ${
     //   isPublic ? "Town Square" : "Grimoire"
     // }`);
-    (document.title = `编程分享：钟楼谜团 ${
+    (document.title = `编程分享：钟楼谜团魔典——线上的说书人辅助工具（血染钟楼） ${
       isPublic ? "" : ""
     }`);
 
@@ -103,6 +103,9 @@ module.exports = store => {
   /**** Session related data *****/
   if (localStorage.getItem("playerId")) {
     store.commit("session/setPlayerId", localStorage.getItem("playerId"));
+  }
+  if (localStorage.getItem("stSecret")) {
+    store.commit("session/setStSecret", localStorage.getItem("stSecret"));
   }
   if (localStorage.getItem("playerName")) {
     store.commit("session/setPlayerName", localStorage.getItem("playerName"));
@@ -308,6 +311,13 @@ module.exports = store => {
           localStorage.setItem("playerId", payload);
         } else {
           localStorage.removeItem("playerId");
+        }
+        break;
+      case "session/setStSecret":
+        if (payload) {
+          localStorage.setItem("stSecret", payload);
+        } else {
+          localStorage.removeItem("stSecret");
         }
         break;
       case "session/setPlayerName":

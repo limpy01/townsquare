@@ -494,7 +494,7 @@ import { nextTick } from 'vue';
 
 export default {
   computed: {
-    ...mapState(["grimoire", "session", "edition", "channels", "selectedEditions"]),
+    ...mapState(["grimoire", "session", "lobby", "edition", "channels", "selectedEditions"]),
     ...mapState("players", ["players"]),
     formattedTime() {
       const minutes = Math.floor(this.session.timer / 60);
@@ -623,7 +623,7 @@ export default {
       if (!this.session.playerName) return;
 
       if (this.session.sessionId) return;
-      if (this.session.rooms === null) {
+      if (this.lobby.rooms === null) {
         await this.showInputModal({
           inputType: "alert",
           inputModal: "text",
@@ -637,7 +637,7 @@ export default {
       }
       
       let sessionPlaceholder = Math.round(Math.random() * 10000);
-      while (this.session.rooms.includes(sessionPlaceholder)) {
+      while (this.lobby.rooms.includes(sessionPlaceholder)) {
         sessionPlaceholder = Math.round(Math.random() * 10000);
       }
       const input = await this.showInputModal({
@@ -653,7 +653,7 @@ export default {
       });
       if (input === null) return;
 
-      const sessionId = input[0];
+      const sessionId = Number(input[0]).toString();
       const numPlayers = Math.min(input[1], 20);
       if (sessionId) {
         this.$store.commit("session/clearVoteHistory", []);
@@ -898,7 +898,7 @@ export default {
       if (!this.session.playerName) await this.changeName();
       if (!this.session.playerName) return;
 
-      if (this.session.rooms === null) {
+      if (this.lobby.rooms === null) {
         await this.showInputModal({
           inputType: "alert",
           inputModal: "text",

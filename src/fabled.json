@@ -277,6 +277,50 @@
     "ability": "最先死亡的四名玩家会立刻以相同阵营的旅行者转世重生。"
   },
   {
+    "id": "pope",
+    "firstNight": 0,
+    "firstNightReminder": "",
+    "otherNightReminder": "",
+    "reminders": [],
+    "setup": false,
+    "name": "教皇",
+    "team": "loric",
+    "ability": "会有重复的善良角色在场。他们也可能是恶魔的伪装。"
+  },
+  {
+    "id": "ventriloquist",
+    "firstNight": 0,
+    "firstNightReminder": "",
+    "otherNightReminder": "",
+    "reminders": ["疯狂"],
+    "setup": false,
+    "name": "腹语师",
+    "team": "loric",
+    "ability": "如果一名玩家在被提名时“疯狂”地证明自己是一个新的角色，他可能不会死于当天的处决。"
+  },
+  {
+    "id": "godofug",
+    "firstNight": 0,
+    "firstNightReminder": "",
+    "otherNightReminder": "",
+    "reminders": ["讷帽"],
+    "setup": false,
+    "name": "讷神",
+    "team": "loric",
+    "ability": "会有一顶讷帽。当玩家戴着讷帽的时候，只能说单音节词，但投票算作两票。如果违反规则，讷帽会被转移。"
+  },
+  {
+    "id": "knaves",
+    "firstNight": 0,
+    "firstNightReminder": "",
+    "otherNightReminder": "",
+    "reminders": ["真","假"],
+    "setup": false,
+    "name": "诡诈杰克",
+    "team": "loric",
+    "ability": "场上有两位说书人：一人说真话，一人说假话。每局游戏限一次，他们可能会在黄昏互换。"
+  },
+  {
     "id": "ankothearts",
     "name": "红心赦令",
     "team": "fabled",

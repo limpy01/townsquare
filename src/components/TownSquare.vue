@@ -133,13 +133,18 @@
         </div>
       </div>
       <form class="chatbox" @submit.prevent="sendChat">
-        <input type="text" id="message" ref="message" autocomplete="off" class="edit" @focus="typing" @blur="notTyping" v-model="message">
+        <input type="text" id="message" ref="message" autocomplete="off" class="edit" @focus="typing" @blur="notTyping" v-model="message" maxlength="250">
         <button type="submit" class="send">发送</button>
       <div class="toBottom" v-if="false">
           移至底部
           <font-awesome-icon icon="arrow"/>
       </div>
       </form>
+    </div>
+    <div v-if="floatingNotice" id="floating-notice">
+      <div class="floating-window">
+        <span class="floating-text">{{ floatingNotice }}</span>
+      </div>
     </div>
     <div id="version">
       <a href="https://beian.miit.gov.cn/" target="_blank">浙ICP备2024109577号-2</a>
@@ -165,6 +170,7 @@ export default {
     ...mapGetters({ nightOrder: "players/nightOrder" }),
     ...mapState(["grimoire", "roles", "session"]),
     ...mapState("players", ["players", "bluffs", "fabled"]),
+    ...mapState(["floatingNotice"]),
     orientation: function(){
       const ratio = this.windowWidth / this.windowHeight;
       const unit = this.windowWidth > this.windowHeight ? "height: 100%;" : "height: " + ratio * 100 + "%;";
@@ -1302,6 +1308,56 @@ export default {
     &.is-using-wraith {
       color: red;
     }
+  }
+}
+
+#floating-notice {
+  position: fixed;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  max-width: 600px;
+  overflow: hidden;
+  z-index: 30;
+  pointer-events: none;
+
+  .floating-window {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+  }
+
+  .floating-text {
+    display: inline-block;
+    color: #ffff00;
+    font-weight: bold;
+    font-size: 1.1rem;
+    
+    /* 1800s = 30 minutes cycle */
+    animation: roll-notice 1800s linear infinite;
+  }
+}
+
+// Fixed Keyframes Timeline
+@keyframes roll-notice {
+  /* 0%: Start completely pushed outside the right boundary of the window */
+  0% {
+    transform: translate3d(100vw, 0, 0); 
+  }
+  /* 0.55% (~10 seconds): Slide left completely past the view box until it safely clears */
+  0.85% {
+    transform: translate3d(-100%, 0, 0);
+  }
+  /* 99.99%: Hold its completely hidden off-screen position for the rest of the 30 minutes */
+  99.99% {
+    transform: translate3d(-100%, 0, 0);
+  }
+  /* 100%: Instantly snap back to the right origin without showing an animation frame rewind */
+  100% {
+    transform: translate3d(100vw, 0, 0);
   }
 }
 

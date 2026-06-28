@@ -6,6 +6,16 @@
         当前版本并非最新版本（{{ latestVersion }}），请尝试清空缓存获取最新版本！
       </span>
     </div>
+    <div>
+      <h4>作者的话</h4>
+      <div>
+        <span>官方wiki已将试运营相克收录进相克列表，但是作者觉得很多都很烂，所以魔典不予收录。</span>
+        <br>
+        <span>如需启用这些新相克请手动添加至json。：）</span>
+        <br>
+      </div>
+      <br>
+    </div>
     <div
       v-for="version in changelog"
       :key="version.id"

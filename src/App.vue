@@ -33,6 +33,7 @@
     <EditionModal />
     <FabledModal />
     <RolesModal />
+    <DrawModal />
     <ReferenceModal />
     <NightOrderModal />
     <VoteHistoryModal />
@@ -53,6 +54,7 @@ import TownInfo from "./components/TownInfo";
 import Menu from "./components/Menu";
 import ImageCropper from "./components/ImageCropper";
 import RolesModal from "./components/modals/RolesModal";
+import DrawModal from "./components/modals/DrawModal";
 import EditionModal from "./components/modals/EditionModal";
 import Intro from "./components/Intro";
 import ReferenceModal from "./components/modals/ReferenceModal";
@@ -81,13 +83,14 @@ export default {
     ImageCropper,
     EditionModal,
     RolesModal,
+    DrawModal,
     InputModal,
     GroupChatModal,
     VersionModal,
     Gradients
   },
   computed: {
-    ...mapState(["grimoire", "session", "modals"]),
+    ...mapState(["grimoire", "session", "lobby", "modals"]),
     ...mapState("players", ["players"])
   },
   data() {
@@ -96,66 +99,69 @@ export default {
     };
   },
   async mounted() {
-  this.$store.dispatch("checkVersion");
-  
-  // Original socket.js logic is now here
-  const pathname = window.location.pathname;
-  const sessionId = window.location.hash.substr(1);
+    const pathname = window.location.pathname;
+    const sessionId = window.location.hash.substr(1);
 
-  if (pathname === "/" && sessionId && this.session.sessionId === "") {
-    
-    // Set initial session state
-    this.$store.commit("session/setSpectator", true);
-    this.$store.commit("toggleGrimoire", false);
+    if (pathname === "/") {
+      this.$store.dispatch("fetchInit");
 
-    let finalName = this.session.playerName; // Get existing name if any
+      if (sessionId && this.session.sessionId === "") {
+        // Set initial session state
+        this.$store.commit("session/setSpectator", true);
+        this.$store.commit("toggleGrimoire", false);
 
-    if (!finalName) {
-      const input = await this.showInputModal({
-        inputType: "changeName",
-        inputModal: "input",
-        inputData: {
-          name: ["输入玩家昵称"],
-          length: 1,
-          placeholder: [""]
+        let finalName = this.session.playerName; // Get existing name if any
+
+        if (!finalName) {
+          const input = await this.showInputModal({
+            inputType: "changeName",
+            inputModal: "input",
+            inputData: {
+              name: ["输入玩家昵称"],
+              length: 1,
+              placeholder: [""]
+            }
+          }).catch(() => {
+            return null;
+          });
+          if (input === null) return;
+          
+          finalName = input[0];
         }
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-      
-      finalName = input[0];
-    }
-    
-    // Now handle the result
-    if (finalName) {
-      this.$store.commit("session/setPlayerName", finalName);
-      this.$store.commit("session/setSessionId", sessionId);
-    } else {
-      // User cancelled input, so don't join the session
-      this.$store.commit("session/setSessionId", "");
-    }
-
-  } else if (pathname === "/" && sessionId && sessionId != this.session.sessionId) {
-    await this.showInputModal({
-      inputType: "alert",
-      inputModal: "text",
-      inputData: {
-        name: [`已经在房间${this.session.sessionId}中，如需换房间请退出重进！`],
+        
+        // Now handle the result
+        if (finalName) {
+          this.$store.commit("session/setPlayerName", finalName);
+          this.$store.commit("session/setSessionId", sessionId);
+        } else {
+          // User cancelled input, so don't join the session
+          this.$store.commit("session/setSessionId", "");
+        }
+      } else if (pathname === "/" && sessionId && sessionId != this.session.sessionId) {
+        await this.showInputModal({
+          inputType: "alert",
+          inputModal: "text",
+          inputData: {
+            name: [`已经在房间${this.session.sessionId}中，如需换房间请退出重进！`],
+          }
+        }).catch(() => {
+          return null;
+        });
+        return;
       }
-    }).catch(() => {
-      return null;
-    });
-    return;
-  }
+      // Clear hash after processing
+      window.location.hash = "";
+    }
 
-  // Clear hash after processing
-  window.location.hash = "";
-  
-  // You would also call your socket connection setup here if needed
-  // this.setupSocketConnection(); 
-},
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+  },
+  beforeDestroy() {
+    document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+  },
   methods: {
+    handleVisibilityChange(){
+      this.$store.commit("lobby/setAllowConnect", document.visibilityState === "visible");
+    },
     async showInputModal({ inputType, inputModal, inputData }) {
       return new Promise((resolve, reject) => {
         this.$store.commit("session/setInputResolver", resolve);

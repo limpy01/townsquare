@@ -17,7 +17,7 @@ const handleVote = (state, [index, vote]) => {
 const state = () => ({
   sessionId: "",
   StId: null,
-  rooms: null,
+  stSecret: "",
   isHostAllowed: null,
   hostTimeout: null,
   isJoinAllowed: null,
@@ -80,6 +80,7 @@ const state = () => ({
   inputResolver: null,
   inputRejecter: null,
   bootlegger: "",
+  drawRoles: [],
   timer: 480,
   startTime: null,
   lastUpdateTime: null,
@@ -102,6 +103,7 @@ const mutations = {
   setIsHostAllowed: set("isHostAllowed"),
   setPlayerId: set("playerId"),
   setStId: set("stId"),
+  setStSecret: set("stSecret"),
   setSpectator: set("isSpectator"),
   setReconnecting: set("isReconnecting"),
   setPlayerCount: set("playerCount"),
@@ -153,6 +155,10 @@ const mutations = {
   },
   setPlayerName(state, name){
     state.playerName = name;
+  },
+  setDrawRoles(state, roles){
+    if (!Array.isArray(roles)) return;
+    state.drawRoles = [...roles];
   },
   nomination(
     state,

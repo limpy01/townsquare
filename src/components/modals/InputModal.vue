@@ -48,7 +48,7 @@ import Modal from "./Modal";
 export default {
   components: { Modal },
   computed: {
-    ...mapState(["modals", "grimoire", "session"]),
+    ...mapState(["modals", "grimoire", "session", "lobby"]),
     ...mapState("players", ["players"]),
   },
   data(){
@@ -131,8 +131,8 @@ export default {
               this.warningMessage = "请输入大于0小于10000的数字！";
               return;
             }
-            if (this.session.rooms.includes(Number(sessionId).toString())) {
-              this.warningMessage = `房间"${sessionId}"已经存在说书人！`;
+            if (this.lobby.rooms.includes(Number(sessionId).toString())) {
+              this.warningMessage = `房间"${Number(sessionId)}"已经存在说书人！`;
               return;
             }
             if (!Number(numPlayers) || numPlayers <= 0) {
@@ -146,7 +146,7 @@ export default {
             if (sessionId.match(/^https?:\/\//i)) {
               sessionId = sessionId.split("#").pop();
             }
-            if (!this.session.rooms.includes(sessionId)) {
+            if (!this.lobby.rooms.includes(sessionId)) {
               this.warningMessage = `房间"${sessionId}"不存在！`;
               return;
             }
