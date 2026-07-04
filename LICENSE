@@ -672,3 +672,36 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
+
+===============================================================================
+ADDITIONAL TERMS AND ATTRIBUTION REQUIREMENTS (GPLv3 Section 7)
+===============================================================================
+In accordance with Sections 7(b) and 7(c) of the GNU General Public License, 
+version 3, the author of the modifications in this repository supplements the 
+terms of this License with the following non-removable requirements:
+
+1. MANDATORY AUTHOR ATTRIBUTION: Any downstream redistribution of this modified 
+software, or derivatives thereof, whether in source or binary form, must 
+prominently display the following attribution notice in its documentation, 
+accompanying user manuals, or primary repository overview:
+"Contains heavy modifications and original enhancements developed by limpy01."
+
+2. TERMINAL INTERACTION NOTICES: If this software (or any derivative work) 
+features a command-line interface, terminal interface, or interactive mode, 
+it must display a short, prominent notice of author attribution and copyright 
+upon startup containing the author's identity (limpy01) and contact information.
+
+3. GUI / ABOUT BOX NOTICES: If this software (or any derivative work) features a 
+Graphical User Interface (GUI) or Web Interface, it must include an easily 
+accessible "About", "Credits", or "Legal" interface displaying the author's 
+copyright, original source link, and attribution notice.
+
+4. COMMAND PRESERVATION: The specific interactive commands or parameters used 
+to output license and authorship information (e.g., `--version`, `show c`, 
+or equivalent) must be preserved or mapped to clearly output the author's 
+original copyright and the full text of this License, explicitly stating: 
+"Copyright (C) 2026 @limpy01 <admin@botcgrimoire.top>".
+
+These requirements constitute author attribution and notice obligations under 
+GPLv3 Section 7 and may not be removed or stripped out by downstream licensees.
+===============================================================================

@@ -149,6 +149,15 @@
     <div id="version">
       <a href="https://beian.miit.gov.cn/" target="_blank">浙ICP备2024109577号-2</a>
     </div>
+    <div id="copyright">
+      <span>
+        Copyright &copy; 2020 bra1n
+      </span>
+      <br/>
+      <span>
+        Copyright &copy; 2026 <a href="mailto:admin@botcgrimoire.top">@limpy01</a>
+      </span>
+    </div>
   </div>
 </template>
 
@@ -1279,6 +1288,22 @@ export default {
 #version a {
     color: white;
     text-decoration: none;
+}
+
+#copyright {
+    position: fixed;
+    bottom: 1px;
+    left: 4px;
+    background-color: transparent;
+    color: white;
+    padding: 0px;
+    font-size: 0.6rem;
+    opacity: 0.75;
+}
+
+#copyright a {
+    color: white;
+    text-decoration: underline;
 }
 
 #townsquare > .is-role {

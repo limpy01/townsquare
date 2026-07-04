@@ -1,8 +1,8 @@
 {
   "name": "townsquare",
-  "version": "2.16.2",
+  "version": "3.3.1",
   "description": "Blood on the Clocktower Town Square",
-  "author": "Steffen Baumgart",
+  "author": "limpy01",
   "scripts": {
     "serve": "vue-cli-service serve --https",
     "build": "vue-cli-service build ./src/main.js",
@@ -51,7 +51,7 @@
     "vue",
     "scss"
   ],
-  "license": "GPL-3.0",
+  "license": "LGPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "https://github.com/limpy01/townsquare"

@@ -65,6 +65,7 @@
 - 汉化魔典
 - 加入魔典内文字私聊功能
 - 增加手机端格式
+- 这个项目取自开源项目[bra1n/townsquare](https://github.com/bra1n/townsquare)，由[limpy01](https://github.com/limpy01)全程汉化和优化，官方发布地址为：https://botcgrimoire.top/
 
 ---
 
