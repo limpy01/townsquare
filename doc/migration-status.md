@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-24  
+最后更新：2026-07-24（Pinia 运行时与 Vuex 移除批次完成）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -18,11 +18,11 @@
 | 阶段                      | 状态   | 退出条件                                        |
 | ------------------------- | ------ | ----------------------------------------------- |
 | 0. 冻结行为基线           | 进行中 | Node、构建、协议、存档和测试基线可重复验证      |
-| 1. workspace 与共享契约   | 待开始 | v1 decoder/encoder、schema、domain 测试稳定     |
+| 1. workspace 与共享契约   | 进行中 | v1 decoder/encoder、schema、domain 测试稳定     |
 | 2. 服务端 TypeScript 化   | 进行中 | 旧前端与新服务端的 HTTP/WS 集成矩阵通过         |
 | 3. Vue 3 + Vite 兼容启动  | 进行中 | Vite 下旧行为与视觉基线一致                     |
-| 4. 前端 TypeScript 基础层 | 待开始 | transport、持久化、协议和浏览器适配层严格类型化 |
-| 5. Vuex 至 Pinia          | 进行中 | 所有业务 store 独立、可测且存档兼容             |
+| 4. 前端 TypeScript 基础层 | 进行中 | transport、持久化、协议和浏览器适配层严格类型化 |
+| 5. Vuex 至 Pinia          | 已完成 | 所有业务 store 独立、可测且存档兼容             |
 | 6. 组件 Composition API   | 进行中 | 所有 SFC 为 Vue TS，compat warning 为零         |
 | 7. 样式与资源治理         | 待开始 | 全局样式归属明确，视觉与性能预算受控            |
 | 8. 清理、部署与收尾       | 待开始 | `npm run check` 全绿，部署与回滚演练完成        |
@@ -39,8 +39,8 @@
 | MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter     | 服务端入口使用 decoder，头像 HTTP 输入使用 Zod schema；15 个 fixture 测试通过 | 网络继续传输旧三元组               |
 | MIG-007 | 待开始 | `packages/domain` 第一个纯逻辑模块             | 严格类型与高覆盖率                                                            | 不导入 Vue/Express                 |
 | MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口       | 7 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                        | 旧前端可连接                       |
-| MIG-009 | 进行中 | Vue 3、Vite、Vuex 4 兼容启动                   | typecheck、核心 E2E、视觉回归                                                 | Vite 环境变量和静态资源保持兼容    |
-| MIG-010 | 进行中 | Pinia 状态域的渐进式替换与组件 Composition API | lobby、模态框状态与组件单元测试通过；遗留 Vuex consumer 可平滑过渡            | 继续保持单窗口模态框与输入流程语义 |
+| MIG-009 | 已完成 | Vue 3、Vite 运行时启动                         | typecheck、核心 E2E、视觉回归                                                 | Vite 环境变量和静态资源保持兼容    |
+| MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除                   | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                          | 保持单窗口模态框与输入流程语义     |
 
 ## 已记录基线
 
@@ -90,6 +90,8 @@
 - 房间身份、说书人凭据、玩家标识与席位已迁至 Pinia session-identity store；Vuex session 仅保留转发访问器以保障旧组件、存档和 WebSocket 生命周期兼容。
 - 游戏面板显示状态已迁至 Pinia grimoire store；根 Vuex 仅引用同一响应式对象以兼容现有 mutation 广播。
 - 已完成全部模态框与头像裁剪组件的 Composition API 迁移：输入、剧本、游戏状态、角色/角色分发、参考表、夜间顺序、提示标记、投票记录、群聊、抽取与头像裁剪均直接读取 Pinia；会影响存档或 v1 WebSocket 的写入继续通过兼容 mutation 出站层。剩余 Options API 组件为 Vote、Menu、Player 与 TownSquare。
+- Vuex facade、模块、类型声明与 npm 依赖已删除；应用改由 Pinia runtime 启动持久化、lobby 与 session WebSocket effect。旧 mutation 名称只在 Pinia 命令边界保留，以维持本地存档和 WebSocket v1 兼容。
+- 自定义剧本对象在 scenario store 进入状态前经共享 Zod schema 校验；损坏的 localStorage 集合不会阻断启动或后续群聊/投票持久化。浏览器侧契约子入口通过 Vite source alias 加载，避免 CommonJS workspace 导出在开发服务器中失效。
 
 ## 本批次约束
 
@@ -97,4 +99,4 @@
 - 禁止：改动游戏规则、UI、网络消息格式、存档格式、角色资源或 Vue 业务组件。
 - 停止条件：任一基线命令失败，或发现改动影响页面/协议行为。
 
-下一批：扩展游戏状态 fixture，随后把 contracts/domain adapter 接入旧客户端与服务端（MIG-006/007）。
+下一批：扩展游戏状态与 WebSocket fixture，继续收紧 contracts/domain adapter，并整理样式与 CI 门禁。
