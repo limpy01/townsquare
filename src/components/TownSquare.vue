@@ -251,7 +251,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import store from "../store";
+import { legacyCommands } from "../store/legacy-commands";
 import Player from "./Player.vue";
 import Token from "./Token.vue";
 import ReminderModal from "./modals/ReminderModal.vue";
@@ -273,7 +273,7 @@ const bluffsElement = ref<HTMLElement | null>(null);
 const chatWith = ref<HTMLElement | null>(null);
 const chatContent = ref<HTMLElement | null>(null);
 const messageInput = ref<HTMLInputElement | null>(null);
-const context: any = reactive({ $store: store, $nextTick: nextTick });
+const context: any = reactive({ $store: legacyCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
   roles: { get: () => scenario.roles },

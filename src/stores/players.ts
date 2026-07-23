@@ -60,6 +60,57 @@ export const usePlayersStore = defineStore("players", {
     setPlayers(players: any[] = []) {
       this.players = players;
     },
+    clear(emptyFabled = false) {
+      this.players = [];
+      this.bluffs = [];
+      this.setFabled({ fabled: [], emptyFabled });
+    },
+    remove(index: number) {
+      this.players.splice(index, 1);
+    },
+    swap([from, to]: [number, number]) {
+      [this.players[from], this.players[to]] = [
+        this.players[to],
+        this.players[from],
+      ];
+      this.players.splice(0, 0);
+    },
+    move([from, to]: [number, number]) {
+      const [player] = this.players.splice(from, 1);
+      if (player) this.players.splice(to, 0, player);
+    },
+    randomize() {
+      this.players = this.players
+        .map((player) => [Math.random(), player] as const)
+        .sort(([left], [right]) => left - right)
+        .map(([, player]) => player);
+    },
+    clearRoles(isSpectator: boolean) {
+      if (isSpectator) {
+        this.players.forEach((player) => {
+          if (player.role.team !== "traveler") player.role = {};
+          player.reminders = [];
+        });
+      } else {
+        this.players = this.players.map(
+          ({ name, id, pronouns, image, chatGroup }) => ({
+            ...createPlayer(),
+            name,
+            id,
+            pronouns,
+            image,
+            chatGroup,
+          }),
+        );
+        this.setFabled({ fabled: [] });
+      }
+      this.setBluff();
+    },
+    realivePlayers() {
+      this.players.forEach((player) => {
+        this.update({ player, property: "isDead", value: false });
+      });
+    },
     update({
       player,
       property,
@@ -83,6 +134,24 @@ export const usePlayersStore = defineStore("players", {
         return;
       }
       this.bluffs.splice(index, 1, role);
+    },
+    setPlayerMessage({ playerId, num }: { playerId: string; num: number }) {
+      const player = this.players.find((item) => item.id === playerId);
+      if (!player) return;
+      player.newMessages = num > 0 ? player.newMessages + num : num;
+    },
+    setTalking({
+      seatNum,
+      isTalking,
+      playerId,
+    }: {
+      seatNum: number;
+      isTalking: boolean;
+      playerId: string;
+    }) {
+      const player = this.players[seatNum];
+      if (!player || !player.id || player.id !== playerId) return;
+      player.isTalking = isTalking;
     },
     empty(player: any) {
       const changes = [

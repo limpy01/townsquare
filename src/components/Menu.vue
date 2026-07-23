@@ -596,7 +596,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import store from "../store";
+import { legacyCommands } from "../store/legacy-commands";
 
 const emit = defineEmits(["trigger"]);
 const grimoire = useGrimoireStore();
@@ -615,7 +615,7 @@ const profile = useProfileStore();
 const outbox = useMessageOutboxStore();
 const chat = useChatStore();
 const audioInputNumber = ref<HTMLInputElement | null>(null);
-const context: any = reactive({ $store: store, $nextTick: nextTick });
+const context: any = reactive({ $store: legacyCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
   session: { get: () => session },
