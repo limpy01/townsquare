@@ -105,6 +105,7 @@
 - `TownSquare.vue` 的换位、移动、提名、票数和说书人席位操作已迁为 Composition API；临时 `swap`/`move`/`nominate` 状态直接驱动既有模板，并保留在座位重排时修正提名索引的旧规则。
 - `TownSquare.vue` 的私聊与群聊开闭、发送、未读清理、亡魂转发和 DOM 滚动焦点也已迁为 Composition API；消息仍通过同一 `session/updateChatSent` 兼容命令送入既有存档与 v1 WebSocket 路径。
 - `TownSquare.vue` 已移除临时 Options/context 适配器与 `@ts-nocheck`，成为完整的 `<script setup lang="ts">` 组件；空 DOM ref、可选群聊和可用角色状态现在经 TypeScript 收窄处理。
+- `Menu.vue` 的新增/清空/随机座位、清空角色、私货商人说明和日夜切换已迁为直接 Composition API 命令；确认弹窗继续复用同一输入服务，玩家状态继续通过既有兼容命令同步。
 
 ## 本批次约束
 

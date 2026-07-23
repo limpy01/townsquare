@@ -761,7 +761,7 @@ const options: any = {
         this.commands.commit("session/setSessionId", sessionId);
         this.commands.commit("players/clear");
         for (let i = 0; i < numPlayers; i++) {
-          this.addPlayer();
+          addPlayer();
         }
         this.copySessionUrl();
       }
@@ -1121,100 +1121,6 @@ const options: any = {
         });
       }
     },
-    addPlayer(stImage = null, stName = null) {
-      if (this.session.isSpectator) return;
-      if (this.players.length >= 20) return;
-
-      // setting name to a default value, combining with the seat number
-      this.commands.commit("players/add", { name: "", stImage, stName });
-    },
-    async randomizeSeatings() {
-      if (this.session.isSpectator) return;
-
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定要随机分配座位吗？"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-
-      if (confirm === true) {
-        this.commands.dispatch("players/randomize");
-      }
-    },
-    async clearPlayers() {
-      if (this.session.isSpectator) return;
-
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定要移除所有座位吗？"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-
-      if (confirm === true) {
-        // abort vote if in progress
-        if (this.voting.nomination) {
-          this.commands.commit("session/nomination");
-        }
-        if (this.session.sessionId) {
-          this.commands.commit("players/clear");
-        } else {
-          this.commands.commit("players/clear", true);
-        }
-      }
-    },
-    async clearRoles() {
-      if (this.session.isSpectator && this.review.isReview) return;
-
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定要移除所有玩家角色吗？"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-
-      if (confirm === true) {
-        this.commands.dispatch("players/clearRoles");
-      }
-    },
-    async customiseBootlegger() {
-      if (this.session.isSpectator) return;
-
-      const input = await this.showInputModal({
-        inputType: "bootlegger",
-        inputModal: "input",
-        inputData: {
-          name: ["输入私货商人内容"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-
-      const content = input[0].trim();
-      this.commands.commit("session/setBootlegger", content);
-    },
-    toggleNight() {
-      this.commands.commit("toggleNight");
-      if (this.grimoire.isNight) {
-        this.commands.commit("session/setMarkedPlayer", -1);
-      }
-    },
     async toggleIsReview() {
       if (this.isSpectator) return;
 
@@ -1467,6 +1373,53 @@ const syncAudioThresholdNumber = (save: boolean) => {
   audioThresholdNumber.value = audioThresholdSlider.value;
   if (save) commitGameCommand("setAudioThreshold", audioThresholdSlider.value);
 };
+const addPlayer = (
+  stImage: string | null = null,
+  stName: string | null = null,
+) => {
+  if (session.isSpectator || playersState.players.length >= 20) return;
+  commitGameCommand("players/add", { name: "", stImage, stName });
+};
+const confirm = (name: string) =>
+  showInputModal({
+    inputType: "confirm",
+    inputModal: "confirm",
+    inputData: { name: [name] },
+  }).catch(() => null);
+const randomizeSeatings = async () => {
+  if (session.isSpectator || (await confirm("确定要随机分配座位吗？")) !== true)
+    return;
+  gameCommands.dispatch("players/randomize");
+};
+const clearPlayers = async () => {
+  if (session.isSpectator || (await confirm("确定要移除所有座位吗？")) !== true)
+    return;
+  if (voting.nomination) commitGameCommand("session/nomination");
+  if (session.sessionId) commitGameCommand("players/clear");
+  else commitGameCommand("players/clear", true);
+};
+const clearRoles = async () => {
+  if (
+    (session.isSpectator && review.isReview) ||
+    (await confirm("确定要移除所有玩家角色吗？")) !== true
+  )
+    return;
+  gameCommands.dispatch("players/clearRoles");
+};
+const customiseBootlegger = async () => {
+  if (session.isSpectator) return;
+  const input = await showInputModal({
+    inputType: "bootlegger",
+    inputModal: "input",
+    inputData: { name: ["输入私货商人内容"], length: 1, placeholder: [""] },
+  }).catch(() => null);
+  if (!Array.isArray(input)) return;
+  commitGameCommand("session/setBootlegger", input[0].trim());
+};
+const toggleNight = () => {
+  commitGameCommand("toggleNight");
+  if (grimoire.isNight) commitGameCommand("session/setMarkedPlayer", -1);
+};
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
@@ -1489,12 +1442,6 @@ const {
   imageOptIn,
   joinSession,
   leaveSession,
-  addPlayer,
-  randomizeSeatings,
-  clearPlayers,
-  clearRoles,
-  customiseBootlegger,
-  toggleNight,
   toggleIsReview,
   useOldOrderAsk,
   selectOldOrder,
