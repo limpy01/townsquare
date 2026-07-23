@@ -5,6 +5,7 @@ import type {
 } from "../legacy-vuex";
 import { pinia } from "../../pinia";
 import { useSessionSettingsStore } from "../../stores/session-settings";
+import { useProfileStore } from "../../stores/profile";
 
 const NEWPLAYER = {
   name: "",
@@ -283,10 +284,10 @@ const mutations: Record<string, LegacyMutation> = {
   ) {
     if (!stImage)
       stImage =
-        this.state.session.playerAvatar === "default.webp"
+        useProfileStore(pinia).playerAvatar === "default.webp"
           ? "default_storyteller.webp"
-          : this.state.session.playerAvatar;
-    if (!stName) stName = this.state.session.playerName;
+          : useProfileStore(pinia).playerAvatar;
+    if (!stName) stName = useProfileStore(pinia).playerName;
     if (index !== undefined) {
       if (index == 0) return; // do not ever remove the first fabled i.e. storyteller
 

@@ -6,6 +6,7 @@ import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
 import { useVotingStore } from "../../stores/voting";
 import { useRoleActivityStore } from "../../stores/role-activity";
+import { useProfileStore } from "../../stores/profile";
 import sessionModule from "./session";
 
 describe("session Vuex compatibility module", () => {
@@ -94,5 +95,21 @@ describe("session Vuex compatibility module", () => {
     });
 
     expect(roles.wraith.active).toBe(true);
+  });
+
+  it("delegates player profile updates to the Pinia store", () => {
+    const profile = useProfileStore(pinia);
+    profile.$reset();
+
+    sessionModule.mutations.setPlayerName(sessionModule.state(), "Alice");
+    sessionModule.mutations.updatePlayerAvatar(
+      sessionModule.state(),
+      "alice.webp",
+    );
+
+    expect(profile.$state).toEqual({
+      playerName: "Alice",
+      playerAvatar: "alice.webp",
+    });
   });
 });

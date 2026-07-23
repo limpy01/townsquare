@@ -589,6 +589,7 @@ import { useReviewStore } from "../stores/review";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useVotingStore } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
+import { useProfileStore } from "../stores/profile";
 
 export default {
   computed: {
@@ -623,6 +624,9 @@ export default {
     },
     settings() {
       return useSessionSettingsStore();
+    },
+    profile() {
+      return useProfileStore();
     },
     formattedTime() {
       const minutes = Math.floor(this.timer.seconds / 60);
@@ -736,8 +740,8 @@ export default {
       this.$store.commit("session/setPlayerName", newName);
     },
     async hostSession() {
-      if (!this.session.playerName) await this.changeName();
-      if (!this.session.playerName) return;
+      if (!this.profile.playerName) await this.changeName();
+      if (!this.profile.playerName) return;
 
       if (this.session.sessionId) return;
       if (this.lobby.rooms === null) {
@@ -1028,8 +1032,8 @@ export default {
     },
     async joinSession() {
       if (this.session.sessionId) return this.leaveSession();
-      if (!this.session.playerName) await this.changeName();
-      if (!this.session.playerName) return;
+      if (!this.profile.playerName) await this.changeName();
+      if (!this.profile.playerName) return;
 
       if (this.lobby.rooms === null) {
         await this.showInputModal({

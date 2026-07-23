@@ -53,6 +53,7 @@ import { useLobbyStore } from "./stores/lobby";
 import { useInteractionStore } from "./stores/interaction";
 import { useAudioStore } from "./stores/audio";
 import { useVotingStore } from "./stores/voting";
+import { useProfileStore } from "./stores/profile";
 import { showInputModal } from "./services/input-modal";
 import { version } from "../package.json";
 import TownSquare from "./components/TownSquare";
@@ -103,6 +104,9 @@ export default {
     voting() {
       return useVotingStore();
     },
+    profile() {
+      return useProfileStore();
+    },
     interaction() {
       return useInteractionStore();
     },
@@ -127,7 +131,7 @@ export default {
         this.$store.commit("session/setSpectator", true);
         this.$store.commit("toggleGrimoire", false);
 
-        let finalName = this.session.playerName; // Get existing name if any
+        let finalName = this.profile.playerName; // Get existing name if any
 
         if (!finalName) {
           const input = await this.showInputModal({

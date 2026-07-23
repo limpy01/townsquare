@@ -12,6 +12,7 @@ import { useTimerStore } from "../../stores/timer";
 import { useVotingStore } from "../../stores/voting";
 import { useSessionSettingsStore } from "../../stores/session-settings";
 import { useRoleActivityStore } from "../../stores/role-activity";
+import { useProfileStore } from "../../stores/profile";
 
 const state = () => ({
   sessionId: "",
@@ -19,8 +20,6 @@ const state = () => ({
   stSecret: "",
   isSpectator: false,
   playerId: "",
-  playerName: "",
-  playerAvatar: "default.webp",
   claimedSeat: -1,
   messageQueue: [],
   messageUniqueQueue: [],
@@ -101,8 +100,8 @@ const mutations: Record<string, LegacyMutation> = {
       .replace(/[^0-9a-z]/g, "")
       .substr(0, 10);
   },
-  setPlayerName(state, name) {
-    state.playerName = name;
+  setPlayerName(_state, playerName) {
+    useProfileStore(pinia).setPlayerName(playerName);
   },
   nomination(state, nomination = {}) {
     useVotingStore(pinia).setNomination(nomination, {
@@ -307,11 +306,11 @@ const mutations: Record<string, LegacyMutation> = {
     const group = state.groupChats[index];
     state.groupChats[index].keep = !group.keep;
   },
-  setPlayerAvatar(state) {
-    state.playerAvatar = "";
+  setPlayerAvatar() {
+    useProfileStore(pinia).resetPlayerAvatar();
   },
-  updatePlayerAvatar(state, link) {
-    state.playerAvatar = link;
+  updatePlayerAvatar(_state, playerAvatar) {
+    useProfileStore(pinia).updatePlayerAvatar(playerAvatar);
   },
   setIsRole(_state, payload) {
     useRoleActivityStore(pinia).setRole(payload);

@@ -234,6 +234,7 @@ import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import { useRoleActivityStore } from "../stores/role-activity";
+import { useProfileStore } from "../stores/profile";
 import Player from "./Player";
 import Token from "./Token";
 import ReminderModal from "./modals/ReminderModal";
@@ -265,6 +266,9 @@ export default {
     },
     roleActivity() {
       return useRoleActivityStore();
+    },
+    profile() {
+      return useProfileStore();
     },
     orientation: function () {
       const ratio = this.windowWidth / this.windowHeight;
@@ -683,7 +687,7 @@ export default {
         });
         if (!seated) return;
       }
-      const sender = this.session.playerName;
+      const sender = this.profile.playerName;
       const sendingPlayerId = this.session.playerId;
       const message = sender.concat(": ", this.message);
       if (this.chattingGroup === "") {

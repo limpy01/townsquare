@@ -12,6 +12,7 @@ import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
 import { useRoleActivityStore } from "../stores/role-activity";
+import { useProfileStore } from "../stores/profile";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 
@@ -31,6 +32,7 @@ class LiveSession {
     this._voting = useVotingStore(pinia);
     this._settings = useSessionSettingsStore(pinia);
     this._roles = useRoleActivityStore(pinia);
+    this._profile = useProfileStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -1274,12 +1276,12 @@ class LiveSession {
     if (!this._isSpectator) return;
     const players = this._store.state.players.players;
     if (players.length > seat && (seat < 0 || !players[seat].id)) {
-      // this._send("claim", [seat, this._store.state.session.playerId, this._store.state.session.playerName, this._store.state.session.playerAvatar]);
+      // this._send("claim", [seat, this._store.state.session.playerId, this._profile.playerName, this._profile.playerAvatar]);
       this._sendDirect("host", "claim", [
         seat,
         this._store.state.session.playerId,
-        this._store.state.session.playerName,
-        this._store.state.session.playerAvatar,
+        this._profile.playerName,
+        this._profile.playerAvatar,
       ]);
     }
   }
