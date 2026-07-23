@@ -1,5 +1,6 @@
 import { pinia } from "../pinia";
 import { useAudioStore } from "../stores/audio";
+import { useAppMetaStore } from "../stores/app-meta";
 import { useChatStore } from "../stores/chat";
 import { useDistributionStore } from "../stores/distribution";
 import { useGrimoireStore } from "../stores/grimoire";
@@ -32,6 +33,9 @@ export const legacyCommit = (type: string, payload?: any) => {
   const voting = useVotingStore(pinia);
 
   switch (type) {
+    case "setLastVersion":
+      useAppMetaStore(pinia).setLastVersion(payload);
+      break;
     case "setBackground":
       grimoire.set("background", payload);
       break;
@@ -71,6 +75,18 @@ export const legacyCommit = (type: string, payload?: any) => {
     case "setCustomRoles":
       useScenarioStore(pinia).setCustomRoles(payload);
       break;
+    case "setStates":
+      useScenarioStore(pinia).setStates(payload);
+      break;
+    case "setTeamsNames":
+      useScenarioStore(pinia).setTeamsNames(payload);
+      break;
+    case "setFirstNight":
+      useScenarioStore(pinia).setFirstNight(payload);
+      break;
+    case "setOtherNight":
+      useScenarioStore(pinia).setOtherNight(payload);
+      break;
     case "setSelectedEditions":
       useScenarioStore(pinia).setSelectedEditions(payload);
       break;
@@ -102,6 +118,9 @@ export const legacyCommit = (type: string, payload?: any) => {
       break;
     case "players/setBluff":
       players.setBluff(payload);
+      break;
+    case "players/updateBluff":
+      players.bluffs = payload;
       break;
     case "players/setFabled":
       players.setFabled(payload);
@@ -148,6 +167,34 @@ export const legacyCommit = (type: string, payload?: any) => {
     case "session/setMarkedPlayer":
       voting.setMarkedPlayer(payload, { isSecretVote: voting.isSecretVote });
       break;
+    case "session/setPlayerId":
+      session.setPlayerId(payload);
+      break;
+    case "session/setStId":
+      session.setStId(payload);
+      break;
+    case "session/setStSecret":
+      session.setStSecret(payload);
+      break;
+    case "session/setVoteHistoryAllowed":
+      voting.setVoteHistoryAllowed(payload);
+      break;
+    case "session/addVotes":
+      voting.addVotes(payload);
+      break;
+    case "session/addVoteSelected":
+      voting.addVoteSelected(payload, {
+        isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
+        isSpectator: session.isSpectator,
+      });
+      break;
+    case "session/vote":
+    case "session/voteSync":
+      voting.vote(payload);
+      break;
+    case "session/lockVote":
+      voting.lockVote(payload);
+      break;
     case "session/setNomination":
     case "session/nomination":
       voting.setNomination(payload, {
@@ -177,15 +224,50 @@ export const legacyCommit = (type: string, payload?: any) => {
       useAudioStore(pinia).setTalking(payload.isTalking);
       players.setTalking({ ...payload, playerId: session.playerId });
       break;
+    case "session/setTimer":
+      useTimerStore(pinia).setTimer(payload);
+      break;
     case "session/setIsRole":
       useRoleActivityStore(pinia).setRole(payload);
       break;
     case "session/deleteMessageQueue":
       useMessageOutboxStore(pinia).remove(payload);
       break;
+    case "session/addMessageQueue":
+      useMessageOutboxStore(pinia).add(payload);
+      break;
     case "session/removeGroupChat": {
       const changes = useChatStore(pinia).removeGroup(payload.chatId);
       changes.forEach((change) => players.update(change));
+      break;
+    }
+    case "session/addGroupChat": {
+      const chat = useChatStore(pinia);
+      const members =
+        payload.players ??
+        players.players.filter(
+          (player) => payload.playerIds?.includes(player.id),
+        );
+      chat
+        .addGroup({
+          chatId: payload.chatId,
+          players: members,
+          keep: payload.keep,
+        })
+        .forEach((change) => players.update(change));
+      break;
+    }
+    case "session/removeGroupChatMember": {
+      const player =
+        payload.player ??
+        players.players.find((item) => item.id === payload.playerId);
+      if (player) {
+        const change = useChatStore(pinia).removeGroupMember(
+          payload.chatId,
+          player,
+        );
+        if (change) players.update(change);
+      }
       break;
     }
     case "session/updateChatSent":
@@ -201,6 +283,13 @@ export const legacyCommit = (type: string, payload?: any) => {
           id: new Date().getTime(),
         });
       }
+      break;
+    case "session/updateChatReceived":
+      if (!session.isSpectator || payload.playerId === session.stId)
+        useChatStore(pinia).addReceivedMessage(payload);
+      break;
+    case "session/updatePlayerAvatar":
+      useProfileStore(pinia).updatePlayerAvatar(payload);
       break;
     default:
       throw new Error(`Unsupported legacy command: ${type}`);
@@ -227,6 +316,29 @@ export const legacyDispatch = (type: string, payload?: any) => {
 };
 
 export const legacyCommands = {
+  commit: legacyCommit,
+  dispatch: legacyDispatch,
+};
+
+/** A read-only legacy-shaped state projection for transports during the cutover. */
+export const legacyRuntime = {
+  get state() {
+    const scenario = useScenarioStore(pinia);
+    const identity = useSessionIdentityStore(pinia);
+    const outbox = useMessageOutboxStore(pinia);
+    return {
+      grimoire: useGrimoireStore(pinia).$state,
+      players: usePlayersStore(pinia).$state,
+      roles: scenario.roles,
+      fabled: scenario.fabled,
+      edition: scenario.edition,
+      session: {
+        ...identity.$state,
+        isListening: useAudioStore(pinia).listeningFrame,
+        messageQueue: outbox.queue,
+      },
+    };
+  },
   commit: legacyCommit,
   dispatch: legacyDispatch,
 };

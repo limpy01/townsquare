@@ -6,7 +6,7 @@ import { mutationBus } from "./mutation-bus";
 type LegacyPersistenceStore = {
   commit(type: string, payload?: any): void;
   state: any;
-  getters: any;
+  getters?: any;
 };
 
 const isRecord = (value: any) =>

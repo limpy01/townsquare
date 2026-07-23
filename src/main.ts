@@ -1,7 +1,7 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import { pinia } from "./pinia";
-import store from "./store";
+import { initializeRuntime } from "./store/runtime";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { fab } from "@fortawesome/free-brands-svg-icons";
@@ -80,8 +80,9 @@ library.add(
   wraith as IconDefinition,
 );
 
+initializeRuntime();
+
 createApp(App)
   .use(pinia)
-  .use(store)
   .component("font-awesome-icon", FontAwesomeIcon)
   .mount("#app");
