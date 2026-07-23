@@ -36,6 +36,7 @@ import { mapState } from "vuex";
 import Cropper from 'cropperjs';
 import 'cropperjs/dist/cropper.css';
 import { apiBase } from "../config";
+import { showInputModal } from "../services/input-modal";
 
 export default {
   data() {
@@ -58,18 +59,7 @@ export default {
     ...mapState(["session"])
   },
   methods: {
-    async showInputModal({ inputType, inputModal, inputData }) {
-      return new Promise((resolve, reject) => {
-        this.$store.commit("session/setInputResolver", resolve);
-        this.$store.commit("session/setInputRejecter", reject);
-
-        this.$store.commit("session/setInputType", inputType);
-        this.$store.commit("session/setInputModal", inputModal);
-        this.$store.commit("session/setInputData", inputData);
-
-        this.$store.commit("toggleModal", "input");
-      });
-    },
+    showInputModal,
     async uploadAvatar() {
       this.$refs.upload.click();
     },
@@ -229,4 +219,3 @@ img {
   overflow-x: hidden;
 }
 </style>
-

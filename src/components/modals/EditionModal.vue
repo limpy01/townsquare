@@ -78,6 +78,7 @@
 import editionJSON from "../../editions";
 import { mapMutations, mapState } from "vuex";
 import Modal from "./Modal";
+import { showInputModal } from "../../services/input-modal";
 
 export default {
   components: {
@@ -125,18 +126,7 @@ export default {
   },
   computed: mapState(["modals", "selectedEditions"]),
   methods: {
-    async showInputModal({ inputType, inputModal, inputData }) {
-      return new Promise((resolve, reject) => {
-        this.$store.commit("session/setInputResolver", resolve);
-        this.$store.commit("session/setInputRejecter", reject);
-
-        this.$store.commit("session/setInputType", inputType);
-        this.$store.commit("session/setInputModal", inputModal);
-        this.$store.commit("session/setInputData", inputData);
-
-        this.$store.commit("toggleModal", "input");
-      });
-    },
+    showInputModal,
     closeEdition(){
       this.toggleModal('edition');
       this.isCustom = false;

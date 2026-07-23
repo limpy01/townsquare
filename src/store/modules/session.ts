@@ -78,11 +78,6 @@ const state = () => ({
   chatHistory: [],
   newStMessage: [0],
   groupChats: [],
-  inputType: "",
-  inputModal: "",
-  inputData: {},
-  inputResolver: null,
-  inputRejecter: null,
   bootlegger: "",
   drawRoles: [],
   timer: 480,
@@ -126,25 +121,11 @@ const mutations: Record<string, LegacyMutation> = {
   setListeningFrame: set("listeningFrame"),
   setChatOpen: set("isChatOpen"),
   setTyping: set("isTyping"),
-  setInputType: set("inputType"),
-  setInputModal: set("inputModal"),
-  setInputData: set("inputData"),
   setSecretVote: set("isSecretVote"),
   setBootlegger: set("bootlegger"),
   setUseOldOrder: set("isUseOldOrder"),
   setUseOldRole: set("isUseOldRole"),
   setIsReview: set("isReview"),
-  setInputResolver(state, resolver) {
-    state.inputResolver = resolver;
-  },
-  setInputRejecter(state, rejecter) {
-    state.inputRejecter = rejecter;
-  },
-  clearInputHandlers(state) {
-    // New mutation for cleanup
-    state.inputResolver = null;
-    state.inputRejecter = null;
-  },
   claimSeat: set("claimedSeat"),
   distributeRoles: set("isRolesDistributed"),
   distributeTypes: set("isTypesDistributed"),

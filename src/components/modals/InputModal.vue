@@ -3,13 +3,13 @@
     v-if="modals.input"
     @close="close"
     :name="'input'"
-    :type="session.inputModal"
+    :type="inputState.inputModal"
   >
     <span v-if="!!warningMessage" class="warning">{{ warningMessage }}</span>
-    <div v-if="session.inputModal === 'input'">
+    <div v-if="inputState.inputModal === 'input'">
       <form class="input-box" @submit.prevent="confirmInput">
-        <div v-for="n in session.inputData.length" :key="n">
-          <label>{{ session.inputData.name[n - 1] }}</label>
+        <div v-for="n in inputState.inputData.length" :key="n">
+          <label>{{ inputState.inputData.name[n - 1] }}</label>
           <input
             type="text"
             :id="'input-' + n"
@@ -26,22 +26,22 @@
         </div>
       </form>
     </div>
-    <div v-else-if="session.inputModal === 'confirm'">
+    <div v-else-if="inputState.inputModal === 'confirm'">
       <form
         class="input-box confirm-box"
         @submit.prevent="confirmYes"
         tabindex="-1"
       >
-        <label>{{ session.inputData.name[0] }}</label>
+        <label>{{ inputState.inputData.name[0] }}</label>
         <div class="input-actions">
           <button type="submit" class="confirm" ref="confirmYes">确认</button>
           <button type="button" @click="close" class="cancel">取消</button>
         </div>
       </form>
     </div>
-    <div v-else-if="session.inputModal === 'text'">
+    <div v-else-if="inputState.inputModal === 'text'">
       <form class="input-box text-box" @submit.prevent="close" tabindex="-1">
-        <label>{{ session.inputData.name[0] }}</label>
+        <label>{{ inputState.inputData.name[0] }}</label>
         <div class="input-actions">
           <button type="submit" class="confirm" ref="confirmClose">关闭</button>
         </div>
@@ -51,15 +51,19 @@
 </template>
 
 <script>
-import { mapMutations, mapState } from "vuex";
+import { mapState } from "vuex";
 import Modal from "./Modal";
 import { useLobbyStore } from "../../stores/lobby";
+import { useInputStore } from "../../stores/input";
 
 export default {
   components: { Modal },
   computed: {
     ...mapState(["modals", "grimoire", "session"]),
     ...mapState("players", ["players"]),
+    inputState() {
+      return useInputStore();
+    },
     lobby() {
       return useLobbyStore();
     },
@@ -75,15 +79,14 @@ export default {
   },
   created() {
     if (
-      this.session &&
-      this.session.inputData &&
-      this.session.inputData.placeholder
+      this.inputState.inputData &&
+      this.inputState.inputData.placeholder
     ) {
-      this.input = [...this.session.inputData.placeholder];
+      this.input = [...this.inputState.inputData.placeholder];
     }
   },
   watch: {
-    "session.inputData.placeholder": {
+    "inputState.inputData.placeholder": {
       handler(placeholder) {
         if (Array.isArray(placeholder) && placeholder.length > 0) {
           this.input = [...placeholder];
@@ -93,16 +96,16 @@ export default {
     },
     "modals.input": function (isOpen) {
       if (isOpen) {
-        if (this.session.inputModal === "input") {
+        if (this.inputState.inputModal === "input") {
           this.$nextTick(() => {
             const input = this.$refs["input-1"];
             (Array.isArray(input) ? input[0] : input)?.select();
           });
-        } else if (this.session.inputModal === "confirm") {
+        } else if (this.inputState.inputModal === "confirm") {
           this.$nextTick(() => {
             this.$refs.confirmYes.focus();
           });
-        } else if (this.session.inputModal === "text") {
+        } else if (this.inputState.inputModal === "text") {
           this.$nextTick(() => {
             this.$refs.confirmClose.focus();
           });
@@ -126,14 +129,14 @@ export default {
     confirmInput() {
       const allowEmpty = ["bootlegger"];
       if (
-        this.session.inputModal === "input" &&
-        !allowEmpty.includes(this.session.inputType) &&
+        this.inputState.inputModal === "input" &&
+        !allowEmpty.includes(this.inputState.inputType) &&
         (this.input.length <= 0 || this.input.some((item) => item === ""))
       ) {
         this.close();
         return;
       }
-      switch (this.session.inputType) {
+      switch (this.inputState.inputType) {
         case "background":
           break;
         case "changeName":
@@ -225,28 +228,21 @@ export default {
           break;
       }
 
-      if (this.session.inputResolver) {
-        this.session.inputResolver(this.input);
+      if (this.inputState.inputResolver) {
+        this.inputState.resolve(this.input);
       }
 
       this.close();
     },
     confirmYes() {
-      this.session.inputResolver(true);
+      this.inputState.resolve(true);
       this.close();
     },
     close() {
-      if (this.session.inputResolver && this.session.inputModal === "text") {
-        this.session.inputResolver(true);
-      } else if (this.session.inputRejecter) {
-        this.session.inputRejecter(null);
-      }
       this.$store.commit("session/setTyping", false);
-      this.$store.commit("session/clearInputHandlers");
       this.input = [""];
       this.warningMessage = "";
-
-      this.toggleModal("input");
+      this.inputState.close();
 
       this.$nextTick(() => {
         document.getElementById("app").focus();
@@ -256,7 +252,6 @@ export default {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
     },
-    ...mapMutations(["toggleModal"]),
   },
 };
 </script>

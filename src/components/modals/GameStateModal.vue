@@ -28,6 +28,7 @@
 <script>
 import Modal from "./Modal";
 import { mapMutations, mapState } from "vuex";
+import { showInputModal } from "../../services/input-modal";
 
 export default {
   components: {
@@ -60,18 +61,7 @@ export default {
     };
   },
   methods: {
-    async showInputModal({ inputType, inputModal, inputData }) {
-      return new Promise((resolve, reject) => {
-        this.$store.commit("session/setInputResolver", resolve);
-        this.$store.commit("session/setInputRejecter", reject);
-
-        this.$store.commit("session/setInputType", inputType);
-        this.$store.commit("session/setInputModal", inputModal);
-        this.$store.commit("session/setInputData", inputData);
-
-        this.$store.commit("toggleModal", "input");
-      });
-    },
+    showInputModal,
     copy: function() {
       navigator.clipboard.writeText(this.input || this.gamestate);
     },

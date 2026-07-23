@@ -2,6 +2,7 @@ import { wsBase } from "../config";
 import { decodeLegacyEnvelope } from "@townsquare/contracts/legacy-envelope";
 import { pinia } from "../pinia";
 import LiveLobby from "./lobby-transport";
+import { showInputModal } from "../services/input-modal";
 
 class LiveSession {
   constructor(store) {
@@ -630,17 +631,8 @@ class LiveSession {
     return;
   }
 
-  async showInputModal({ inputType, inputModal, inputData }) {
-    return new Promise((resolve, reject) => {
-      this._store.commit("session/setInputResolver", resolve);
-      this._store.commit("session/setInputRejecter", reject);
-
-      this._store.commit("session/setInputType", inputType);
-      this._store.commit("session/setInputModal", inputModal);
-      this._store.commit("session/setInputData", inputData);
-
-      this._store.commit("toggleModal", "input");
-    });
+  showInputModal(request) {
+    return showInputModal(request);
   }
 
   /**

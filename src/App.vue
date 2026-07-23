@@ -50,6 +50,7 @@
 <script>
 import { mapState } from "vuex";
 import { useLobbyStore } from "./stores/lobby";
+import { showInputModal } from "./services/input-modal";
 import { version } from "../package.json";
 import TownSquare from "./components/TownSquare";
 import TownInfo from "./components/TownInfo";
@@ -172,20 +173,9 @@ export default {
     );
   },
   methods: {
+    showInputModal,
     handleVisibilityChange() {
       useLobbyStore().setAllowReconnect(document.visibilityState === "visible");
-    },
-    async showInputModal({ inputType, inputModal, inputData }) {
-      return new Promise((resolve, reject) => {
-        this.$store.commit("session/setInputResolver", resolve);
-        this.$store.commit("session/setInputRejecter", reject);
-
-        this.$store.commit("session/setInputType", inputType);
-        this.$store.commit("session/setInputModal", inputModal);
-        this.$store.commit("session/setInputData", inputData);
-
-        this.$store.commit("toggleModal", "input");
-      });
     },
     keyup({ key, ctrlKey, metaKey }) {
       if (ctrlKey || metaKey) return;

@@ -33,6 +33,7 @@
 <script>
 import Modal from "./Modal";
 import { mapMutations, mapState } from "vuex";
+import { showInputModal } from "../../services/input-modal";
 
 /**
  * Helper function that maps a reminder name with a role-based object that provides necessary visual data.
@@ -91,18 +92,7 @@ export default {
     ...mapState("players", ["players"])
   },
   methods: {
-    async showInputModal({ inputType, inputModal, inputData }) {
-      return new Promise((resolve, reject) => {
-        this.$store.commit("session/setInputResolver", resolve);
-        this.$store.commit("session/setInputRejecter", reject);
-
-        this.$store.commit("session/setInputType", inputType);
-        this.$store.commit("session/setInputModal", inputModal);
-        this.$store.commit("session/setInputData", inputData);
-
-        this.$store.commit("toggleModal", "input");
-      });
-    },
+    showInputModal,
     async addReminder(reminder) {
       const player = this.$store.state.players.players[this.playerIndex];
       let value;
