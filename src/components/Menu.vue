@@ -638,30 +638,6 @@ Object.defineProperties(context, {
 });
 
 const options: any = {
-  computed: {
-    formattedTime() {
-      const minutes = Math.floor(this.timer.seconds / 60);
-      const seconds = Math.ceil(this.timer.seconds % 60);
-      return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-    },
-    lessThanOneMinute() {
-      return {
-        color: this.timer.seconds < 60 ? "red" : "white",
-      };
-    },
-    keyboardIcon() {
-      return {
-        color: this.audio.listeningFrame ? "red" : "white",
-      };
-    },
-    isHandHeld() {
-      const deviceType = navigator.userAgent.toLocaleLowerCase();
-      console.log(deviceType);
-      if (/mobile|android|touch|webos|iphone|ipod/i.test(deviceType))
-        return true;
-      return false;
-    },
-  },
   data() {
     return {
       tab: "grimoire",
@@ -1518,12 +1494,6 @@ const options: any = {
   },
 };
 
-for (const [name, getter] of Object.entries(options.computed)) {
-  Object.defineProperty(context, name, {
-    enumerable: true,
-    get: () => getter.call(context),
-  });
-}
 Object.assign(context, options.data.call(context));
 for (const [name, method] of Object.entries(options.methods))
   context[name] = method.bind(context);
@@ -1531,10 +1501,6 @@ for (const [name, method] of Object.entries(options.methods))
 const players = computed(() => playersState.players);
 const edition = computed(() => scenario.edition);
 const selectedEditions = computed(() => scenario.selectedEditions);
-const formattedTime = computed(() => context.formattedTime);
-const lessThanOneMinute = computed(() => context.lessThanOneMinute);
-const keyboardIcon = computed(() => context.keyboardIcon);
-const isHandHeld = computed(() => context.isHandHeld);
 const tab = toRef(context, "tab");
 const timing = toRef(context, "timing");
 const distributing = toRef(context, "distributing");
@@ -1552,6 +1518,22 @@ const microphoneSetting = toRef(context, "microphoneSetting");
 const audioThresholdNumber = toRef(context, "audioThresholdNumber");
 const audioThresholdSlider = toRef(context, "audioThresholdSlider");
 const isEditingThreshold = toRef(context, "isEditingThreshold");
+const formattedTime = computed(() => {
+  const minutes = Math.floor(timer.seconds / 60);
+  const seconds = Math.ceil(timer.seconds % 60);
+  return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+});
+const lessThanOneMinute = computed(() => ({
+  color: timer.seconds < 60 ? "red" : "white",
+}));
+const keyboardIcon = computed(() => ({
+  color: audio.listeningFrame ? "red" : "white",
+}));
+const isHandHeld = computed(() => {
+  const deviceType = navigator.userAgent.toLocaleLowerCase();
+  console.log(deviceType);
+  return /mobile|android|touch|webos|iphone|ipod/i.test(deviceType);
+});
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
