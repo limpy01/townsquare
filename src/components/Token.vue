@@ -1,16 +1,17 @@
 <template>
-  <div class="token" @click="setRole" :class="[role.id]" 
-  :style="tokenBackground"
+  <div
+    class="token"
+    @click="setRole"
+    :class="[role.id]"
+    :style="tokenBackground"
   >
     <span
       class="icon"
       v-if="role.id"
       :style="{
         backgroundImage: `url(${
-          role.image && grimoire.isImageOptIn
-            ? role.image
-            : roleIcon
-        })`
+          role.image && grimoire.isImageOptIn ? role.image : roleIcon
+        })`,
       }"
     ></span>
     <span
@@ -48,63 +49,54 @@
   </div>
 </template>
 
-<script>
-import { mapState } from "vuex";
+<script setup lang="ts">
+import { computed } from "vue";
+import { useGrimoireStore } from "../stores/grimoire";
 
 const iconImages = import.meta.glob("../assets/icons/*.png", {
   eager: true,
-  import: "default"
+  import: "default",
 });
 const tokenImage = new URL("../assets/token.png", import.meta.url).href;
 
-export default {
-  name: "Token",
-  props: {
-    role: {
-      type: Object,
-      default: () => ({})
-    },
-    id: {
-      type: String,
-      default: ""
-    },
-    image: {
-      type: String,
-      default: ""
-    }
+const props = withDefaults(
+  defineProps<{
+    role?: Record<string, any>;
+    id?: string;
+    image?: string;
+  }>(),
+  {
+    role: () => ({}),
+    id: "",
+    image: "",
   },
-  computed: {
-    reminderLeaves: function() {
-      return (
-        (this.role.reminders || []).length +
-        (this.role.remindersGlobal || []).length
-      );
-    },
-    tokenBackground() {
-      return (!!this.id && !!this.image) ? {} : {backgroundImage: `url(${tokenImage})`}
-    },
-    roleIcon() {
-      const id = this.role.imageAlt || this.role.id.replace(/old1$/, "");
-      return iconImages[`../assets/icons/${id}.png`];
-    },
-    ...mapState(["grimoire"])
-  },
-  data() {
-    return {};
-  },
-  methods: {
-    nameToFontSize(name) {
-      return name && name.length > 10 ? "90%" : "110%";
-    },
-    setRole() {
-      this.$emit("set-role");
-    }
-  }
-};
+);
+
+const emit = defineEmits<{ "set-role": [] }>();
+const grimoire = useGrimoireStore();
+const reminderLeaves = computed(
+  () =>
+    (props.role.reminders || []).length +
+    (props.role.remindersGlobal || []).length,
+);
+const tokenBackground = computed(() =>
+  props.id && props.image ? {} : { backgroundImage: `url(${tokenImage})` },
+);
+const roleIcon = computed(() => {
+  const id = props.role.imageAlt || props.role.id.replace(/old1$/, "");
+  return iconImages[`../assets/icons/${id}.png`];
+});
+
+function nameToFontSize(name: string) {
+  return name && name.length > 10 ? "90%" : "110%";
+}
+
+function setRole() {
+  emit("set-role");
+}
 </script>
 
 <style scoped lang="scss">
-
 .token {
   border-radius: 50%;
   width: 100%;
