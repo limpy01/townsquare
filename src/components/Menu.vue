@@ -681,42 +681,8 @@ const options: any = {
   },
   methods: {
     showInputModal,
-    async setBackground() {
-      const input = await this.showInputModal({
-        inputType: "background",
-        inputModal: "input",
-        inputData: {
-          name: ["输入自定义背景图URL"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-
-      const background = input[0];
-      this.commands.commit("setBackground", background);
-    },
-    async changeName() {
-      const input = await this.showInputModal({
-        inputType: "changeName",
-        inputModal: "input",
-        inputData: {
-          name: ["输入玩家昵称"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-
-      const newName = input[0];
-      this.commands.commit("session/setPlayerName", newName);
-    },
     async hostSession() {
-      if (!this.profile.playerName) await this.changeName();
+      if (!this.profile.playerName) await changeName();
       if (!this.profile.playerName) return;
 
       if (this.session.sessionId) return;
@@ -760,13 +726,8 @@ const options: any = {
         for (let i = 0; i < numPlayers; i++) {
           addPlayer();
         }
-        this.copySessionUrl();
+        copySessionUrl();
       }
-    },
-    copySessionUrl() {
-      const url = window.location.href.split("#")[0];
-      const link = url + "#" + this.session.sessionId;
-      navigator.clipboard.writeText(link);
     },
     distributeAsk() {
       this.distributingBluffs = false;
@@ -974,7 +935,7 @@ const options: any = {
     },
     async joinSession() {
       if (this.session.sessionId) return this.leaveSession();
-      if (!this.profile.playerName) await this.changeName();
+      if (!this.profile.playerName) await changeName();
       if (!this.profile.playerName) return;
 
       if (this.lobby.rooms === null) {
@@ -1396,15 +1357,33 @@ const selectOldRole = (update = false) => {
     commitGameCommand("setCustomRoles", readStoredArray(localStorage, "roles"));
   commitGameCommand("setEdition", scenario.edition);
 };
+const setBackground = async () => {
+  const input = await showInputModal({
+    inputType: "background",
+    inputModal: "input",
+    inputData: { name: ["输入自定义背景图URL"], length: 1, placeholder: [""] },
+  }).catch(() => null);
+  if (Array.isArray(input)) commitGameCommand("setBackground", input[0]);
+};
+const changeName = async () => {
+  const input = await showInputModal({
+    inputType: "changeName",
+    inputModal: "input",
+    inputData: { name: ["输入玩家昵称"], length: 1, placeholder: [""] },
+  }).catch(() => null);
+  if (Array.isArray(input))
+    commitGameCommand("session/setPlayerName", input[0]);
+};
+const copySessionUrl = () => {
+  const url = window.location.href.split("#")[0];
+  void navigator.clipboard.writeText(`${url}#${session.sessionId}`);
+};
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
 );
 const {
-  setBackground,
-  changeName,
   hostSession,
-  copySessionUrl,
   distributeAsk,
   distributeRoles,
   distributeTypeAsk,

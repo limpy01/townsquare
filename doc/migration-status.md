@@ -108,6 +108,7 @@
 - `Menu.vue` 的新增/清空/随机座位、清空角色、私货商人说明和日夜切换已迁为直接 Composition API 命令；确认弹窗继续复用同一输入服务，玩家状态继续通过既有兼容命令同步。
 - `Menu.vue` 的剧本版本选择与自定义图标确认已迁为 Composition API ref/function；勾选草稿在打开对话框时仍从 scenario store 复制，提交时仍走原有 `setSelectedEditions` 命令。
 - `Menu.vue` 的旧夜间顺序与旧角色能力草稿已迁为 Composition API；提交继续执行 `setUseOldOrder`/`setUseOldRole` 兼容命令、重载已有自定义角色并重新应用当前剧本。
+- `Menu.vue` 的背景、昵称与房间链接操作已迁为直接 Composition API 函数；host/join 流程也已改用同一昵称入口，移除了对已删除 Options 方法的调用。
 
 ## 本批次约束
 
