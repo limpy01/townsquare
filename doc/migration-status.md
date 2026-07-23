@@ -119,6 +119,7 @@
 - 浏览器 session 的持久化出站队列分流已从 `socket.ts` 提取为纯 dispatcher；direct、request、upload 和房间广播仍走相同 v1 传输助手，并有独立回归覆盖。
 - 服务端 v1 WebSocket 校验已扩展至稳定的投票、锁票、说书人标识和私货商人标量 payload；错误的元组形状或标量类型会在房间广播前以 1008 拒绝。
 - v1 WebSocket 的座位标记、换位/移动和 ping payload 也已按客户端真实出站格式校验；对象标记保留 `val`/`force` 兼容形状。
+- v1 WebSocket 的代词、座位移除和旧规则选项 payload 已加入 contracts 校验，并由服务端拒绝畸形字段。
 
 ## 本批次约束
 

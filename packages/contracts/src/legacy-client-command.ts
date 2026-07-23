@@ -83,6 +83,8 @@ const legacyScalarPayloadSchemas: Partial<
     z.union([z.string(), z.number().int().nonnegative()]),
     z.literal("latency"),
   ]),
+  pronouns: z.tuple([z.number().int().nonnegative(), z.string()]),
+  remove: z.number().int().nonnegative(),
   secretVote: z.boolean(),
   setTimer: z.number().finite().nonnegative(),
   startTimer: z.number().finite().nonnegative(),
@@ -92,6 +94,18 @@ const legacyScalarPayloadSchemas: Partial<
     z.number().int().nonnegative(),
     z.number().int().nonnegative(),
   ]),
+  useOldOrder: z
+    .object({ pithag: z.boolean(), professor: z.boolean() })
+    .strict(),
+  useOldRole: z
+    .object({
+      balloonist: z.boolean(),
+      acrobat: z.boolean(),
+      lilmonsta: z.boolean(),
+      alchemist: z.boolean(),
+      lycanthrope: z.boolean(),
+    })
+    .strict(),
   votingSpeed: z.number().finite().positive(),
   vote: z.tuple([
     z.number().int().nonnegative(),

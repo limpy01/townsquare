@@ -123,6 +123,9 @@ test("rejects malformed nested WebSocket payloads", async (t) => {
     [["marked", { val: -1 }], /Invalid marked payload/],
     [["move", [0, "1"]], /Invalid move payload/],
     [["ping", ["player-a", "other"]], /Invalid ping payload/],
+    [["pronouns", [0, 1]], /Invalid pronouns payload/],
+    [["remove", -1], /Invalid remove payload/],
+    [["useOldOrder", { pithag: true }], /Invalid useOldOrder payload/],
   ]) {
     const client = await openClient(
       `${wsBase}/ws/42/${Math.random().toString(36).slice(2)}`,
