@@ -20,6 +20,16 @@ import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 import { getCustomRolesStripped, rolesJSONbyId } from "./selectors";
 import { mutationBus } from "./mutation-bus";
 
+export const decodeSessionMessage = (data: unknown) => {
+  if (typeof data !== "string") return null;
+
+  try {
+    return decodeLegacyEnvelope(JSON.parse(data));
+  } catch {
+    return null;
+  }
+};
+
 class LiveSession {
   constructor(store) {
     this._wss = `${wsBase}/ws/`;
@@ -377,13 +387,17 @@ class LiveSession {
    * @private
    */
   _handleMessage({ data }) {
-    let command, params, feedback;
-    try {
-      ({ command, params, feedback } = decodeLegacyEnvelope(JSON.parse(data)));
-    } catch (err) {
+    const envelope = decodeSessionMessage(data);
+    if (!envelope) {
       console.log("unsupported socket message", data);
+      return;
     }
-    dispatchSessionInboundMessage(this, command, params, feedback);
+    dispatchSessionInboundMessage(
+      this,
+      envelope.command,
+      envelope.params,
+      envelope.feedback,
+    );
   }
 
   /**
