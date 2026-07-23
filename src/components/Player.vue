@@ -118,7 +118,7 @@
           title="Nominate this player"
         />
         <div
-          v-if="!player.id && session.isSpectator && !session.isReview"
+          v-if="!player.id && session.isSpectator && !review.isReview"
           class="sitDown"
           :style="font"
         >
@@ -327,7 +327,7 @@
       </div>
     </template>
     <div
-      v-if="!session.isSpectator || !session.isReview"
+      v-if="!session.isSpectator || !review.isReview"
       class="reminder add"
       @click="$emit('trigger', ['openReminderModal'])"
     >
@@ -343,6 +343,7 @@ import { mapGetters, mapState } from "vuex";
 import { apiBase } from "../config";
 import { showInputModal } from "../services/input-modal";
 import { useDistributionStore } from "../stores/distribution";
+import { useReviewStore } from "../stores/review";
 // import Vue from "vue";
 
 export default {
@@ -361,6 +362,9 @@ export default {
     ...mapState(["grimoire", "session"]),
     distribution() {
       return useDistributionStore();
+    },
+    review() {
+      return useReviewStore();
     },
     ...mapGetters({ nightOrder: "players/nightOrder" }),
     index: function () {
@@ -409,7 +413,7 @@ export default {
     reminders() {
       const reminders = !this.session.isSpectator
         ? this.player.reminders
-        : this.session.isReview
+        : this.review.isReview
         ? this.player.stReminders
         : this.player.reminders;
       return reminders;
@@ -477,7 +481,7 @@ export default {
         this.claimSeat();
         return;
       }
-      if (!this.session.isSpectator || !this.session.isReview)
+      if (!this.session.isSpectator || !this.review.isReview)
         this.$emit("trigger", ["openRoleModal"]);
     },
     async changePronouns() {
@@ -586,7 +590,7 @@ export default {
       this.updatePlayer("name", name, true);
     },
     removeReminder(reminder) {
-      if (this.session.isReview && this.session.isSpectator) return;
+      if (this.review.isReview && this.session.isSpectator) return;
       const reminders = [...this.player.reminders];
       reminders.splice(this.player.reminders.indexOf(reminder), 1);
       this.updatePlayer("reminders", reminders, true);

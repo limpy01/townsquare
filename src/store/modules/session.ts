@@ -6,6 +6,7 @@ import type {
 import { pinia } from "../../pinia";
 import { useAudioStore } from "../../stores/audio";
 import { useDistributionStore } from "../../stores/distribution";
+import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
 
 /**
@@ -63,7 +64,6 @@ const state = () => ({
     alchemist: false,
     lycanthrope: false,
   },
-  isReview: false,
   messageQueue: [],
   messageUniqueQueue: [],
   chatHistory: [],
@@ -100,7 +100,9 @@ const mutations: Record<string, LegacyMutation> = {
   setBootlegger: set("bootlegger"),
   setUseOldOrder: set("isUseOldOrder"),
   setUseOldRole: set("isUseOldRole"),
-  setIsReview: set("isReview"),
+  setIsReview(_state, isReview) {
+    useReviewStore(pinia).setReview(isReview);
+  },
   claimSeat: set("claimedSeat"),
   distributeRoles(_state, active) {
     useDistributionStore(pinia).setRoles(active);

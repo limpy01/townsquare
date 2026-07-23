@@ -36,7 +36,7 @@
         目前选择的角色会修改游戏的初始角色配置！随机分发器不会识别这些角色的功能。建议说书人手动调整要分发的角色。
       </span>
     </div>
-    <div class="warningReview" v-if="session.isReview">
+    <div class="warningReview" v-if="review.isReview">
       <font-awesome-icon icon="exclamation-triangle" />
       <span> 警告: 正在使用复盘视角，如果即将进行游戏请先关闭复盘视角！ </span>
     </div>
@@ -55,14 +55,14 @@
       >
         <font-awesome-icon
           icon="exclamation-triangle"
-          v-if="session.isReview"
+          v-if="review.isReview"
           style="color: yellow"
         />
         <font-awesome-icon icon="people-arrows" v-else />
         随机分配{{ selectedRoles }}个角色
       </div>
       <div
-        v-if="session.isReview"
+        v-if="review.isReview"
         class="button"
         @click="assignRoles(false)"
         :class="{
@@ -95,6 +95,7 @@ import gameJSON from "./../../game";
 import Token from "./../Token";
 import { mapGetters, mapMutations, mapState } from "vuex";
 import { useDrawStore } from "../../stores/draw";
+import { useReviewStore } from "../../stores/review";
 
 const randomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -133,6 +134,9 @@ export default {
     ...mapGetters({ nonTravelers: "players/nonTravelers" }),
     draw() {
       return useDrawStore();
+    },
+    review() {
+      return useReviewStore();
     },
   },
   methods: {
@@ -175,7 +179,7 @@ export default {
     assignRoles(allowReview = true) {
       if (this.selectedRoles <= this.nonTravelers && this.selectedRoles) {
         // generate list of selected roles and randomize it
-        if (!allowReview && this.session.isReview) {
+        if (!allowReview && this.review.isReview) {
           this.$store.commit("session/setIsReview", false);
         }
         const roles = Object.values(this.roleSelection)

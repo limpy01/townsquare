@@ -130,7 +130,7 @@
               复盘视角
               <em>
                 <font-awesome-icon
-                  :icon="['fas', session.isReview ? 'check-square' : 'square']"
+                  :icon="['fas', review.isReview ? 'check-square' : 'square']"
                 />
               </em>
             </li>
@@ -585,6 +585,7 @@ import { useInteractionStore } from "../stores/interaction";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useAudioStore } from "../stores/audio";
 import { useTimerStore } from "../stores/timer";
+import { useReviewStore } from "../stores/review";
 
 export default {
   computed: {
@@ -607,6 +608,9 @@ export default {
     },
     timer() {
       return useTimerStore();
+    },
+    review() {
+      return useReviewStore();
     },
     formattedTime() {
       const minutes = Math.floor(this.timer.seconds / 60);
@@ -1091,7 +1095,7 @@ export default {
         }
 
         // reset review
-        if (this.session.isReview) {
+        if (this.review.isReview) {
           this.$store.commit("session/setIsReview", false);
         }
 
@@ -1174,7 +1178,7 @@ export default {
       }
     },
     async clearRoles() {
-      if (this.session.isSpectator && this.session.isReview) return;
+      if (this.session.isSpectator && this.review.isReview) return;
 
       const confirm = await this.showInputModal({
         inputType: "confirm",
@@ -1219,7 +1223,7 @@ export default {
     async toggleIsReview() {
       if (this.isSpectator) return;
 
-      const confirm = this.session.isReview
+      const confirm = this.review.isReview
         ? false
         : await this.showInputModal({
             inputType: "confirm",
@@ -1232,10 +1236,10 @@ export default {
           });
       if (confirm === null) return;
 
-      if (!this.session.isReview && confirm === true) {
-        this.$store.commit("session/setIsReview", !this.session.isReview);
+      if (!this.review.isReview && confirm === true) {
+        this.$store.commit("session/setIsReview", !this.review.isReview);
         this.$store.dispatch("players/realivePlayers");
-      } else if (this.session.isReview) {
+      } else if (this.review.isReview) {
         this.$store.commit("session/setIsReview", false);
       }
     },

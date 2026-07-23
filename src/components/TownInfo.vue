@@ -8,12 +8,10 @@
           edition.logo && grimoire.isImageOptIn
             ? edition.logo
             : require('../assets/editions/' + edition.id + '.png')
-        })`
+        })`,
       }"
     ></li>
-    <li v-if="players.length - teams.traveler < 5">
-      请添加更多玩家！
-    </li>
+    <li v-if="players.length - teams.traveler < 5">请添加更多玩家！</li>
     <li>
       <span class="meta" v-if="!edition.isOfficial">
         {{ edition.name }}
@@ -69,32 +67,27 @@
       </span>
     </li>
     <li>
-      <span>
-        房间号：
-      </span>
+      <span> 房间号： </span>
       <span v-if="$store.state.session.sessionId">
         {{ this.$store.state.session.sessionId }}
       </span>
-      <span v-else>
-        未加入房间
-      </span>
+      <span v-else> 未加入房间 </span>
     </li>
-    <li v-if="$store.state.session.isReview">
-      复盘视角
-    </li>
+    <li v-if="review.isReview">复盘视角</li>
   </ul>
 </template>
 
 <script>
 import gameJSON from "./../game";
 import { mapState } from "vuex";
+import { useReviewStore } from "../stores/review";
 
 export default {
   computed: {
-    teams: function() {
+    teams: function () {
       const { players } = this.$store.state.players;
       const nonTravelers = this.$store.getters["players/nonTravelers"];
-      const alive = players.filter(player => player.isDead !== true).length;
+      const alive = players.filter((player) => player.isDead !== true).length;
       return {
         ...gameJSON[nonTravelers - 5],
         traveler: players.length - nonTravelers,
@@ -102,13 +95,16 @@ export default {
         votes:
           alive +
           players.filter(
-            player => player.isDead === true && player.isVoteless !== true
-          ).length
+            (player) => player.isDead === true && player.isVoteless !== true,
+          ).length,
       };
     },
     ...mapState(["edition", "grimoire"]),
-    ...mapState("players", ["players"])
-  }
+    ...mapState("players", ["players"]),
+    review() {
+      return useReviewStore();
+    },
+  },
 };
 </script>
 
@@ -135,7 +131,10 @@ export default {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    text-shadow: 0 2px 1px black, 0 -2px 1px black, 2px 0 1px black,
+    text-shadow:
+      0 2px 1px black,
+      0 -2px 1px black,
+      2px 0 1px black,
       -2px 0 1px black;
 
     span {

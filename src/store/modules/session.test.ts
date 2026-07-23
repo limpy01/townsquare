@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pinia } from "../../pinia";
 import { useDistributionStore } from "../../stores/distribution";
+import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
 import sessionModule from "./session";
 
@@ -45,5 +46,14 @@ describe("session Vuex compatibility module", () => {
 
     expect(distribution.roles).toBe(true);
     expect(distribution.bluffs).toBe(true);
+  });
+
+  it("delegates review mode to the Pinia store", () => {
+    const review = useReviewStore(pinia);
+    review.$reset();
+
+    sessionModule.mutations.setIsReview(sessionModule.state(), true);
+
+    expect(review.isReview).toBe(true);
   });
 });

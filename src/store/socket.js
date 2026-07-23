@@ -6,6 +6,7 @@ import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useAudioStore } from "../stores/audio";
+import { useReviewStore } from "../stores/review";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
@@ -21,6 +22,7 @@ class LiveSession {
     this._gamestate = [];
     this._store = store;
     this._connection = useSessionConnectionStore(pinia);
+    this._review = useReviewStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -101,7 +103,7 @@ class LiveSession {
         }
 
         // reset review
-        if (this._store.state.session.isReview) {
+        if (this._review.isReview) {
           this._store.commit("session/setIsReview", false);
         }
 
@@ -582,7 +584,7 @@ class LiveSession {
       name: player.name,
       id: player.id,
       image: player.image,
-      stReminders: this._store.state.session.isReview ? player.stReminders : [],
+      stReminders: this._review.isReview ? player.stReminders : [],
       isDead: player.isDead,
       isVoteless: player.isVoteless,
       votes: player.votes,
@@ -620,7 +622,7 @@ class LiveSession {
         isSecretVote: session.isSecretVote,
         isUseOldOrder: session.isUseOldOrder,
         isUseOldRole: session.isUseOldRole,
-        isReview: session.isReview,
+        isReview: this._review.isReview,
         nomination: session.nomination,
         votingSpeed: session.votingSpeed,
         lockedVote: session.lockedVote,
@@ -635,7 +637,7 @@ class LiveSession {
       });
     }
 
-    if (this._store.state.session.isReview) {
+    if (this._review.isReview) {
       this.distributeGrimoire(playerId ? { playerId } : { all: true });
     }
 
@@ -965,16 +967,13 @@ class LiveSession {
     if (
       this._isSpectator ||
       property === "reminders" ||
-      (property === "stReminders" && !this._store.state.session.isReview)
+      (property === "stReminders" && !this._review.isReview)
     )
       return;
     const index = this._store.state.players.players.indexOf(player);
     const staticProperties = ["isAllowRole"];
     if (property === "role") {
-      if (
-        this._store.state.session.isReview ||
-        (value.team && value.team === "traveler")
-      ) {
+      if (this._review.isReview || (value.team && value.team === "traveler")) {
         // update local gamestate to remember this player as a traveler
         if (value.team && value.team === "traveler" && this._gamestate[index])
           this._gamestate[index].roleId = value.id;
@@ -984,7 +983,7 @@ class LiveSession {
           value: value.id,
         });
         if (
-          this._store.state.session.isReview &&
+          this._review.isReview &&
           value.team != "traveler" &&
           this._gamestate[index] &&
           this._gamestate[index].roleId
@@ -1793,7 +1792,7 @@ class LiveSession {
 
   _handleSetIsReview(isReview) {
     if (!this._isSpectator) return;
-    this._store.state.session.isReview = isReview;
+    this._review.setReview(isReview);
     if (!isReview) {
       this._store.state.players.players.forEach((player) => {
         this._store.commit("players/update", {
