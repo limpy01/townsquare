@@ -578,7 +578,7 @@
 
 <script setup lang="ts">
 // @ts-nocheck
-import { computed, nextTick, reactive, ref, toRef, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useLobbyStore } from "../stores/lobby";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
@@ -617,6 +617,7 @@ const settings = useSessionSettingsStore();
 const profile = useProfileStore();
 const outbox = useMessageOutboxStore();
 const chat = useChatStore();
+const interaction = useInteractionStore();
 const audioInputNumber = ref<HTMLInputElement | null>(null);
 const microphoneSetting = ref("free");
 const audioThresholdNumber = ref(150);
@@ -651,207 +652,10 @@ const distributingBluffs = ref(false);
 const distributingGrimoire = ref(false);
 const distributingTypes = ref(false);
 const isSendingBluff = ref(true);
-const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
-Object.defineProperties(context, {
-  grimoire: { get: () => grimoire },
-  session: { get: () => session },
-  edition: { get: () => scenario.edition },
-  selectedEditions: { get: () => scenario.selectedEditions },
-  players: { get: () => playersState.players },
-  lobby: { get: () => lobby },
-  connection: { get: () => connection },
-  audio: { get: () => audio },
-  timer: { get: () => timer },
-  review: { get: () => review },
-  legacyOptions: { get: () => legacyOptions },
-  voting: { get: () => voting },
-  settings: { get: () => settings },
-  profile: { get: () => profile },
-  outbox: { get: () => outbox },
-  chat: { get: () => chat },
-  $refs: { get: () => ({ audioInputNumber: audioInputNumber.value }) },
-});
-
-const options: any = {
-  data() {
-    return {
-      tab: "grimoire",
-      recognition: null,
-    };
-  },
-  methods: {
-    showInputModal,
-    async hostSession() {
-      if (!this.profile.playerName) await changeName();
-      if (!this.profile.playerName) return;
-
-      if (this.session.sessionId) return;
-      if (this.lobby.rooms === null) {
-        await this.showInputModal({
-          inputType: "alert",
-          inputModal: "text",
-          inputData: {
-            name: ["网络连接不稳定，请稍等！"],
-          },
-        }).catch(() => {
-          return null;
-        });
-        return;
-      }
-
-      let sessionPlaceholder = Math.round(Math.random() * 10000);
-      while (this.lobby.rooms.includes(sessionPlaceholder)) {
-        sessionPlaceholder = Math.round(Math.random() * 10000);
-      }
-      const input = await this.showInputModal({
-        inputType: "hostSession",
-        inputModal: "input",
-        inputData: {
-          name: ["请输入房间号", "请输入玩家人数"],
-          length: 2,
-          placeholder: [String(sessionPlaceholder), "12"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-
-      const sessionId = Number(input[0]).toString();
-      const numPlayers = Math.min(input[1], 20);
-      if (sessionId) {
-        this.commands.commit("session/clearVoteHistory", []);
-        this.commands.commit("session/setSpectator", false);
-        this.commands.commit("session/setSessionId", sessionId);
-        this.commands.commit("players/clear");
-        for (let i = 0; i < numPlayers; i++) {
-          addPlayer();
-        }
-        copySessionUrl();
-      }
-    },
-    async joinSession() {
-      if (this.session.sessionId) return this.leaveSession();
-      if (!this.profile.playerName) await changeName();
-      if (!this.profile.playerName) return;
-
-      if (this.lobby.rooms === null) {
-        await this.showInputModal({
-          inputType: "alert",
-          inputModal: "text",
-          inputData: {
-            name: ["网络连接不稳定，请稍等！"],
-          },
-        }).catch(() => {
-          return null;
-        });
-        return;
-      }
-      const input = await this.showInputModal({
-        inputType: "joinSession",
-        inputModal: "input",
-        inputData: {
-          name: ["输入房间号/链接"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-
-      const sessionId = Number(input[0].split("#").pop()).toString();
-      if (sessionId) {
-        this.commands.commit("session/clearVoteHistory", []);
-        this.commands.commit("session/setSpectator", true);
-        commitGameCommand("toggleGrimoire", false);
-        this.commands.commit("session/setSessionId", sessionId);
-      }
-    },
-    async leaveSession() {
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定要离开/解散该房间吗？"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-
-      if (confirm === true) {
-        // vacate seat upon leaving the room
-        this.commands.commit("session/claimSeat", -1);
-
-        this.commands.commit("session/setSpectator", false);
-        this.commands.commit("session/setSessionId", "");
-        this.connection.setIsHostAllowed(null);
-        this.connection.setIsJoinAllowed(null);
-
-        // clear seats and return to intro
-        if (this.voting.nomination) {
-          this.commands.commit("session/nomination");
-        }
-        this.commands.commit("players/clear", true);
-
-        // clear customBootlegger
-        if (this.settings.bootlegger) {
-          this.commands.commit("session/setBootlegger", "");
-        }
-
-        // reset allowed votes
-        if (this.voting.playerVotes > 1) {
-          this.commands.commit("session/setPlayerVotes", 1);
-        }
-
-        // reset secret vote
-        if (this.voting.isSecretVote) {
-          this.commands.commit("session/setSecretVote", false);
-        }
-
-        // reset review
-        if (this.review.isReview) {
-          this.commands.commit("session/setIsReview", false);
-        }
-
-        // close chat box
-        useInteractionStore().setChatOpen(false);
-
-        // exit group chat
-        this.chat.groups.forEach((group) => {
-          this.commands.commit("session/removeGroupChat", { chatId: group.id });
-        });
-
-        // clear messages
-        while (this.outbox.queue.length > 0) {
-          this.commands.commit("session/deleteMessageQueue", 0);
-        }
-
-        // reset wraith
-        this.commands.commit("session/setIsRole", {
-          role: "wraith",
-          property: "active",
-          value: false,
-        });
-        this.commands.commit("session/setIsRole", {
-          role: "wraith",
-          property: "using",
-          value: false,
-          st: true,
-        });
-      }
-    },
-  },
-};
-
-Object.assign(context, options.data.call(context));
-for (const [name, method] of Object.entries(options.methods))
-  context[name] = method.bind(context);
-
 const players = computed(() => playersState.players);
 const edition = computed(() => scenario.edition);
 const selectedEditions = computed(() => scenario.selectedEditions);
-const tab = toRef(context, "tab");
+const tab = ref("grimoire");
 const formattedTime = computed(() => {
   const minutes = Math.floor(timer.seconds / 60);
   const seconds = Math.ceil(timer.seconds % 60);
@@ -1085,6 +889,99 @@ const copySessionUrl = () => {
   const url = window.location.href.split("#")[0];
   void navigator.clipboard.writeText(`${url}#${session.sessionId}`);
 };
+const showNetworkWarning = () =>
+  showInputModal({
+    inputType: "alert",
+    inputModal: "text",
+    inputData: { name: ["网络连接不稳定，请稍等！"] },
+  }).catch(() => null);
+const hostSession = async () => {
+  if (!profile.playerName) await changeName();
+  if (!profile.playerName || session.sessionId) return;
+  if (lobby.rooms === null) {
+    await showNetworkWarning();
+    return;
+  }
+  let sessionPlaceholder = Math.round(Math.random() * 10000);
+  while (lobby.rooms.includes(sessionPlaceholder))
+    sessionPlaceholder = Math.round(Math.random() * 10000);
+  const input = await showInputModal({
+    inputType: "hostSession",
+    inputModal: "input",
+    inputData: {
+      name: ["请输入房间号", "请输入玩家人数"],
+      length: 2,
+      placeholder: [String(sessionPlaceholder), "12"],
+    },
+  }).catch(() => null);
+  if (!Array.isArray(input)) return;
+  const sessionId = Number(input[0]).toString();
+  const numPlayers = Math.min(Number(input[1]), 20);
+  if (!sessionId) return;
+  commitGameCommand("session/clearVoteHistory", []);
+  commitGameCommand("session/setSpectator", false);
+  commitGameCommand("session/setSessionId", sessionId);
+  commitGameCommand("players/clear");
+  for (let index = 0; index < numPlayers; index++) addPlayer();
+  copySessionUrl();
+};
+const leaveSession = async () => {
+  const confirmed = await showInputModal({
+    inputType: "confirm",
+    inputModal: "confirm",
+    inputData: { name: ["确定要离开/解散该房间吗？"] },
+  }).catch(() => null);
+  if (confirmed !== true) return;
+  commitGameCommand("session/claimSeat", -1);
+  commitGameCommand("session/setSpectator", false);
+  commitGameCommand("session/setSessionId", "");
+  connection.setIsHostAllowed(null);
+  connection.setIsJoinAllowed(null);
+  if (voting.nomination) commitGameCommand("session/nomination");
+  commitGameCommand("players/clear", true);
+  if (settings.bootlegger) commitGameCommand("session/setBootlegger", "");
+  if (voting.playerVotes > 1) commitGameCommand("session/setPlayerVotes", 1);
+  if (voting.isSecretVote) commitGameCommand("session/setSecretVote", false);
+  if (review.isReview) commitGameCommand("session/setIsReview", false);
+  interaction.setChatOpen(false);
+  chat.groups.forEach((group) =>
+    commitGameCommand("session/removeGroupChat", { chatId: group.id }),
+  );
+  while (outbox.queue.length > 0)
+    commitGameCommand("session/deleteMessageQueue", 0);
+  commitGameCommand("session/setIsRole", {
+    role: "wraith",
+    property: "active",
+    value: false,
+  });
+  commitGameCommand("session/setIsRole", {
+    role: "wraith",
+    property: "using",
+    value: false,
+    st: true,
+  });
+};
+const joinSession = async () => {
+  if (session.sessionId) return leaveSession();
+  if (!profile.playerName) await changeName();
+  if (!profile.playerName) return;
+  if (lobby.rooms === null) {
+    await showNetworkWarning();
+    return;
+  }
+  const input = await showInputModal({
+    inputType: "joinSession",
+    inputModal: "input",
+    inputData: { name: ["输入房间号/链接"], length: 1, placeholder: [""] },
+  }).catch(() => null);
+  if (!Array.isArray(input)) return;
+  const sessionId = Number(input[0].split("#").pop()).toString();
+  if (!sessionId) return;
+  commitGameCommand("session/clearVoteHistory", []);
+  commitGameCommand("session/setSpectator", true);
+  commitGameCommand("toggleGrimoire", false);
+  commitGameCommand("session/setSessionId", sessionId);
+};
 const startTimer = (time?: number) => {
   if (session.isSpectator) return;
   commitGameCommand("session/startTimer", time ?? timer.seconds);
@@ -1261,11 +1158,6 @@ const clearLocalStorage = async () => {
     inputData: { name: ["清理完成，请刷新网页！"] },
   }).catch(() => null);
 };
-const methodNames = Object.keys(options.methods);
-const methodBindings = Object.fromEntries(
-  methodNames.map((name) => [name, context[name]]),
-);
-const { hostSession, joinSession, leaveSession } = methodBindings;
 watch(
   () => grimoire.audioThreshold,
   (value) => {
