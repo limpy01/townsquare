@@ -43,14 +43,14 @@
       "
     >
       <button
-        v-if="!session.isSpectator && (!timing || session.timer <= 0)"
+        v-if="!session.isSpectator && (!timing || timer.seconds <= 0)"
         @click="startTimer"
         class="timerButton"
       >
         开始
       </button>
       <button
-        v-if="!session.isSpectator && timing && session.timer > 0"
+        v-if="!session.isSpectator && timing && timer.seconds > 0"
         @click="stopTimer"
         class="timerButton"
       >
@@ -584,6 +584,7 @@ import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useAudioStore } from "../stores/audio";
+import { useTimerStore } from "../stores/timer";
 
 export default {
   computed: {
@@ -604,14 +605,17 @@ export default {
     audio() {
       return useAudioStore();
     },
+    timer() {
+      return useTimerStore();
+    },
     formattedTime() {
-      const minutes = Math.floor(this.session.timer / 60);
-      const seconds = Math.ceil(this.session.timer % 60);
+      const minutes = Math.floor(this.timer.seconds / 60);
+      const seconds = Math.ceil(this.timer.seconds % 60);
       return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     },
     lessThanOneMinute() {
       return {
-        color: this.session.timer < 60 ? "red" : "white",
+        color: this.timer.seconds < 60 ? "red" : "white",
       };
     },
     keyboardIcon() {
@@ -1293,7 +1297,7 @@ export default {
     },
     startTimer(time = null) {
       if (this.session.isSpectator) return;
-      if (typeof time != "number") time = this.session.timer;
+      if (typeof time != "number") time = this.timer.seconds;
       this.$store.commit("session/startTimer", time);
       this.timing = true;
     },

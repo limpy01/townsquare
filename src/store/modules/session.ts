@@ -5,6 +5,7 @@ import type {
 } from "../legacy-vuex";
 import { pinia } from "../../pinia";
 import { useAudioStore } from "../../stores/audio";
+import { useTimerStore } from "../../stores/timer";
 
 /**
  * Handle a vote request.
@@ -71,10 +72,6 @@ const state = () => ({
   chatHistory: [],
   groupChats: [],
   bootlegger: "",
-  timer: 480,
-  startTime: null,
-  lastUpdateTime: null,
-  interval: null,
 });
 
 const getters: Record<string, LegacyGetter> = {};
@@ -431,31 +428,14 @@ const mutations: Record<string, LegacyMutation> = {
     if (property === "using" && !st) return; // using会请求说书人统一更改，说书人不会使用using属性
     state.isRole[role][property] = value;
   },
-  startTimer(state, time) {
-    if (time) state.timer = time;
-    state.startTime = Date.now();
-    state.lastUpdateTime = Date.now(); // Initialize last update time
-
-    state.interval = setInterval(() => {
-      const now = Date.now();
-      const elapsedSinceLastUpdate = now - state.lastUpdateTime;
-
-      // Calculate how many full seconds have passed
-      const secondsPassed = elapsedSinceLastUpdate / 1000;
-
-      if (secondsPassed > 0) {
-        state.timer -= secondsPassed; // Decrement by the actual seconds passed
-        state.lastUpdateTime = now; // Update the last update time
-      }
-
-      if (state.timer <= 0) {
-        state.timer = 0;
-        clearInterval(state.interval);
-      }
-    }, 1000);
+  setTimer(_state, timer) {
+    useTimerStore(pinia).setTimer(timer);
   },
-  stopTimer(state) {
-    clearInterval(state.interval);
+  startTimer(_state, time) {
+    useTimerStore(pinia).startTimer(time);
+  },
+  stopTimer() {
+    useTimerStore(pinia).stopTimer();
   },
   setTalking(state, { seatNum, isTalking }) {
     if (seatNum < 0 || seatNum >= this.state.players.players.length) return;

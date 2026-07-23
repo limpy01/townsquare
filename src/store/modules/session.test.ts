@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { pinia } from "../../pinia";
+import { useTimerStore } from "../../stores/timer";
 import sessionModule from "./session";
 
 describe("session Vuex compatibility module", () => {
@@ -20,5 +22,14 @@ describe("session Vuex compatibility module", () => {
     state.nomination = [0, 1];
     sessionModule.mutations.vote(state, [0, true]);
     expect(state.votes).toEqual([true]);
+  });
+
+  it("delegates timer commands to the Pinia timer store", () => {
+    const timer = useTimerStore(pinia);
+    timer.$reset();
+
+    sessionModule.mutations.setTimer(sessionModule.state(), 90);
+
+    expect(timer.seconds).toBe(90);
   });
 });
