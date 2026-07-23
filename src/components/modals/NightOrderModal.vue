@@ -1,11 +1,11 @@
 <template>
   <Modal
     class="night-reference"
-    @close="toggleModal('nightOrder')"
+    @close="modals.toggle('nightOrder')"
     v-if="modals.nightOrder && roles.size"
   >
     <font-awesome-icon
-      @click="toggleModal('reference')"
+      @click="modals.toggle('reference')"
       icon="address-card"
       class="toggle"
       title="Show Character Reference"
@@ -23,10 +23,7 @@
       <span>显示空座位提示</span> &nbsp;
       <em>
         <font-awesome-icon
-          :icon="[
-            'fas',
-            isShowVacant ? 'check-square' : 'square'
-          ]"
+          :icon="['fas', isShowVacant ? 'check-square' : 'square']"
         />
       </em>
     </div>
@@ -48,7 +45,12 @@
                 :class="{ dead: player.isDead }"
                 :key="index"
                 >{{
-                    (player.index+1) + "." + (player.name ? player.name : "空座位") + (role.players.length > index + 1 ? "," : "") + (player.another ? player.another : "")
+                  Number(player.index) +
+                  1 +
+                  "." +
+                  (player.name ? player.name : "空座位") +
+                  (role.players.length > Number(index) + 1 ? "," : "") +
+                  (player.another ? player.another : "")
                 }}</small
               >
             </span>
@@ -60,10 +62,12 @@
               backgroundImage: `url(${
                 role.image && grimoire.isImageOptIn
                   ? role.image
-                  : require('../../assets/icons/' +
-                      (role.imageAlt || role.id.replace(/old1$/, '')) +
-                      '.png')
-              })`
+                  : require(
+                      '../../assets/icons/' +
+                        (role.imageAlt || role.id.replace(/old1$/, '')) +
+                        '.png',
+                    )
+              })`,
             }"
           ></span>
           <span class="reminder" v-if="role.firstNightReminder">
@@ -85,10 +89,12 @@
               backgroundImage: `url(${
                 role.image && grimoire.isImageOptIn
                   ? role.image
-                  : require('../../assets/icons/' +
-                      (role.imageAlt || role.id.replace(/old1$/, '')) +
-                      '.png')
-              })`
+                  : require(
+                      '../../assets/icons/' +
+                        (role.imageAlt || role.id.replace(/old1$/, '')) +
+                        '.png',
+                    )
+              })`,
             }"
           ></span>
           <span class="name">
@@ -101,7 +107,12 @@
                 :class="{ dead: player.isDead }"
                 :key="index"
                 >{{
-                  (player.index+1) + "." + (player.name ? player.name : "空座位") + (role.players.length > index + 1 ? "," : "") + (player.another ? player.another : "")
+                  Number(player.index) +
+                  1 +
+                  "." +
+                  (player.name ? player.name : "空座位") +
+                  (role.players.length > Number(index) + 1 ? "," : "") +
+                  (player.another ? player.another : "")
                 }}</small
               >
             </span>
@@ -115,138 +126,169 @@
   </Modal>
 </template>
 
-<script>
-import Modal from "./Modal";
-import { mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import Modal from "./Modal.vue";
+import { useGrimoireStore } from "../../stores/grimoire";
+import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
+import { useScenarioStore } from "../../stores/scenario";
+import { useSessionIdentityStore } from "../../stores/session-identity";
 
-export default {
-  components: {
-    Modal
-  },
-  computed: {
-    rolesFirstNight: function() {
-      // 打开行动顺序时先给所有座位加上座位号，同时检索是其他类型的token
-      this.players.forEach(player => {
-        player.index = this.players.indexOf(player);
-        let another = "";
-        player.reminders.forEach(reminder => {
-          switch (reminder.name) {
-            case "是学徒":
-              another = another + "（学徒）";
-              break;
-            case "是叫花子":
-              another = another + "（叫花子）";
-              break;
-            case "是酒鬼":
-              another = another + "（酒鬼）";
-              break;
-            case "是疯子":
-              another = another + "（疯子）"
-              break;
-            case "是哲学家":
-              another = another + "（哲学家）"
-              break;
-            case "是炼金术士":
-              another = another + "（炼金术士）"
-              break;
-            case "是炼金术士（旧）":
-              another = another + "（炼金术士）"
-              break;
-            case "是正牙医生":
-              another = another + "（正牙医生）"
-              break;
-            case "是悟道者":
-              another = another + "（悟道者）"
-              break;
-          }
-        });
-        player.another = another;
-      });
-      const rolesFirstNight = [];
-      // add minion / demon infos to night order sheet
-      if (this.players.length > 6) {
-        rolesFirstNight.push(
-          {
-            id: "evil",
-            alias: "minioninfo",
-            name: "爪牙信息",
-            firstNight: this.grimoire.isForwardEvilInfo ? 0 : 15,
-            team: "minion",
-            players: this.players.filter(p => p.role.team === "minion"),
-            firstNightReminder:
-              "如果爪牙多于一位，让他们互相看清彼此。" +
-              "展示这是恶魔卡片，指向恶魔。（夜间顺序15）"
-          },
-          {
-            id: "evil",
-            alias: "demoninfo",
-            name: "恶魔信息与伪装身份",
-            firstNight: this.grimoire.isForwardEvilInfo ? 0 : 21,
-            team: "demon",
-            players: this.players.filter(p => p.role.team === "demon"),
-            firstNightReminder:
-              "展示这些是你的爪牙卡片，并指向每个爪牙。" +
-              "展示这些身份不在游戏中卡片，并展示3个不在场的善良身份。（夜间顺序21）"
-          }
-        );
+const modals = useModalStore();
+const grimoire = useGrimoireStore();
+const playerState = usePlayersStore();
+const scenario = useScenarioStore();
+const session = useSessionIdentityStore();
+const players = computed(() => playerState.players);
+const fabled = computed(() => playerState.fabled);
+const roles = scenario.roles as Map<string, any>;
+const edition = computed(() => scenario.edition ?? ({} as any));
+const isShowVacant = ref(false);
+
+const setPlayerAnnotations = () => {
+  // 打开行动顺序时先给所有座位加上座位号，同时检索是其他类型的token
+  players.value.forEach((player, index) => {
+    player.index = index;
+    let another = "";
+    player.reminders.forEach((reminder: any) => {
+      switch (reminder.name) {
+        case "是学徒":
+          another = another + "（学徒）";
+          break;
+        case "是叫花子":
+          another = another + "（叫花子）";
+          break;
+        case "是酒鬼":
+          another = another + "（酒鬼）";
+          break;
+        case "是疯子":
+          another = another + "（疯子）";
+          break;
+        case "是哲学家":
+          another = another + "（哲学家）";
+          break;
+        case "是炼金术士":
+          another = another + "（炼金术士）";
+          break;
+        case "是炼金术士（旧）":
+          another = another + "（炼金术士）";
+          break;
+        case "是正牙医生":
+          another = another + "（正牙医生）";
+          break;
+        case "是悟道者":
+          another = another + "（悟道者）";
+          break;
       }
-      this.roles.forEach(role => {
-        const players = this.players.filter(p => p.role.id === role.id);
-        if (role.firstNight && (role.team !== "traveler" || players.length)) {
-          if(players.length > 0 && !players[0].id) players[0].name = "";
-          rolesFirstNight.push(Object.assign({ players }, role));
-        }
-      });
-      this.fabled
-        .filter(({ firstNight }) => firstNight)
-        .forEach(fabled => {
-          rolesFirstNight.push(Object.assign({ players: [] }, fabled));
-        });
-      const roles = [...this.roles.values()];
-      const roleIds = [...roles.filter(role => role.firstNight > 0).map(role => role.id), ...this.fabled.filter(role => role.firstNight > 0).map(role => role.id), 'dusk', 'dawn', 'minioninfo', 'demoninfo'];
-      const customOrder = this.firstNight.every(role => roleIds.includes(role)) && roleIds.every(role => this.firstNight.includes(role));
-      rolesFirstNight.sort((a, b) => {
-        return customOrder ? this.firstNight.indexOf(a.alias || a.id) -  this.firstNight.indexOf(b.alias || b.id) : a.firstNight - b.firstNight;
-      });
-      return rolesFirstNight;
-    },
-    rolesOtherNight: function() {
-      const rolesOtherNight = [];
-      this.roles.forEach(role => {
-        const players = this.players.filter(p => p.role.id === role.id);
-        if (role.otherNight && (role.team !== "traveler" || players.length)) {
-          if(players.length > 0 && !players[0].id) players[0].name = "";
-          rolesOtherNight.push(Object.assign({ players }, role));
-        }
-      });
-      this.fabled
-        .filter(({ otherNight }) => otherNight)
-        .forEach(fabled => {
-          rolesOtherNight.push(Object.assign({ players: [] }, fabled));
-        });
-      const roles = [...this.roles.values()];
-      const roleIds = [...roles.filter(role => role.otherNight > 0).map(role => role.id), ...this.fabled.filter(role => role.otherNight > 0).map(role => role.id), 'dusk', 'dawn'];
-      const customOrder = this.otherNight.every(role => roleIds.includes(role)) && roleIds.every(role => this.otherNight.includes(role));
-      rolesOtherNight.sort((a, b) => {
-        return customOrder ? this.otherNight.indexOf(a.id) -  this.otherNight.indexOf(b.id) : a.otherNight - b.otherNight;
-      });
-      return rolesOtherNight;
-    },
-    ...mapState(["roles", "session", "modals", "edition", "grimoire", "firstNight", "otherNight"]),
-    ...mapState("players", ["players", "fabled"])
-  },
-  data() {
-    return {
-      isShowVacant: false
-    };
-  },
-  methods: {
-    toggleVacantSeats() {
-      this.isShowVacant = !this.isShowVacant;
-    },
-    ...mapMutations(["toggleModal"])
-  }
+    });
+    player.another = another;
+  });
 };
+
+const rolesFirstNight = computed(() => {
+  setPlayerAnnotations();
+  const rolesFirstNight: any[] = [];
+  // add minion / demon infos to night order sheet
+  if (players.value.length > 6) {
+    rolesFirstNight.push(
+      {
+        id: "evil",
+        alias: "minioninfo",
+        name: "爪牙信息",
+        firstNight: grimoire.isForwardEvilInfo ? 0 : 15,
+        team: "minion",
+        players: players.value.filter((p) => p.role.team === "minion"),
+        firstNightReminder:
+          "如果爪牙多于一位，让他们互相看清彼此。" +
+          "展示这是恶魔卡片，指向恶魔。（夜间顺序15）",
+      },
+      {
+        id: "evil",
+        alias: "demoninfo",
+        name: "恶魔信息与伪装身份",
+        firstNight: grimoire.isForwardEvilInfo ? 0 : 21,
+        team: "demon",
+        players: players.value.filter((p) => p.role.team === "demon"),
+        firstNightReminder:
+          "展示这些是你的爪牙卡片，并指向每个爪牙。" +
+          "展示这些身份不在游戏中卡片，并展示3个不在场的善良身份。（夜间顺序21）",
+      },
+    );
+  }
+  roles.forEach((role) => {
+    const rolePlayers = players.value.filter((p) => p.role.id === role.id);
+    if (role.firstNight && (role.team !== "traveler" || rolePlayers.length)) {
+      if (rolePlayers.length > 0 && !rolePlayers[0].id)
+        rolePlayers[0].name = "";
+      rolesFirstNight.push(Object.assign({ players: rolePlayers }, role));
+    }
+  });
+  fabled.value
+    .filter(({ firstNight }) => firstNight)
+    .forEach((fabled) => {
+      rolesFirstNight.push(Object.assign({ players: [] }, fabled));
+    });
+  const rolesList = [...roles.values()];
+  const roleIds = [
+    ...rolesList.filter((role) => role.firstNight > 0).map((role) => role.id),
+    ...fabled.value
+      .filter((role) => role.firstNight > 0)
+      .map((role) => role.id),
+    "dusk",
+    "dawn",
+    "minioninfo",
+    "demoninfo",
+  ];
+  const customOrder =
+    scenario.firstNight.every((role: any) => roleIds.includes(role)) &&
+    roleIds.every((role) => scenario.firstNight.includes(role));
+  rolesFirstNight.sort((a, b) => {
+    return customOrder
+      ? (scenario.firstNight as any[]).indexOf(a.alias || a.id) -
+          (scenario.firstNight as any[]).indexOf(b.alias || b.id)
+      : a.firstNight - b.firstNight;
+  });
+  return rolesFirstNight;
+});
+const rolesOtherNight = computed(() => {
+  const rolesOtherNight: any[] = [];
+  roles.forEach((role) => {
+    const rolePlayers = players.value.filter((p) => p.role.id === role.id);
+    if (role.otherNight && (role.team !== "traveler" || rolePlayers.length)) {
+      if (rolePlayers.length > 0 && !rolePlayers[0].id)
+        rolePlayers[0].name = "";
+      rolesOtherNight.push(Object.assign({ players: rolePlayers }, role));
+    }
+  });
+  fabled.value
+    .filter(({ otherNight }) => otherNight)
+    .forEach((fabled) => {
+      rolesOtherNight.push(Object.assign({ players: [] }, fabled));
+    });
+  const rolesList = [...roles.values()];
+  const roleIds = [
+    ...rolesList.filter((role) => role.otherNight > 0).map((role) => role.id),
+    ...fabled.value
+      .filter((role) => role.otherNight > 0)
+      .map((role) => role.id),
+    "dusk",
+    "dawn",
+  ];
+  const customOrder =
+    scenario.otherNight.every((role: any) => roleIds.includes(role)) &&
+    roleIds.every((role) => scenario.otherNight.includes(role));
+  rolesOtherNight.sort((a, b) => {
+    return customOrder
+      ? (scenario.otherNight as any[]).indexOf(a.id) -
+          (scenario.otherNight as any[]).indexOf(b.id)
+      : a.otherNight - b.otherNight;
+  });
+  return rolesOtherNight;
+});
+function toggleVacantSeats() {
+  isShowVacant.value = !isShowVacant.value;
+}
 </script>
 
 <style lang="scss" scoped>
@@ -447,15 +489,15 @@ ul {
 }
 
 .check-box {
-  display: flex; 
-  justify-content: center; 
+  display: flex;
+  justify-content: center;
   align-items: center;
-  width: fit-content; 
+  width: fit-content;
 
   margin-left: auto;
   margin-right: auto;
-  
-  cursor: pointer; 
+
+  cursor: pointer;
   &:hover {
     color: red;
   }
