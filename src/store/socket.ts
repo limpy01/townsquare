@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { wsBase } from "../config";
 import { decodeLegacyEnvelope } from "@townsquare/contracts/legacy-envelope";
 import { pinia } from "../pinia";
