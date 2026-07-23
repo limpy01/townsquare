@@ -163,7 +163,7 @@
               背景图
               <em><font-awesome-icon icon="image" /></em>
             </li>
-            <li @click="$emit('trigger', ['uploadAvatar'])">
+            <li @click="emit('trigger', ['uploadAvatar'])">
               上传头像
               <em><font-awesome-icon icon="user" /></em>
             </li>
@@ -576,9 +576,9 @@
   </div>
 </template>
 
-<script>
-import { mapMutations, mapState } from "vuex";
-import { nextTick } from "vue";
+<script setup lang="ts">
+// @ts-nocheck
+import { computed, nextTick, reactive, ref, toRef, watch } from "vue";
 import { useLobbyStore } from "../stores/lobby";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
@@ -591,47 +591,53 @@ import { useVotingStore } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
 import { useProfileStore } from "../stores/profile";
 import { useMessageOutboxStore } from "../stores/message-outbox";
+import { useChatStore } from "../stores/chat";
+import { usePlayersStore } from "../stores/players";
+import { useGrimoireStore } from "../stores/grimoire";
+import { useScenarioStore } from "../stores/scenario";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import store from "../store";
 
-export default {
+const emit = defineEmits(["trigger"]);
+const grimoire = useGrimoireStore();
+const scenario = useScenarioStore();
+const session = useSessionIdentityStore();
+const playersState = usePlayersStore();
+const lobby = useLobbyStore();
+const connection = useSessionConnectionStore();
+const audio = useAudioStore();
+const timer = useTimerStore();
+const review = useReviewStore();
+const legacyOptions = useLegacyOptionsStore();
+const voting = useVotingStore();
+const settings = useSessionSettingsStore();
+const profile = useProfileStore();
+const outbox = useMessageOutboxStore();
+const chat = useChatStore();
+const audioInputNumber = ref<HTMLInputElement | null>(null);
+const context: any = reactive({ $store: store, $nextTick: nextTick });
+Object.defineProperties(context, {
+  grimoire: { get: () => grimoire },
+  session: { get: () => session },
+  edition: { get: () => scenario.edition },
+  selectedEditions: { get: () => scenario.selectedEditions },
+  players: { get: () => playersState.players },
+  lobby: { get: () => lobby },
+  connection: { get: () => connection },
+  audio: { get: () => audio },
+  timer: { get: () => timer },
+  review: { get: () => review },
+  legacyOptions: { get: () => legacyOptions },
+  voting: { get: () => voting },
+  settings: { get: () => settings },
+  profile: { get: () => profile },
+  outbox: { get: () => outbox },
+  chat: { get: () => chat },
+  $refs: { get: () => ({ audioInputNumber: audioInputNumber.value }) },
+});
+
+const options: any = {
   computed: {
-    ...mapState([
-      "grimoire",
-      "session",
-      "edition",
-      "channels",
-      "selectedEditions",
-    ]),
-    ...mapState("players", ["players"]),
-    lobby() {
-      return useLobbyStore();
-    },
-    connection() {
-      return useSessionConnectionStore();
-    },
-    audio() {
-      return useAudioStore();
-    },
-    timer() {
-      return useTimerStore();
-    },
-    review() {
-      return useReviewStore();
-    },
-    legacyOptions() {
-      return useLegacyOptionsStore();
-    },
-    voting() {
-      return useVotingStore();
-    },
-    settings() {
-      return useSessionSettingsStore();
-    },
-    profile() {
-      return useProfileStore();
-    },
-    outbox() {
-      return useMessageOutboxStore();
-    },
     formattedTime() {
       const minutes = Math.floor(this.timer.seconds / 60);
       const seconds = Math.ceil(this.timer.seconds % 60);
@@ -1478,19 +1484,133 @@ export default {
       });
       return;
     },
-    ...mapMutations([
-      "toggleGrimoire",
-      "toggleMenu",
-      "toggleImageOptIn",
-      "toggleForwardEvilInfo",
-      "toggleMuted",
-      "toggleNightOrder",
-      "toggleStatic",
-      "setZoom",
-      "toggleModal",
-    ]),
+    toggleGrimoire() {
+      this.$store.commit("toggleGrimoire");
+    },
+    toggleMenu() {
+      this.$store.commit("toggleMenu");
+    },
+    toggleImageOptIn() {
+      this.$store.commit("toggleImageOptIn");
+    },
+    toggleForwardEvilInfo() {
+      this.$store.commit("toggleForwardEvilInfo");
+    },
+    toggleMuted() {
+      this.$store.commit("toggleMuted");
+    },
+    toggleNightOrder() {
+      this.$store.commit("toggleNightOrder");
+    },
+    toggleStatic() {
+      this.$store.commit("toggleStatic");
+    },
+    setZoom(value) {
+      this.$store.commit("setZoom", value);
+    },
+    toggleModal(name) {
+      this.$store.commit("toggleModal", name);
+    },
   },
 };
+
+for (const [name, getter] of Object.entries(options.computed)) {
+  Object.defineProperty(context, name, {
+    enumerable: true,
+    get: () => getter.call(context),
+  });
+}
+Object.assign(context, options.data.call(context));
+for (const [name, method] of Object.entries(options.methods))
+  context[name] = method.bind(context);
+
+const players = computed(() => playersState.players);
+const edition = computed(() => scenario.edition);
+const selectedEditions = computed(() => scenario.selectedEditions);
+const formattedTime = computed(() => context.formattedTime);
+const lessThanOneMinute = computed(() => context.lessThanOneMinute);
+const keyboardIcon = computed(() => context.keyboardIcon);
+const isHandHeld = computed(() => context.isHandHeld);
+const tab = toRef(context, "tab");
+const timing = toRef(context, "timing");
+const distributing = toRef(context, "distributing");
+const distributingBluffs = toRef(context, "distributingBluffs");
+const distributingGrimoire = toRef(context, "distributingGrimoire");
+const distributingTypes = toRef(context, "distributingTypes");
+const isSendingBluff = toRef(context, "isSendingBluff");
+const selectingEditions = toRef(context, "selectingEditions");
+const selectingOldOrder = toRef(context, "selectingOldOrder");
+const selectingOldRole = toRef(context, "selectingOldRole");
+const pendingEditions = toRef(context, "pendingEditions");
+const pendingOldOrder = toRef(context, "pendingOldOrder");
+const pendingOldRole = toRef(context, "pendingOldRole");
+const microphoneSetting = toRef(context, "microphoneSetting");
+const audioThresholdNumber = toRef(context, "audioThresholdNumber");
+const audioThresholdSlider = toRef(context, "audioThresholdSlider");
+const isEditingThreshold = toRef(context, "isEditingThreshold");
+const methodNames = Object.keys(options.methods);
+const methodBindings = Object.fromEntries(
+  methodNames.map((name) => [name, context[name]]),
+);
+const {
+  setBackground,
+  changeName,
+  hostSession,
+  copySessionUrl,
+  distributeAsk,
+  distributeRoles,
+  distributeTypeAsk,
+  distributeTypes,
+  distributeBluffsAsk,
+  distributeBluffs,
+  distributeGrimoireAsk,
+  distributeGrimoire,
+  selectEditionsAsk,
+  selectEditions,
+  imageOptIn,
+  joinSession,
+  leaveSession,
+  addPlayer,
+  randomizeSeatings,
+  clearPlayers,
+  clearRoles,
+  customiseBootlegger,
+  toggleNight,
+  toggleIsReview,
+  useOldOrderAsk,
+  selectOldOrder,
+  useOldRoleAsk,
+  selectOldRole,
+  setTimer,
+  startTimer,
+  stopTimer,
+  initAudio,
+  runAudioDetection,
+  startListening,
+  stopListening,
+  startEditingThreshold,
+  stopEditingThreshold,
+  syncAudioThresholdSlider,
+  syncAudioThresholdNumber,
+  clearLocalStorage,
+  toggleGrimoire,
+  toggleMenu,
+  toggleImageOptIn,
+  toggleForwardEvilInfo,
+  toggleMuted,
+  toggleNightOrder,
+  toggleStatic,
+  setZoom,
+  toggleModal,
+} = methodBindings;
+watch(
+  () => grimoire.audioThreshold,
+  (value) =>
+    options.watch["grimoire.audioThreshold"].handler.call(context, value),
+  { immediate: true },
+);
+
+defineExpose({ hostSession, joinSession, startListening });
 </script>
 
 <style scoped lang="scss">
