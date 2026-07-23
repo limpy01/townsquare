@@ -17,6 +17,11 @@
       "types": "./dist/custom-script.d.ts",
       "require": "./dist/custom-script.js",
       "default": "./dist/custom-script.js"
+    },
+    "./game-state": {
+      "types": "./dist/game-state.d.ts",
+      "require": "./dist/game-state.js",
+      "default": "./dist/game-state.js"
     }
   },
   "files": [

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export * from "./legacy-envelope.js";
 export * from "./custom-script.js";
+export * from "./game-state.js";
 
 export const playerIdSchema = z
   .string()

@@ -27,6 +27,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { parseGameState } from "@townsquare/contracts/game-state";
 import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
 import { emitLegacyMutation } from "../../store/legacy-effects";
@@ -100,6 +101,10 @@ function selectAll(event: Event) {
   (event.target as HTMLTextAreaElement).select();
 }
 
+function parseInput(): any {
+  return parseGameState(JSON.parse(input.value || gamestate.value));
+}
+
 function copy() {
   navigator.clipboard.writeText(input.value || gamestate.value);
 }
@@ -116,7 +121,7 @@ async function showLoadError(error: unknown) {
 
 async function loadGrimoire() {
   try {
-    const data: any = JSON.parse(input.value || gamestate.value);
+    const data = parseInput();
     const { bluffs, edition, roles, fabled, players } = data;
     if (roles && !session.isSpectator) {
       setCustomRoles(roles);
@@ -199,7 +204,7 @@ async function loadState() {
   if (prompt === null || !prompt) return;
 
   try {
-    const data: any = JSON.parse(input.value || gamestate.value);
+    const data = parseInput();
     const { bluffs, edition, roles, fabled, players } = data;
     if (roles) setCustomRoles(roles);
     if (edition) setEdition(edition);

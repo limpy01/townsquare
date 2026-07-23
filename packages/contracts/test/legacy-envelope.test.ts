@@ -6,6 +6,7 @@ import {
   encodeLegacyEnvelope,
   parseAvatarUpload,
   parseCustomScript,
+  parseGameState,
 } from "../src/index.js";
 
 async function fixture(name: string): Promise<unknown> {
@@ -89,5 +90,25 @@ describe("HTTP boundary input", () => {
     { playerId: "player-a", uploadContent: "" },
   ])("rejects malformed avatar upload input %#", (input) => {
     expect(() => parseAvatarUpload(input)).toThrow();
+  });
+});
+
+describe("game-state import input", () => {
+  it("provides compatible defaults for optional historical fields", () => {
+    expect(parseGameState({})).toMatchObject({
+      bluffs: [],
+      roles: "",
+      fabled: [],
+      players: [],
+    });
+  });
+
+  it.each([
+    { bluffs: {} },
+    { fabled: {} },
+    { players: {} },
+    { players: [{ role: 1 }] },
+  ])("rejects invalid game-state containers %#", (input) => {
+    expect(() => parseGameState(input)).toThrow();
   });
 });

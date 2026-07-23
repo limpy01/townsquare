@@ -14,6 +14,9 @@ export default defineConfig({
       "@townsquare/contracts/custom-script": fileURLToPath(
         new URL("./packages/contracts/src/custom-script.ts", import.meta.url),
       ),
+      "@townsquare/contracts/game-state": fileURLToPath(
+        new URL("./packages/contracts/src/game-state.ts", import.meta.url),
+      ),
     },
   },
   build: {
