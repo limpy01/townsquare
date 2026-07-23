@@ -599,7 +599,9 @@ import { useSessionIdentityStore } from "../stores/session-identity";
 import { commitGameCommand, gameCommands } from "../store/legacy-commands";
 import { clearTownsquareStorage, readStoredArray } from "../store/storage";
 
-const emit = defineEmits(["trigger"]);
+const emit = defineEmits<{
+  trigger: [command: ["uploadAvatar"]];
+}>();
 const grimoire = useGrimoireStore();
 const scenario = useScenarioStore();
 const session = useSessionIdentityStore();

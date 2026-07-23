@@ -95,8 +95,8 @@ const profile = useProfileStore();
 const interaction = useInteractionStore();
 const audio = useAudioStore();
 const appMeta = useAppMetaStore();
-const menu = ref<any>(null);
-const imageCropper = ref<any>(null);
+const menu = ref<InstanceType<typeof Menu> | null>(null);
+const imageCropper = ref<InstanceType<typeof ImageCropper> | null>(null);
 
 async function initialize() {
   const pathname = window.location.pathname;
@@ -264,11 +264,20 @@ function keydown({ key, ctrlKey, metaKey }: KeyboardEvent) {
   }
 }
 
-function handleTrigger([method]: string[]) {
-  if (!method) return;
-  if (typeof menu.value?.[method] === "function") menu.value[method]();
-  if (typeof imageCropper.value?.[method] === "function")
-    imageCropper.value[method]();
+type AppTrigger = "hostSession" | "joinSession" | "uploadAvatar";
+
+function handleTrigger([command]: [AppTrigger]) {
+  switch (command) {
+    case "hostSession":
+      void menu.value?.hostSession();
+      break;
+    case "joinSession":
+      void menu.value?.joinSession();
+      break;
+    case "uploadAvatar":
+      void imageCropper.value?.uploadAvatar();
+      break;
+  }
 }
 
 onMounted(initialize);

@@ -42,7 +42,9 @@
 <script setup lang="ts">
 import { useGrimoireStore } from "../stores/grimoire";
 
-const emit = defineEmits<{ trigger: [command: string[]] }>();
+const emit = defineEmits<{
+  trigger: [command: ["hostSession" | "joinSession"]];
+}>();
 const grimoire = useGrimoireStore();
 
 function hostSession() {
