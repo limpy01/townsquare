@@ -3,6 +3,7 @@ import persistence from "./persistence";
 import socket from "./socket";
 import { pinia } from "../pinia";
 import { useModalStore } from "../stores/modals";
+import { useLegacyOptionsStore } from "../stores/legacy-options";
 import players from "./modules/players";
 import session from "./modules/session";
 import editionJSON from "../editions.json";
@@ -227,9 +228,10 @@ const rootStoreOptions: any = {
      * @param roles Array of role IDs or full role definitions
      */
     setCustomRoles(state, roles) {
-      const oldRoles = Object.keys(state.session.isUseOldRole).filter(
-        (key) => state.session.isUseOldRole[key] === true,
-      );
+      const { useOldRole } = useLegacyOptionsStore(pinia);
+      const oldRoles = (
+        Object.keys(useOldRole) as Array<keyof typeof useOldRole>
+      ).filter((key) => useOldRole[key] === true);
       roles = roles.map((role: any) => {
         return oldRoles.includes(role.id)
           ? { ...role, id: role.id + "old1" }
@@ -360,14 +362,14 @@ const rootStoreOptions: any = {
       }
       // 为官方角色增加原顺序选项
       if (state.roles.get("professor")) {
-        state.roles.get("professor").otherNight = state.session.isUseOldOrder
-          .professor
+        state.roles.get("professor").otherNight = useLegacyOptionsStore(pinia)
+          .useOldOrder.professor
           ? 79
           : 96;
       }
       if (state.roles.get("pithag")) {
-        state.roles.get("pithag").otherNight = state.session.isUseOldOrder
-          .pithag
+        state.roles.get("pithag").otherNight = useLegacyOptionsStore(pinia)
+          .useOldOrder.pithag
           ? 37
           : 16;
       }

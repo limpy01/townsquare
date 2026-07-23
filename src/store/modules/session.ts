@@ -6,6 +6,7 @@ import type {
 import { pinia } from "../../pinia";
 import { useAudioStore } from "../../stores/audio";
 import { useDistributionStore } from "../../stores/distribution";
+import { useLegacyOptionsStore } from "../../stores/legacy-options";
 import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
 
@@ -53,17 +54,6 @@ const state = () => ({
   voteSelected: [],
   markedPlayer: -1,
   isVoteHistoryAllowed: true,
-  isUseOldOrder: {
-    pithag: false,
-    professor: false,
-  },
-  isUseOldRole: {
-    balloonist: false,
-    acrobat: false,
-    lilmonsta: false,
-    alchemist: false,
-    lycanthrope: false,
-  },
   messageQueue: [],
   messageUniqueQueue: [],
   chatHistory: [],
@@ -98,8 +88,12 @@ const mutations: Record<string, LegacyMutation> = {
   setVoteHistoryAllowed: set("isVoteHistoryAllowed"),
   setSecretVote: set("isSecretVote"),
   setBootlegger: set("bootlegger"),
-  setUseOldOrder: set("isUseOldOrder"),
-  setUseOldRole: set("isUseOldRole"),
+  setUseOldOrder(_state, useOldOrder) {
+    useLegacyOptionsStore(pinia).setUseOldOrder(useOldOrder);
+  },
+  setUseOldRole(_state, useOldRole) {
+    useLegacyOptionsStore(pinia).setUseOldRole(useOldRole);
+  },
   setIsReview(_state, isReview) {
     useReviewStore(pinia).setReview(isReview);
   },

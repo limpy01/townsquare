@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pinia } from "../../pinia";
 import { useDistributionStore } from "../../stores/distribution";
+import { useLegacyOptionsStore } from "../../stores/legacy-options";
 import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
 import sessionModule from "./session";
@@ -55,5 +56,17 @@ describe("session Vuex compatibility module", () => {
     sessionModule.mutations.setIsReview(sessionModule.state(), true);
 
     expect(review.isReview).toBe(true);
+  });
+
+  it("delegates old role options to the Pinia store", () => {
+    const options = useLegacyOptionsStore(pinia);
+    options.$reset();
+
+    sessionModule.mutations.setUseOldOrder(sessionModule.state(), {
+      pithag: true,
+      professor: false,
+    });
+
+    expect(options.useOldOrder.pithag).toBe(true);
   });
 });

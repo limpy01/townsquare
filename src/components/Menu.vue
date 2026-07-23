@@ -586,6 +586,7 @@ import { useSessionConnectionStore } from "../stores/session-connection";
 import { useAudioStore } from "../stores/audio";
 import { useTimerStore } from "../stores/timer";
 import { useReviewStore } from "../stores/review";
+import { useLegacyOptionsStore } from "../stores/legacy-options";
 
 export default {
   computed: {
@@ -611,6 +612,9 @@ export default {
     },
     review() {
       return useReviewStore();
+    },
+    legacyOptions() {
+      return useLegacyOptionsStore();
     },
     formattedTime() {
       const minutes = Math.floor(this.timer.seconds / 60);
@@ -1247,7 +1251,7 @@ export default {
       this.selectingOldRole = false;
       this.selectingOldOrder = !this.selectingOldOrder;
       if (this.selectingOldOrder)
-        this.pendingOldOrder = { ...this.session.isUseOldOrder };
+        this.pendingOldOrder = { ...this.legacyOptions.useOldOrder };
     },
     selectOldOrder(update = false) {
       this.$nextTick(() => {
@@ -1262,7 +1266,7 @@ export default {
       this.selectingOldOrder = false;
       this.selectingOldRole = !this.selectingOldRole;
       if (this.selectingOldRole)
-        this.pendingOldRole = { ...this.session.isUseOldRole };
+        this.pendingOldRole = { ...this.legacyOptions.useOldRole };
     },
     selectOldRole(update = false) {
       this.$nextTick(() => {

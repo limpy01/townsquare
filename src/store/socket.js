@@ -7,6 +7,7 @@ import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useAudioStore } from "../stores/audio";
 import { useReviewStore } from "../stores/review";
+import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
@@ -23,6 +24,7 @@ class LiveSession {
     this._store = store;
     this._connection = useSessionConnectionStore(pinia);
     this._review = useReviewStore(pinia);
+    this._legacyOptions = useLegacyOptionsStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -620,8 +622,8 @@ class LiveSession {
         isNight: grimoire.isNight,
         isVoteHistoryAllowed: session.isVoteHistoryAllowed,
         isSecretVote: session.isSecretVote,
-        isUseOldOrder: session.isUseOldOrder,
-        isUseOldRole: session.isUseOldRole,
+        isUseOldOrder: this._legacyOptions.useOldOrder,
+        isUseOldRole: this._legacyOptions.useOldRole,
         isReview: this._review.isReview,
         nomination: session.nomination,
         votingSpeed: session.votingSpeed,
@@ -1772,7 +1774,7 @@ class LiveSession {
 
   _handleSetUseOldOrder(isUseOldOrder) {
     if (!this._isSpectator) return;
-    this._store.state.session.isUseOldOrder = isUseOldOrder;
+    this._legacyOptions.setUseOldOrder(isUseOldOrder);
   }
 
   setUseOldRole(isUseOldRole) {
@@ -1782,7 +1784,7 @@ class LiveSession {
 
   _handleSetUseOldRole(isUseOldRole) {
     if (!this._isSpectator) return;
-    this._store.state.session.isUseOldRole = isUseOldRole;
+    this._legacyOptions.setUseOldRole(isUseOldRole);
   }
 
   setIsReview(isReview) {
