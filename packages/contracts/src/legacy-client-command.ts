@@ -46,6 +46,17 @@ export const legacyClientCommandSchema = z.enum([
 
 export type LegacyClientCommand = z.infer<typeof legacyClientCommandSchema>;
 
+export const legacySetTalkingPayloadSchema = z
+  .object({
+    seatNum: z.number().int().nonnegative(),
+    isTalking: z.boolean(),
+  })
+  .passthrough();
+
+export type LegacySetTalkingPayload = z.infer<
+  typeof legacySetTalkingPayloadSchema
+>;
+
 export function isLegacyClientCommand(
   command: string,
 ): command is LegacyClientCommand {

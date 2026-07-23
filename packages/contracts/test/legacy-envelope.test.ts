@@ -6,6 +6,7 @@ import {
   encodeLegacyEnvelope,
   isLegacyClientCommand,
   legacyClientCommandSchema,
+  legacySetTalkingPayloadSchema,
   isLegacySessionCommand,
   legacySessionCommandSchema,
   parseAvatarUpload,
@@ -57,6 +58,18 @@ describe("legacy client command boundary", () => {
       legacyClientCommandSchema.safeParse("runArbitraryCode").success,
     ).toBe(false);
     expect(isLegacyClientCommand("runArbitraryCode")).toBe(false);
+  });
+
+  it("validates the player talking payload", () => {
+    expect(
+      legacySetTalkingPayloadSchema.parse({ seatNum: 2, isTalking: true }),
+    ).toMatchObject({ seatNum: 2, isTalking: true });
+    expect(
+      legacySetTalkingPayloadSchema.safeParse({
+        seatNum: "2",
+        isTalking: true,
+      }).success,
+    ).toBe(false);
   });
 });
 

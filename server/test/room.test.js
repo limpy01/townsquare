@@ -84,6 +84,23 @@ test("rejects unknown WebSocket commands before they are broadcast", async (t) =
   assert.match(reason, /Unknown WebSocket command/);
 });
 
+test("rejects malformed player talking payloads", async (t) => {
+  const { wsBase } = await createTestService(t);
+  const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
+  const player = await openClient(`${wsBase}/ws/42/player-a`);
+
+  player.send(["setTalking", { seatNum: "0", isTalking: true }]);
+  const [code, reason] = await new Promise((resolve) =>
+    player.socket.once("close", (closeCode, closeReason) =>
+      resolve([closeCode, closeReason.toString()]),
+    ),
+  );
+
+  assert.equal(code, 1008);
+  assert.match(reason, /Invalid setTalking payload/);
+  host.socket.terminate();
+});
+
 test("announces room lifecycle to lobby clients and disconnects players after host exit", async (t) => {
   const { wsBase } = await createTestService(t);
   const lobby = await openClient(`${wsBase}/lobby/lobby-a`);

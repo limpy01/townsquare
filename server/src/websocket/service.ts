@@ -7,6 +7,7 @@ import WebSocket, { WebSocketServer, type RawData } from "ws";
 import {
   decodeLegacyEnvelope,
   isLegacyClientCommand,
+  legacySetTalkingPayloadSchema,
   playerIdSchema,
   roomIdSchema,
   type LegacyFeedback,
@@ -306,6 +307,11 @@ export function createWebsocketService({
       const { command, params, feedback } = message;
       if (!isLegacyClientCommand(command))
         return closeProtocol(socket, "Unknown WebSocket command");
+      if (
+        command === "setTalking" &&
+        !legacySetTalkingPayloadSchema.safeParse(params).success
+      )
+        return closeProtocol(socket, "Invalid setTalking payload");
       // Guests can connect before a host exists so that the client receives an explicit allowJoin=false response.
       const currentRoom = rooms.get(socket.roomId) || room;
       if (command === "request")
