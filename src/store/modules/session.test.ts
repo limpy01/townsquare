@@ -5,6 +5,7 @@ import { useLegacyOptionsStore } from "../../stores/legacy-options";
 import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
 import { useVotingStore } from "../../stores/voting";
+import { useRoleActivityStore } from "../../stores/role-activity";
 import sessionModule from "./session";
 
 describe("session Vuex compatibility module", () => {
@@ -80,5 +81,18 @@ describe("session Vuex compatibility module", () => {
     });
 
     expect(options.useOldOrder.pithag).toBe(true);
+  });
+
+  it("delegates role activity updates to the Pinia store", () => {
+    const roles = useRoleActivityStore(pinia);
+    roles.$reset();
+
+    sessionModule.mutations.setIsRole(sessionModule.state(), {
+      role: "wraith",
+      property: "active",
+      value: true,
+    });
+
+    expect(roles.wraith.active).toBe(true);
   });
 });

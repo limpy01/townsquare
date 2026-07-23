@@ -11,6 +11,7 @@ import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
 import { useVotingStore } from "../../stores/voting";
 import { useSessionSettingsStore } from "../../stores/session-settings";
+import { useRoleActivityStore } from "../../stores/role-activity";
 
 const state = () => ({
   sessionId: "",
@@ -21,16 +22,6 @@ const state = () => ({
   playerName: "",
   playerAvatar: "default.webp",
   claimedSeat: -1,
-  isRole: {
-    wraith: {
-      active: false, // player
-      using: false, // player
-      st: 0, // st
-      player: 0, // st
-      prob: 0.05, // st
-      probMax: 0.1, // st
-    },
-  },
   messageQueue: [],
   messageUniqueQueue: [],
   chatHistory: [],
@@ -322,10 +313,8 @@ const mutations: Record<string, LegacyMutation> = {
   updatePlayerAvatar(state, link) {
     state.playerAvatar = link;
   },
-  setIsRole(state, { role, property, value, st }) {
-    if (!state.isRole[role]) return;
-    if (property === "using" && !st) return; // using会请求说书人统一更改，说书人不会使用using属性
-    state.isRole[role][property] = value;
+  setIsRole(_state, payload) {
+    useRoleActivityStore(pinia).setRole(payload);
   },
   setTimer(_state, timer) {
     useTimerStore(pinia).setTimer(timer);

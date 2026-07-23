@@ -113,7 +113,7 @@
       <font-awesome-icon
         :icon="['custom', isRole]"
         size="4x"
-        :class="{ 'is-using-wraith': session.isRole.wraith.using }"
+        :class="{ 'is-using-wraith': roleActivity.wraith.using }"
         @click="setUsingWraith()"
       />
     </div>
@@ -233,6 +233,7 @@ import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
+import { useRoleActivityStore } from "../stores/role-activity";
 import Player from "./Player";
 import Token from "./Token";
 import ReminderModal from "./modals/ReminderModal";
@@ -261,6 +262,9 @@ export default {
     },
     voting() {
       return useVotingStore();
+    },
+    roleActivity() {
+      return useRoleActivityStore();
     },
     orientation: function () {
       const ratio = this.windowWidth / this.windowHeight;
@@ -323,8 +327,8 @@ export default {
     },
     isRole: function () {
       const activeRoles = [];
-      for (const roleId in this.session.isRole) {
-        const roleObject = this.session.isRole[roleId];
+      for (const roleId in this.roleActivity.$state) {
+        const roleObject = this.roleActivity[roleId];
         if (roleObject.active === true) {
           activeRoles.push(roleId);
         }
@@ -730,10 +734,10 @@ export default {
         // this.$store.commit("session/setIsRole", {
         //   role: 'wraith',
         //   property: 'st',
-        //   value: this.session.isRole.wraith.player + 1
+        //   value: this.roleActivity.wraith.player + 1
         // });
         // 每10次互动会让暴露概率增加1%，最高10%
-        // const prob = Math.min(0.05 + Math.floor(Math.min(this.session.isRole.wraith.st, this.session.isRole.wraith.player) / 10) * 0.01, this.session.isRole.wraith.probMax);
+        // const prob = Math.min(0.05 + Math.floor(Math.min(this.roleActivity.wraith.st, this.roleActivity.wraith.player) / 10) * 0.01, this.roleActivity.wraith.probMax);
         // this.$store.commit("session/setIsRole", {
         //   role: 'wraith',
         //   property: 'prob',
@@ -783,7 +787,7 @@ export default {
       this.interaction.setTyping(false);
     },
     setUsingWraith() {
-      const usingWraith = this.session.isRole.wraith.using;
+      const usingWraith = this.roleActivity.wraith.using;
       this.$store.commit("session/setIsRole", {
         role: "wraith",
         property: "using",

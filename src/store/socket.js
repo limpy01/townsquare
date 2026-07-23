@@ -11,6 +11,7 @@ import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
+import { useRoleActivityStore } from "../stores/role-activity";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 
@@ -29,6 +30,7 @@ class LiveSession {
     this._legacyOptions = useLegacyOptionsStore(pinia);
     this._voting = useVotingStore(pinia);
     this._settings = useSessionSettingsStore(pinia);
+    this._roles = useRoleActivityStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -1128,7 +1130,7 @@ class LiveSession {
     if (st === true) return;
     if (!this._isSpectator) return;
     if (property !== "using") return;
-    if (!this._store.state.session.isRole[role]) return;
+    if (!this._roles[role]) return;
     this._sendDirect("host", "usingRole", {
       role,
       value,
@@ -2081,7 +2083,7 @@ class LiveSession {
         });
     });
     // 处理暴露
-    const prob = this._store.state.session.isRole.wraith.prob;
+    const prob = this._roles.wraith.prob;
     const rand = Math.random();
     if (rand < prob && wraiths.length > 0) {
       const randIndex = Math.floor(Math.random() * wraiths.length);
