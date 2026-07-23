@@ -46,10 +46,12 @@ import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
 import { apiBase } from "../config";
 import { showInputModal } from "../services/input-modal";
-import store from "../store";
+import { emitLegacyMutation } from "../store/legacy-effects";
+import { useProfileStore } from "../stores/profile";
 import { useSessionIdentityStore } from "../stores/session-identity";
 
 const session = useSessionIdentityStore();
+const profile = useProfileStore();
 const upload = ref<HTMLInputElement | null>(null);
 const imageElement = ref<HTMLImageElement | null>(null);
 const image = ref<string | null>(null);
@@ -144,7 +146,8 @@ async function sendImage() {
       if (!response.ok || result.status !== "success") {
         warning.value = "图片上传失败！请重试！";
       } else {
-        store.commit("session/updatePlayerAvatar", result.avatarUrl);
+        profile.updatePlayerAvatar(result.avatarUrl);
+        emitLegacyMutation("session/updatePlayerAvatar", result.avatarUrl);
         closeCropping();
         await showInputModal({
           inputType: "alert",
