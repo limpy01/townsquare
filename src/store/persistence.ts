@@ -1,12 +1,22 @@
 import { readStoredArray, readStoredJson, readStoredRecord } from "./storage";
+type LegacyPersistenceStore = {
+  commit(type: string, payload?: any): void;
+  state: any;
+  getters: any;
+  subscribe(
+    callback: (mutation: { type: string; payload: any }, state: any) => void,
+  ): void;
+};
 
-const isRecord = (value) =>
+const isRecord = (value: any) =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-export default (store) => {
+export default (store: LegacyPersistenceStore) => {
   if (window.location.pathname != "/") return;
 
-  const updatePagetitle = (isPublic) =>
+  const localStorage: any = window.localStorage;
+
+  const updatePagetitle = (isPublic: any) =>
     // (document.title = `Blood on the Clocktower ${
     //   isPublic ? "Town Square" : "Grimoire"
     // }`);
@@ -111,7 +121,7 @@ export default (store) => {
   if (localStorage.players) {
     store.commit(
       "players/set",
-      readStoredArray(localStorage, "players")
+      (readStoredArray(localStorage, "players") as any[])
         .filter(isRecord)
         .map((player) => ({
           ...player,
@@ -177,11 +187,11 @@ export default (store) => {
     store.commit("session/setBootlegger", customBootlegger);
   }
   if (localStorage.getItem("chatHistory")) {
-    const chatHistory = readStoredArray(localStorage, "chatHistory");
+    const chatHistory: any[] = readStoredArray(localStorage, "chatHistory");
     chatHistory.filter(isRecord).forEach((player) => {
       if (typeof player.id !== "string" || !Array.isArray(player.chat)) return;
       store.commit("session/createChatHistory", player.id);
-      player.chat.forEach((message) => {
+      player.chat.forEach((message: any) => {
         store.commit("session/updateChatReceived", {
           message,
           playerId: player.id,
@@ -190,7 +200,7 @@ export default (store) => {
     });
   }
   if (localStorage.getItem("groupChats")) {
-    const groupChats = readStoredArray(localStorage, "groupChats");
+    const groupChats: any[] = readStoredArray(localStorage, "groupChats");
     groupChats.filter(isRecord).forEach((group) => {
       if (typeof group.id !== "string" || !Array.isArray(group.playerIds))
         return;
@@ -214,7 +224,7 @@ export default (store) => {
     );
   }
   if (localStorage.getItem("isRole")) {
-    const isRole = readStoredRecord(localStorage, "isRole");
+    const isRole: any = readStoredRecord(localStorage, "isRole");
     const role = Object.keys(isRole)[0];
     if (role && isRecord(isRole[role])) {
       for (const property in isRole[role]) {
@@ -315,7 +325,7 @@ export default (store) => {
       case "players/updateBluff":
         localStorage.setItem(
           "bluffs",
-          JSON.stringify(state.players.bluffs.map(({ id }) => id)),
+          JSON.stringify(state.players.bluffs.map(({ id }: any) => id)),
         );
         break;
       case "players/setFabled":
@@ -332,7 +342,7 @@ export default (store) => {
           localStorage.setItem(
             "players",
             JSON.stringify(
-              state.players.players.map((player) => ({
+              state.players.players.map((player: any) => ({
                 ...player,
                 // simplify the stored data
                 role: player.role.id || {},
@@ -421,9 +431,11 @@ export default (store) => {
           const votesSelected = JSON.parse(
             localStorage.getItem("votesSelected"),
           );
-          const newVotes = votes.filter((_, index) => !payload.includes(index));
+          const newVotes = votes.filter(
+            (_: any, index: number) => !payload.includes(index),
+          );
           const newVotesSelected = votesSelected.filter(
-            (_, index) => !payload.includes(index),
+            (_: any, index: number) => !payload.includes(index),
           );
           localStorage.setItem("votes", JSON.stringify(newVotes));
           localStorage.setItem(
@@ -452,15 +464,17 @@ export default (store) => {
         {
           if (!!payload.playerIds && !payload.players) return;
           const chatId = payload.chatId;
-          const playerIds = payload.players.map((player) => player.id);
+          const playerIds = payload.players.map((player: any) => player.id);
           const groupChats =
             localStorage.groupChats != undefined
               ? JSON.parse(localStorage.getItem("groupChats"))
               : [];
-          const chats = groupChats.map((group) => group.id);
+          const chats = groupChats.map((group: any) => group.id);
           if (chats.includes(chatId)) {
-            const group = groupChats.filter((group) => group.id === chatId)[0];
-            playerIds.forEach((id) => {
+            const group = groupChats.filter(
+              (group: any) => group.id === chatId,
+            )[0];
+            playerIds.forEach((id: any) => {
               if (group.playerIds.includes(id)) return;
               group.playerIds.push(id);
             });
@@ -478,7 +492,7 @@ export default (store) => {
         if (localStorage.groupChats != undefined) {
           const groupChats = JSON.parse(localStorage.getItem("groupChats"));
           const newGroupChats = groupChats.filter(
-            (group) => group.id != payload.chatId,
+            (group: any) => group.id != payload.chatId,
           );
           localStorage.setItem("groupChats", JSON.stringify(newGroupChats));
         }
@@ -489,11 +503,13 @@ export default (store) => {
           const groupChats = JSON.parse(localStorage.getItem("groupChats"));
           const chatId = payload.chatId;
           const playerId = payload.player.id;
-          const index = groupChats.findIndex((group) => group.id === chatId);
+          const index = groupChats.findIndex(
+            (group: any) => group.id === chatId,
+          );
           if (index === -1) return;
 
           groupChats[index].playerIds = groupChats[index].playerIds.filter(
-            (player) => player != playerId,
+            (player: any) => player != playerId,
           );
           localStorage.setItem("groupChats", JSON.stringify(groupChats));
         }
@@ -501,7 +517,9 @@ export default (store) => {
       case "session/toggleGroupKeep":
         if (localStorage.groupChats != undefined) {
           const groupChats = JSON.parse(localStorage.getItem("groupChats"));
-          const index = groupChats.findIndex((group) => group.id === payload);
+          const index = groupChats.findIndex(
+            (group: any) => group.id === payload,
+          );
           if (index === -1) return;
 
           groupChats[index].keep = !groupChats[index].keep;
