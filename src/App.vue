@@ -50,6 +50,7 @@
 <script>
 import { mapState } from "vuex";
 import { useLobbyStore } from "./stores/lobby";
+import { useInteractionStore } from "./stores/interaction";
 import { showInputModal } from "./services/input-modal";
 import { version } from "../package.json";
 import TownSquare from "./components/TownSquare";
@@ -97,6 +98,9 @@ export default {
   computed: {
     ...mapState(["grimoire", "session", "lobby", "modals"]),
     ...mapState("players", ["players"]),
+    interaction() {
+      return useInteractionStore();
+    },
   },
   data() {
     return {
@@ -179,7 +183,7 @@ export default {
     },
     keyup({ key, ctrlKey, metaKey }) {
       if (ctrlKey || metaKey) return;
-      if (this.session.isTyping && key != "Escape") return;
+      if (this.interaction.isTyping && key != "Escape") return;
       switch (key.toLocaleLowerCase()) {
         case "m":
           this.$store.commit("toggleMenu");

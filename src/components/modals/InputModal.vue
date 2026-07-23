@@ -55,6 +55,7 @@ import { mapState } from "vuex";
 import Modal from "./Modal";
 import { useLobbyStore } from "../../stores/lobby";
 import { useInputStore } from "../../stores/input";
+import { useInteractionStore } from "../../stores/interaction";
 
 export default {
   components: { Modal },
@@ -63,6 +64,9 @@ export default {
     ...mapState("players", ["players"]),
     inputState() {
       return useInputStore();
+    },
+    interaction() {
+      return useInteractionStore();
     },
     lobby() {
       return useLobbyStore();
@@ -121,10 +125,10 @@ export default {
   },
   methods: {
     typing() {
-      this.$store.commit("session/setTyping", true);
+      this.interaction.setTyping(true);
     },
     notTyping() {
-      this.$store.commit("session/setTyping", false);
+      this.interaction.setTyping(false);
     },
     confirmInput() {
       const allowEmpty = ["bootlegger"];
@@ -239,7 +243,7 @@ export default {
       this.close();
     },
     close() {
-      this.$store.commit("session/setTyping", false);
+      this.interaction.setTyping(false);
       this.input = [""];
       this.warningMessage = "";
       this.inputState.close();

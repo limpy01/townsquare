@@ -3,6 +3,7 @@ import { decodeLegacyEnvelope } from "@townsquare/contracts/legacy-envelope";
 import { pinia } from "../pinia";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
+import { useInteractionStore } from "../stores/interaction";
 
 class LiveSession {
   constructor(store) {
@@ -103,7 +104,7 @@ class LiveSession {
         });
 
         // close chat box
-        this._store.commit("session/setChatOpen", false);
+        useInteractionStore(pinia).setChatOpen(false);
 
         // exit group chat
         this._store.state.session.groupChats.forEach((group) => {

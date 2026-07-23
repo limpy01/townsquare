@@ -581,6 +581,7 @@ import { mapMutations, mapState } from "vuex";
 import { nextTick } from "vue";
 import { useLobbyStore } from "../stores/lobby";
 import { showInputModal } from "../services/input-modal";
+import { useInteractionStore } from "../stores/interaction";
 
 export default {
   computed: {
@@ -1084,7 +1085,7 @@ export default {
         }
 
         // close chat box
-        this.$store.commit("session/setChatOpen", false);
+        useInteractionStore().setChatOpen(false);
 
         // exit group chat
         this.session.groupChats.forEach((group) => {

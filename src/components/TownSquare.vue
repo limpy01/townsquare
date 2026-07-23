@@ -107,7 +107,7 @@
     <ReminderModal :player-index="selectedPlayer"></ReminderModal>
     <RoleModal :player-index="selectedPlayer"></RoleModal>
 
-    <div v-show="session.isChatOpen" :class="{chat: !isChatMin, chatMin: isChatMin}" :style="chatStyle">
+    <div v-show="interaction.isChatOpen" :class="{chat: !isChatMin, chatMin: isChatMin}" :style="chatStyle">
       <div class="title" @click="maximiseChat()">
         <div v-if="!isChatMin && isInGroup && isShowGroup" class="group" :style="groupStyle">
           <div v-for="player in inGroupPlayers" :key="player.id">
@@ -163,6 +163,7 @@
 
 <script>
 import { mapGetters, mapState } from "vuex";
+import { useInteractionStore } from "../stores/interaction";
 import Player from "./Player";
 import Token from "./Token";
 import ReminderModal from "./modals/ReminderModal";
@@ -180,6 +181,9 @@ export default {
     ...mapState(["grimoire", "roles", "session"]),
     ...mapState("players", ["players", "bluffs", "fabled"]),
     ...mapState(["floatingNotice"]),
+    interaction() {
+      return useInteractionStore();
+    },
     orientation: function(){
       const ratio = this.windowWidth / this.windowHeight;
       const unit = this.windowWidth > this.windowHeight ? "height: 100%;" : "height: " + ratio * 100 + "%;";
@@ -262,7 +266,7 @@ export default {
     "session.chatHistory": {
       handler() {
         this.$nextTick(() => {
-          if (this.$refs.chatContent.scrollTop >= -20 && this.isChatOpen && !this.isChatMin) {
+          if (this.$refs.chatContent.scrollTop >= -20 && this.interaction.isChatOpen && !this.isChatMin) {
             this.scrollToBottom();
           }
         });
@@ -286,9 +290,9 @@ export default {
     "session.groupChats": {
       handler() {
         this.$nextTick(() => {
-          if (this.session.isChatOpen != "" && this.session.isSpectator) {
+          if (this.interaction.isChatOpen && this.session.isSpectator) {
             this.openChat(0, false);
-          } else if (this.session.isChatOpen != "" && !this.session.isSpectator) {
+          } else if (this.interaction.isChatOpen && !this.session.isSpectator) {
             const index = this.players.findIndex(player => player.id === this.chattingPlayer);
             if (index === -1) return;
             this.openChat(index, false);
@@ -511,8 +515,8 @@ export default {
         this.minimising = false;
         return;
       }
-      if (this.session.isChatOpen && !this.isChatMin) return;
-      this.$store.commit("session/setChatOpen", true);
+      if (this.interaction.isChatOpen && !this.isChatMin) return;
+      this.interaction.setChatOpen(true);
       this.isChatMin = false;
 
       this.$nextTick(() => {
@@ -590,7 +594,7 @@ export default {
       }
     },
     typing(){
-      this.$store.commit("session/setTyping", true);
+      this.interaction.setTyping(true);
       if (this.$refs.chatContent.scrollTop >= -20){
         if (!this.session.isSpectator) {
           this.$store.commit("players/setPlayerMessage", {playerId: this.chattingPlayer, num: 0});
@@ -600,7 +604,7 @@ export default {
       }
     },
     notTyping(){
-      this.$store.commit("session/setTyping", false);
+      this.interaction.setTyping(false);
     },
     setUsingWraith(){
       const usingWraith = this.session.isRole.wraith.using;
