@@ -2,7 +2,7 @@
   <Modal
     class="roles"
     v-if="modals.roles && nonTravelers >= 5"
-    @close="toggleModal('roles')"
+    @close="modals.toggle('roles')"
   >
     <h3>为当前{{ nonTravelers }}名玩家选择角色</h3>
     <ul class="tokens" v-for="(teamRoles, team) in roleSelection" :key="team">
@@ -89,159 +89,110 @@
   </Modal>
 </template>
 
-<script>
-import Modal from "./Modal";
-import gameJSON from "./../../game";
-import Token from "./../Token";
-import { mapGetters, mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import Modal from "./Modal.vue";
+import gameJSON from "../../game.json";
+import Token from "../Token.vue";
 import { useDrawStore } from "../../stores/draw";
+import store from "../../store";
+import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
 import { useReviewStore } from "../../stores/review";
+import { useScenarioStore } from "../../stores/scenario";
 
-const randomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const randomElement = <T,>(items: T[]) =>
+  items[Math.floor(Math.random() * items.length)];
+const modals = useModalStore();
+const playerState = usePlayersStore();
+const scenario = useScenarioStore();
+const draw = useDrawStore();
+const review = useReviewStore();
+const players = computed(() => playerState.players);
+const roles = scenario.roles as Map<string, any>;
+const roleSelection = ref<Record<string, any[]>>({});
+const game = gameJSON as any[];
+const allowMultiple = ref(false);
+const windowWidth = ref(window.innerWidth);
+const windowHeight = ref(window.innerHeight);
+const nonTravelers = computed(() =>
+  Math.min(
+    players.value.filter((player) => player.role.team !== "traveler").length,
+    15,
+  ),
+);
+const selectedRoles = computed(() =>
+  Object.values(roleSelection.value)
+    .flat()
+    .reduce((total, role) => total + role.selected, 0),
+);
+const hasSelectedSetupRoles = computed(() =>
+  Object.values(roleSelection.value)
+    .flat()
+    .some((role) => role.selected && role.setup),
+);
+const tokenWidth = computed(() =>
+  windowWidth.value * 0.06 >= 80 ? "width: 6vw" : "width: 80px",
+);
 
-export default {
-  components: {
-    Token,
-    Modal,
-  },
-  data: function () {
-    return {
-      roleSelection: {},
-      game: gameJSON,
-      allowMultiple: false,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-    };
-  },
-  computed: {
-    selectedRoles: function () {
-      return Object.values(this.roleSelection)
-        .map((roles) => roles.reduce((a, { selected }) => a + selected, 0))
-        .reduce((a, b) => a + b, 0);
-    },
-    hasSelectedSetupRoles: function () {
-      return Object.values(this.roleSelection).some((roles) =>
-        roles.some((role) => role.selected && role.setup),
-      );
-    },
-    tokenWidth() {
-      const percentage = 0.06;
-      const width = percentage * this.windowWidth;
-      return width >= 80 ? "width: 6vw" : "width: 80px";
-    },
-    ...mapState(["roles", "modals", "session"]),
-    ...mapState("players", ["players"]),
-    ...mapGetters({ nonTravelers: "players/nonTravelers" }),
-    draw() {
-      return useDrawStore();
-    },
-    review() {
-      return useReviewStore();
-    },
-  },
-  methods: {
-    handleResize() {
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
-    },
-    selectRandomRoles() {
-      this.roleSelection = {};
-      this.roles.forEach((role) => {
-        if (!this.roleSelection[role.team]) {
-          this.roleSelection[role.team] = [];
-        }
-        this.roleSelection[role.team].push(role);
-        role.selected = 0;
-      });
-      const teamSelected = ["townsfolk", "outsider", "minion", "demon"];
-      const teamDeselected = [];
-      Object.keys(this.roleSelection).forEach((team) => {
-        if (!teamSelected.includes(team)) teamDeselected.push(team);
-      });
-      teamDeselected.forEach((team) => {
-        delete this.roleSelection[team];
-      });
-      const playerCount = Math.max(5, this.nonTravelers);
-      const composition = this.game[playerCount - 5];
-      Object.keys(composition).forEach((team) => {
-        for (let x = 0; x < composition[team]; x++) {
-          if (this.roleSelection[team]) {
-            const available = this.roleSelection[team].filter(
-              (role) => !role.selected,
-            );
-            if (available.length) {
-              randomElement(available).selected = 1;
-            }
-          }
-        }
-      });
-    },
-    assignRoles(allowReview = true) {
-      if (this.selectedRoles <= this.nonTravelers && this.selectedRoles) {
-        // generate list of selected roles and randomize it
-        if (!allowReview && this.review.isReview) {
-          this.$store.commit("session/setIsReview", false);
-        }
-        const roles = Object.values(this.roleSelection)
-          .map((roles) =>
-            roles
-              // duplicate roles selected more than once and filter unselected
-              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], []),
-          )
-          // flatten into a single array
-          .reduce((a, b) => [...a, ...b], [])
-          .map((a) => [Math.random(), a])
-          .sort((a, b) => a[0] - b[0])
-          .map((a) => a[1]);
-        this.players.forEach((player) => {
-          if (player.role.team !== "traveler" && roles.length) {
-            const value = roles.pop();
-            this.$store.commit("players/update", {
-              player,
-              property: "role",
-              value,
-            });
-          }
-        });
-        this.$store.commit("toggleModal", "roles");
-      }
-    },
-    drawRoles() {
-      if (this.selectedRoles <= this.nonTravelers && this.selectedRoles) {
-        // generate list of selected roles and randomize it
-        const roles = Object.values(this.roleSelection)
-          .map((roles) =>
-            roles
-              // duplicate roles selected more than once and filter unselected
-              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], []),
-          )
-          // flatten into a single array
-          .reduce((a, b) => [...a, ...b], [])
-          .map((a) => [Math.random(), a])
-          .sort((a, b) => a[0] - b[0])
-          .map((a) => a[1]);
-        this.draw.setRoles(roles);
-        this.$store.commit("toggleModal", "roles");
-        this.$store.commit("toggleModal", "draw");
-      }
-    },
-    ...mapMutations(["toggleModal"]),
-  },
-  mounted: function () {
-    if (!Object.keys(this.roleSelection).length) {
-      this.selectRandomRoles();
+function handleResize() {
+  windowWidth.value = window.innerWidth;
+  windowHeight.value = window.innerHeight;
+}
+function selectedAndShuffledRoles() {
+  return Object.values(roleSelection.value)
+    .flatMap((teamRoles) =>
+      teamRoles.flatMap((role) => Array(role.selected).fill(role)),
+    )
+    .map((role) => [Math.random(), role] as const)
+    .sort((a, b) => a[0] - b[0])
+    .map(([, role]) => role);
+}
+function selectRandomRoles() {
+  const selection: Record<string, any[]> = {};
+  roles.forEach((role) => {
+    (selection[role.team] ??= []).push({ ...role, selected: 0 });
+  });
+  for (const team of Object.keys(selection))
+    if (!["townsfolk", "outsider", "minion", "demon"].includes(team))
+      delete selection[team];
+  const composition = game[Math.max(5, nonTravelers.value) - 5];
+  Object.keys(composition).forEach((team) => {
+    for (let index = 0; index < composition[team]; index++) {
+      const available = selection[team]?.filter((role) => !role.selected) ?? [];
+      if (available.length) randomElement(available).selected = 1;
     }
-    window.addEventListener("resize", this.handleResize);
-  },
-  beforeUnmount() {
-    window.removeEventListener("resize", this.handleResize);
-  },
-  watch: {
-    roles() {
-      this.selectRandomRoles();
-    },
-  },
-};
+  });
+  roleSelection.value = selection;
+}
+function assignRoles(allowReview = true) {
+  if (selectedRoles.value > nonTravelers.value || !selectedRoles.value) return;
+  if (!allowReview && review.isReview)
+    store.commit("session/setIsReview", false);
+  const assigned = selectedAndShuffledRoles();
+  players.value.forEach((player) => {
+    if (player.role.team !== "traveler" && assigned.length)
+      store.commit("players/update", {
+        player,
+        property: "role",
+        value: assigned.pop(),
+      });
+  });
+  modals.toggle("roles");
+}
+function drawRoles() {
+  if (selectedRoles.value > nonTravelers.value || !selectedRoles.value) return;
+  draw.setRoles(selectedAndShuffledRoles());
+  modals.toggle("roles");
+  modals.toggle("draw");
+}
+
+onMounted(() => {
+  if (!Object.keys(roleSelection.value).length) selectRandomRoles();
+  window.addEventListener("resize", handleResize);
+});
+onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
+watch(() => scenario.roles, selectRandomRoles);
 </script>
 
 <style lang="scss" scoped>
