@@ -1,4 +1,6 @@
 import { readStoredArray, readStoredJson, readStoredRecord } from "./storage";
+import { pinia } from "../pinia";
+import { useChatStore } from "../stores/chat";
 type LegacyPersistenceStore = {
   commit(type: string, payload?: any): void;
   state: any;
@@ -451,10 +453,10 @@ export default (store: LegacyPersistenceStore) => {
       case "session/createChatHistory":
       case "session/updateChatSent":
       case "session/updateChatReceived":
-        if (state.session.chatHistory) {
+        if (useChatStore(pinia).histories) {
           localStorage.setItem(
             "chatHistory",
-            JSON.stringify(state.session.chatHistory),
+            JSON.stringify(useChatStore(pinia).histories),
           );
         } else {
           localStorage.removeItem("chatHistory");

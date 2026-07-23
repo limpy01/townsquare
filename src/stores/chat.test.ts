@@ -16,4 +16,13 @@ describe("chat store", () => {
     chat.clearStorytellerUnread();
     expect(chat.storytellerUnread).toBe(0);
   });
+
+  it("keeps a separate history for each chat participant", () => {
+    const chat = useChatStore();
+    chat.createHistory("host");
+    chat.addReceivedMessage({ message: "hello", playerId: "host" });
+    chat.addReceivedMessage({ message: "ignored", playerId: "missing" });
+
+    expect(chat.histories).toEqual([{ id: "host", chat: ["hello"] }]);
+  });
 });

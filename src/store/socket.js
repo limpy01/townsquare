@@ -35,6 +35,7 @@ class LiveSession {
     this._roles = useRoleActivityStore(pinia);
     this._profile = useProfileStore(pinia);
     this._outbox = useMessageOutboxStore(pinia);
+    this._chat = useChatStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -1386,7 +1387,7 @@ class LiveSession {
     if (index < 0) return;
     const playerId = this._store.state.players.players[index].id;
     if (playerId === "") return;
-    if (this._store.state.session.chatHistory[playerId] != undefined) return;
+    if (this._chat.histories.some((history) => history.id === playerId)) return;
     if (this._isSpectator && this._store.state.session.playerId != playerId)
       return;
     this._store.commit("session/createChatHistory", playerId);

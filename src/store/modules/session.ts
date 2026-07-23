@@ -14,6 +14,7 @@ import { useSessionSettingsStore } from "../../stores/session-settings";
 import { useRoleActivityStore } from "../../stores/role-activity";
 import { useProfileStore } from "../../stores/profile";
 import { useMessageOutboxStore } from "../../stores/message-outbox";
+import { useChatStore } from "../../stores/chat";
 
 const state = () => ({
   sessionId: "",
@@ -22,7 +23,6 @@ const state = () => ({
   isSpectator: false,
   playerId: "",
   claimedSeat: -1,
-  chatHistory: [],
   groupChats: [],
 });
 
@@ -154,9 +154,7 @@ const mutations: Record<string, LegacyMutation> = {
     useVotingStore(pinia).lockVote(lock);
   },
   createChatHistory(state, playerId) {
-    if (playerId === "") return;
-    if (chatIndex(state, playerId) >= 0) return; // do nothing if it already exists
-    state.chatHistory[state.chatHistory.length] = { id: playerId, chat: [] };
+    useChatStore(pinia).createHistory(playerId);
   },
   updateChatSent(state, chatContent) {
     if (state.isSpectator && chatContent.sendingPlayerId != state.playerId)
@@ -171,12 +169,7 @@ const mutations: Record<string, LegacyMutation> = {
   },
   updateChatReceived(state, { message, playerId }) {
     if (state.isSpectator && playerId != state.stId) return;
-    const playerIndex = chatIndex(state, playerId);
-    const oldMessages = state.chatHistory[playerIndex]["chat"];
-    state.chatHistory[playerIndex] = {
-      id: playerId,
-      chat: [...oldMessages, message],
-    };
+    useChatStore(pinia).addReceivedMessage({ message, playerId });
   },
   addMessageQueue(_state, { type, playerId, command, params, id }) {
     useMessageOutboxStore(pinia).add({ type, playerId, command, params, id });
@@ -326,15 +319,6 @@ const mutations: Record<string, LegacyMutation> = {
     this.commit("players/setIsTalking", { seatNum, isTalking });
   },
 };
-
-function chatIndex(state: any, playerId: any) {
-  for (let i = 0; i < state.chatHistory.length; i++) {
-    if (state.chatHistory[i]["id"] === playerId) {
-      return i;
-    }
-  }
-  return -1;
-}
 
 const sessionModule: any = {
   namespaced: true,

@@ -173,7 +173,7 @@
       </div>
       <div ref="chatContent" class="content" @scroll="checkToBottom">
         <div
-          v-for="(player, index) in session.chatHistory"
+          v-for="(player, index) in chat.histories"
           :key="index"
           v-show="
             (session.isSpectator && player.id === session.stId) ||
@@ -363,7 +363,7 @@ export default {
     };
   },
   watch: {
-    "session.chatHistory": {
+    "chat.histories": {
       handler() {
         this.$nextTick(() => {
           if (
