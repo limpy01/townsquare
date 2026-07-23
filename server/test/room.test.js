@@ -114,6 +114,9 @@ test("rejects malformed nested WebSocket payloads", async (t) => {
       ["uploadFile", { uploadAvatar: ["player-a"] }],
       /Invalid uploadFile payload/,
     ],
+    [["isNight", "true"], /Invalid isNight payload/],
+    [["setTimer", -1], /Invalid setTimer payload/],
+    [["stopTimer", true], /Invalid stopTimer payload/],
   ]) {
     const client = await openClient(
       `${wsBase}/ws/42/${Math.random().toString(36).slice(2)}`,

@@ -114,6 +114,7 @@
 - `Menu.vue` 的复盘视角与本地数据清理已迁为 Composition API；复盘仍调用既有 `session/setIsReview` 和玩家复活命令，清理仍只作用于 TownSquare localStorage 命名空间。
 - `Menu.vue` 的创建、加入与离开房间流程已迁为 Composition API，最后的 Options/context 适配器已删除；房间身份、清场、群聊退出、消息队列和亡魂重置仍走现有兼容命令。
 - `Menu.vue` 已移除 `@ts-nocheck`；模板事件、可选输入和数组访问均经 TypeScript 收窄，完整的 Vue 类型检查现覆盖该组件。
+- v1 WebSocket 的稳定标量命令（布尔状态、计时器、投票速度及无参数命令）现于服务端转发前经 contracts 校验；畸形 payload 以 1008 拒绝，嵌套命令仍按现有专用 schema 分批收紧。
 
 ## 本批次约束
 

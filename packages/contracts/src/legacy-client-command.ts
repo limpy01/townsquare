@@ -48,6 +48,34 @@ export const legacyClientCommandSchema = z.enum([
 
 export type LegacyClientCommand = z.infer<typeof legacyClientCommandSchema>;
 
+/**
+ * Scalar v1 broadcast commands whose payloads have remained stable. The
+ * remaining commands retain their dedicated compatibility handlers until
+ * their nested payloads are described by contracts as well.
+ */
+const legacyScalarPayloadSchemas: Partial<
+  Record<LegacyClientCommand, z.ZodType>
+> = {
+  clearVoteHistory: z.union([z.null(), z.undefined()]),
+  isNight: z.boolean(),
+  isReview: z.boolean(),
+  isVoteHistoryAllowed: z.boolean(),
+  isVoteInProgress: z.boolean(),
+  secretVote: z.boolean(),
+  setTimer: z.number().finite().nonnegative(),
+  startTimer: z.number().finite().nonnegative(),
+  stopTimer: z.union([z.null(), z.undefined()]),
+  votingSpeed: z.number().finite().positive(),
+};
+
+export function isLegacyClientPayload(
+  command: LegacyClientCommand,
+  params: unknown,
+): boolean {
+  const schema = legacyScalarPayloadSchemas[command];
+  return !schema || schema.safeParse(params).success;
+}
+
 export const legacySetTalkingPayloadSchema = z
   .object({
     seatNum: z.number().int().nonnegative(),

@@ -6,6 +6,7 @@ import WebSocket, { WebSocketServer, type RawData } from "ws";
 
 import {
   decodeLegacyEnvelope,
+  isLegacyClientPayload,
   isLegacyClientCommand,
   legacyDirectPayloadSchema,
   legacyRequestPayloadSchema,
@@ -310,6 +311,8 @@ export function createWebsocketService({
       const { command, params, feedback } = message;
       if (!isLegacyClientCommand(command))
         return closeProtocol(socket, "Unknown WebSocket command");
+      if (!isLegacyClientPayload(command, params))
+        return closeProtocol(socket, `Invalid ${command} payload`);
       if (
         command === "setTalking" &&
         !legacySetTalkingPayloadSchema.safeParse(params).success
