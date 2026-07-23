@@ -596,7 +596,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { legacyCommands } from "../store/legacy-commands";
+import { legacyCommands as gameCommands } from "../store/legacy-commands";
 import { readStoredArray } from "../store/storage";
 
 const emit = defineEmits(["trigger"]);
@@ -616,7 +616,7 @@ const profile = useProfileStore();
 const outbox = useMessageOutboxStore();
 const chat = useChatStore();
 const audioInputNumber = ref<HTMLInputElement | null>(null);
-const context: any = reactive({ $store: legacyCommands, $nextTick: nextTick });
+const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
   session: { get: () => session },
@@ -731,7 +731,7 @@ const options: any = {
       if (input === null) return;
 
       const background = input[0];
-      this.$store.commit("setBackground", background);
+      this.commands.commit("setBackground", background);
     },
     async changeName() {
       const input = await this.showInputModal({
@@ -748,7 +748,7 @@ const options: any = {
       if (input === null) return;
 
       const newName = input[0];
-      this.$store.commit("session/setPlayerName", newName);
+      this.commands.commit("session/setPlayerName", newName);
     },
     async hostSession() {
       if (!this.profile.playerName) await this.changeName();
@@ -788,10 +788,10 @@ const options: any = {
       const sessionId = Number(input[0]).toString();
       const numPlayers = Math.min(input[1], 20);
       if (sessionId) {
-        this.$store.commit("session/clearVoteHistory", []);
-        this.$store.commit("session/setSpectator", false);
-        this.$store.commit("session/setSessionId", sessionId);
-        this.$store.commit("players/clear");
+        this.commands.commit("session/clearVoteHistory", []);
+        this.commands.commit("session/setSpectator", false);
+        this.commands.commit("session/setSessionId", sessionId);
+        this.commands.commit("players/clear");
         for (let i = 0; i < numPlayers; i++) {
           this.addPlayer();
         }
@@ -816,21 +816,21 @@ const options: any = {
       this.distributing = false;
       if (!confirm) return;
       if (this.session.isSpectator) return;
-      this.$store.commit("session/distributeRoles", true);
+      this.commands.commit("session/distributeRoles", true);
       setTimeout(
         (() => {
-          this.$store.commit("session/distributeRoles", false);
+          this.commands.commit("session/distributeRoles", false);
         }).bind(this),
         2000,
       );
       if (!this.isSendingBluff) return;
-      this.$store.commit("session/distributeBluffs", {
+      this.commands.commit("session/distributeBluffs", {
         val: true,
         role: "demonAll",
       });
       setTimeout(
         (() => {
-          this.$store.commit("session/distributeBluffs", { val: false });
+          this.commands.commit("session/distributeBluffs", { val: false });
         }).bind(this),
         2000,
       );
@@ -859,10 +859,10 @@ const options: any = {
     distributeTypes() {
       this.distributingTypes = false;
       if (this.session.isSpectator) return;
-      this.$store.commit("session/distributeTypes", true);
+      this.commands.commit("session/distributeTypes", true);
       setTimeout(
         (() => {
-          this.$store.commit("session/distributeTypes", false);
+          this.commands.commit("session/distributeTypes", false);
         }).bind(this),
         2000,
       );
@@ -923,14 +923,14 @@ const options: any = {
       if (confirm === null) return;
       if (confirm === true) {
         if (this.session.isSpectator) return;
-        this.$store.commit("session/distributeBluffs", {
+        this.commands.commit("session/distributeBluffs", {
           val: true,
           role,
           seatNum,
         });
         setTimeout(
           (() => {
-            this.$store.commit("session/distributeBluffs", { val: false });
+            this.commands.commit("session/distributeBluffs", { val: false });
           }).bind(this),
           2000,
         );
@@ -993,14 +993,14 @@ const options: any = {
 
       if (confirm === true) {
         if (this.session.isSpectator) return;
-        this.$store.commit("session/distributeGrimoire", {
+        this.commands.commit("session/distributeGrimoire", {
           val: true,
           role,
           seatNum,
         });
         setTimeout(
           (() => {
-            this.$store.commit("session/distributeGrimoire", { val: false });
+            this.commands.commit("session/distributeGrimoire", { val: false });
           }).bind(this),
           2000,
         );
@@ -1019,7 +1019,7 @@ const options: any = {
 
       this.selectingEditions = false;
       if (!update) return;
-      this.$store.commit("setSelectedEditions", this.pendingEditions);
+      this.commands.commit("setSelectedEditions", this.pendingEditions);
     },
     async imageOptIn() {
       const popup = this.grimoire.isImageOptIn
@@ -1073,10 +1073,10 @@ const options: any = {
 
       const sessionId = Number(input[0].split("#").pop()).toString();
       if (sessionId) {
-        this.$store.commit("session/clearVoteHistory", []);
-        this.$store.commit("session/setSpectator", true);
-        this.$store.commit("toggleGrimoire", false);
-        this.$store.commit("session/setSessionId", sessionId);
+        this.commands.commit("session/clearVoteHistory", []);
+        this.commands.commit("session/setSpectator", true);
+        this.commands.commit("toggleGrimoire", false);
+        this.commands.commit("session/setSessionId", sessionId);
       }
     },
     async leaveSession() {
@@ -1093,37 +1093,37 @@ const options: any = {
 
       if (confirm === true) {
         // vacate seat upon leaving the room
-        this.$store.commit("session/claimSeat", -1);
+        this.commands.commit("session/claimSeat", -1);
 
-        this.$store.commit("session/setSpectator", false);
-        this.$store.commit("session/setSessionId", "");
+        this.commands.commit("session/setSpectator", false);
+        this.commands.commit("session/setSessionId", "");
         this.connection.setIsHostAllowed(null);
         this.connection.setIsJoinAllowed(null);
 
         // clear seats and return to intro
         if (this.voting.nomination) {
-          this.$store.commit("session/nomination");
+          this.commands.commit("session/nomination");
         }
-        this.$store.commit("players/clear", true);
+        this.commands.commit("players/clear", true);
 
         // clear customBootlegger
         if (this.settings.bootlegger) {
-          this.$store.commit("session/setBootlegger", "");
+          this.commands.commit("session/setBootlegger", "");
         }
 
         // reset allowed votes
         if (this.voting.playerVotes > 1) {
-          this.$store.commit("session/setPlayerVotes", 1);
+          this.commands.commit("session/setPlayerVotes", 1);
         }
 
         // reset secret vote
         if (this.voting.isSecretVote) {
-          this.$store.commit("session/setSecretVote", false);
+          this.commands.commit("session/setSecretVote", false);
         }
 
         // reset review
         if (this.review.isReview) {
-          this.$store.commit("session/setIsReview", false);
+          this.commands.commit("session/setIsReview", false);
         }
 
         // close chat box
@@ -1131,21 +1131,21 @@ const options: any = {
 
         // exit group chat
         this.chat.groups.forEach((group) => {
-          this.$store.commit("session/removeGroupChat", { chatId: group.id });
+          this.commands.commit("session/removeGroupChat", { chatId: group.id });
         });
 
         // clear messages
         while (this.outbox.queue.length > 0) {
-          this.$store.commit("session/deleteMessageQueue", 0);
+          this.commands.commit("session/deleteMessageQueue", 0);
         }
 
         // reset wraith
-        this.$store.commit("session/setIsRole", {
+        this.commands.commit("session/setIsRole", {
           role: "wraith",
           property: "active",
           value: false,
         });
-        this.$store.commit("session/setIsRole", {
+        this.commands.commit("session/setIsRole", {
           role: "wraith",
           property: "using",
           value: false,
@@ -1158,7 +1158,7 @@ const options: any = {
       if (this.players.length >= 20) return;
 
       // setting name to a default value, combining with the seat number
-      this.$store.commit("players/add", { name: "", stImage, stName });
+      this.commands.commit("players/add", { name: "", stImage, stName });
     },
     async randomizeSeatings() {
       if (this.session.isSpectator) return;
@@ -1175,7 +1175,7 @@ const options: any = {
       if (confirm === null) return;
 
       if (confirm === true) {
-        this.$store.dispatch("players/randomize");
+        this.commands.dispatch("players/randomize");
       }
     },
     async clearPlayers() {
@@ -1195,12 +1195,12 @@ const options: any = {
       if (confirm === true) {
         // abort vote if in progress
         if (this.voting.nomination) {
-          this.$store.commit("session/nomination");
+          this.commands.commit("session/nomination");
         }
         if (this.session.sessionId) {
-          this.$store.commit("players/clear");
+          this.commands.commit("players/clear");
         } else {
-          this.$store.commit("players/clear", true);
+          this.commands.commit("players/clear", true);
         }
       }
     },
@@ -1219,7 +1219,7 @@ const options: any = {
       if (confirm === null) return;
 
       if (confirm === true) {
-        this.$store.dispatch("players/clearRoles");
+        this.commands.dispatch("players/clearRoles");
       }
     },
     async customiseBootlegger() {
@@ -1239,12 +1239,12 @@ const options: any = {
       if (input === null) return;
 
       const content = input[0].trim();
-      this.$store.commit("session/setBootlegger", content);
+      this.commands.commit("session/setBootlegger", content);
     },
     toggleNight() {
-      this.$store.commit("toggleNight");
+      this.commands.commit("toggleNight");
       if (this.grimoire.isNight) {
-        this.$store.commit("session/setMarkedPlayer", -1);
+        this.commands.commit("session/setMarkedPlayer", -1);
       }
     },
     async toggleIsReview() {
@@ -1264,10 +1264,10 @@ const options: any = {
       if (confirm === null) return;
 
       if (!this.review.isReview && confirm === true) {
-        this.$store.commit("session/setIsReview", !this.review.isReview);
-        this.$store.dispatch("players/realivePlayers");
+        this.commands.commit("session/setIsReview", !this.review.isReview);
+        this.commands.dispatch("players/realivePlayers");
       } else if (this.review.isReview) {
-        this.$store.commit("session/setIsReview", false);
+        this.commands.commit("session/setIsReview", false);
       }
     },
     useOldOrderAsk() {
@@ -1282,8 +1282,8 @@ const options: any = {
       });
       this.selectingOldOrder = false;
       if (!update) return;
-      this.$store.commit("session/setUseOldOrder", this.pendingOldOrder);
-      this.$store.commit("setEdition", this.edition);
+      this.commands.commit("session/setUseOldOrder", this.pendingOldOrder);
+      this.commands.commit("setEdition", this.edition);
     },
     useOldRoleAsk() {
       this.selectingOldOrder = false;
@@ -1297,13 +1297,13 @@ const options: any = {
       });
       this.selectingOldRole = false;
       if (!update) return;
-      this.$store.commit("session/setUseOldRole", this.pendingOldRole);
+      this.commands.commit("session/setUseOldRole", this.pendingOldRole);
       if (localStorage.getItem("roles"))
-        this.$store.commit(
+        this.commands.commit(
           "setCustomRoles",
           readStoredArray(localStorage, "roles"),
         );
-      this.$store.commit("setEdition", this.edition);
+      this.commands.commit("setEdition", this.edition);
     },
     async setTimer() {
       if (this.session.isSpectator || !this.session.sessionId) return;
@@ -1332,12 +1332,12 @@ const options: any = {
     startTimer(time = null) {
       if (this.session.isSpectator) return;
       if (typeof time != "number") time = this.timer.seconds;
-      this.$store.commit("session/startTimer", time);
+      this.commands.commit("session/startTimer", time);
       this.timing = true;
     },
     stopTimer() {
       if (this.session.isSpectator) return;
-      this.$store.commit("session/stopTimer");
+      this.commands.commit("session/stopTimer");
       this.timing = false;
     },
     async initAudio() {
@@ -1386,7 +1386,7 @@ const options: any = {
           !this.audio.isTalking
         ) {
           if (!this.audio.isTalking) {
-            this.$store.commit("session/setTalking", {
+            this.commands.commit("session/setTalking", {
               seatNum: this.session.claimedSeat,
               isTalking: true,
             });
@@ -1396,7 +1396,7 @@ const options: any = {
           this.audio.isTalking
         ) {
           if (this.audio.isTalking) {
-            this.$store.commit("session/setTalking", {
+            this.commands.commit("session/setTalking", {
               seatNum: this.session.claimedSeat,
               isTalking: false,
             });
@@ -1426,7 +1426,7 @@ const options: any = {
         cancelAnimationFrame(this.audio.listeningFrame);
         this.audio.setListeningFrame(null);
       }
-      this.$store.commit("session/setTalking", {
+      this.commands.commit("session/setTalking", {
         seatNum: this.session.claimedSeat,
         isTalking: false,
       });
@@ -1456,12 +1456,12 @@ const options: any = {
     syncAudioThresholdSlider(save) {
       this.audioThresholdSlider = this.audioThresholdNumber;
       if (save)
-        this.$store.commit("setAudioThreshold", this.audioThresholdNumber);
+        this.commands.commit("setAudioThreshold", this.audioThresholdNumber);
     },
     syncAudioThresholdNumber(save) {
       this.audioThresholdNumber = this.audioThresholdSlider;
       if (save)
-        this.$store.commit("setAudioThreshold", this.audioThresholdSlider);
+        this.commands.commit("setAudioThreshold", this.audioThresholdSlider);
     },
     async clearLocalStorage() {
       const clear = await this.showInputModal({
@@ -1489,31 +1489,31 @@ const options: any = {
       return;
     },
     toggleGrimoire() {
-      this.$store.commit("toggleGrimoire");
+      this.commands.commit("toggleGrimoire");
     },
     toggleMenu() {
-      this.$store.commit("toggleMenu");
+      this.commands.commit("toggleMenu");
     },
     toggleImageOptIn() {
-      this.$store.commit("toggleImageOptIn");
+      this.commands.commit("toggleImageOptIn");
     },
     toggleForwardEvilInfo() {
-      this.$store.commit("toggleForwardEvilInfo");
+      this.commands.commit("toggleForwardEvilInfo");
     },
     toggleMuted() {
-      this.$store.commit("toggleMuted");
+      this.commands.commit("toggleMuted");
     },
     toggleNightOrder() {
-      this.$store.commit("toggleNightOrder");
+      this.commands.commit("toggleNightOrder");
     },
     toggleStatic() {
-      this.$store.commit("toggleStatic");
+      this.commands.commit("toggleStatic");
     },
     setZoom(value) {
-      this.$store.commit("setZoom", value);
+      this.commands.commit("setZoom", value);
     },
     toggleModal(name) {
-      this.$store.commit("toggleModal", name);
+      this.commands.commit("toggleModal", name);
     },
   },
 };
