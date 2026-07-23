@@ -13,6 +13,11 @@
       "require": "./dist/legacy-envelope.js",
       "default": "./dist/legacy-envelope.js"
     },
+    "./legacy-client-command": {
+      "types": "./dist/legacy-client-command.d.ts",
+      "require": "./dist/legacy-client-command.js",
+      "default": "./dist/legacy-client-command.js"
+    },
     "./custom-script": {
       "types": "./dist/custom-script.d.ts",
       "require": "./dist/custom-script.js",

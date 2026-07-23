@@ -4,6 +4,8 @@ import {
   cleanScriptRoleId,
   decodeLegacyEnvelope,
   encodeLegacyEnvelope,
+  isLegacyClientCommand,
+  legacyClientCommandSchema,
   parseAvatarUpload,
   parseCustomScript,
   parseDynamicInitResponse,
@@ -39,6 +41,20 @@ describe("legacy WebSocket v1 envelopes", () => {
     ["ping", {}, false, "extra"],
   ])("rejects malformed input %#", (input) => {
     expect(() => decodeLegacyEnvelope(input)).toThrow();
+  });
+});
+
+describe("legacy client command boundary", () => {
+  it("accepts supported v1 client commands", () => {
+    expect(legacyClientCommandSchema.parse("direct")).toBe("direct");
+    expect(isLegacyClientCommand("setTimer")).toBe(true);
+  });
+
+  it("rejects unknown commands before server dispatch", () => {
+    expect(
+      legacyClientCommandSchema.safeParse("runArbitraryCode").success,
+    ).toBe(false);
+    expect(isLegacyClientCommand("runArbitraryCode")).toBe(false);
   });
 });
 

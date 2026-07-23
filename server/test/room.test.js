@@ -32,10 +32,10 @@ test("enforces room membership and host authorization", async (t) => {
 
   const player = await openClient(`${wsBase}/ws/42/player-a`);
   player.send(["request", { checkAllowJoin: ["player-a"] }]);
-  assert.deepEqual(
-    await player.next((message) => message[0] === "allowJoin"),
-    ["allowJoin", true],
-  );
+  assert.deepEqual(await player.next((message) => message[0] === "allowJoin"), [
+    "allowJoin",
+    true,
+  ]);
 });
 
 test("forwards host broadcasts and player messages to the storyteller", async (t) => {
@@ -67,6 +67,21 @@ test("forwards host broadcasts and player messages to the storyteller", async (t
     [0, "player-a", "Player"],
     false,
   ]);
+});
+
+test("rejects unknown WebSocket commands before they are broadcast", async (t) => {
+  const { wsBase } = await createTestService(t);
+  const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
+
+  host.send(["runArbitraryCode", { payload: "ignored" }]);
+  const [code, reason] = await new Promise((resolve) =>
+    host.socket.once("close", (closeCode, closeReason) =>
+      resolve([closeCode, closeReason.toString()]),
+    ),
+  );
+
+  assert.equal(code, 1008);
+  assert.match(reason, /Unknown WebSocket command/);
 });
 
 test("announces room lifecycle to lobby clients and disconnects players after host exit", async (t) => {

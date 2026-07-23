@@ -6,6 +6,7 @@ import WebSocket, { WebSocketServer, type RawData } from "ws";
 
 import {
   decodeLegacyEnvelope,
+  isLegacyClientCommand,
   playerIdSchema,
   roomIdSchema,
   type LegacyFeedback,
@@ -303,6 +304,8 @@ export function createWebsocketService({
         return;
       }
       const { command, params, feedback } = message;
+      if (!isLegacyClientCommand(command))
+        return closeProtocol(socket, "Unknown WebSocket command");
       // Guests can connect before a host exists so that the client receives an explicit allowJoin=false response.
       const currentRoom = rooms.get(socket.roomId) || room;
       if (command === "request")
