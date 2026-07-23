@@ -267,6 +267,9 @@ const chatWith = ref<HTMLElement | null>(null);
 const chatContent = ref<HTMLElement | null>(null);
 const messageInput = ref<HTMLInputElement | null>(null);
 const selectedPlayer = ref(0);
+const swap = ref(-1);
+const move = ref(-1);
+const nominate = ref(-1);
 const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
@@ -299,9 +302,6 @@ const options: any = {
   data() {
     return {
       bluffSize: 3,
-      swap: -1,
-      move: -1,
-      nominate: -1,
       isBluffsOpen: true,
       isFabledOpen: true,
       isChatMin: false,
@@ -316,171 +316,10 @@ const options: any = {
     removeFabled(index) {
       if (this.session.isSpectator) {
         if (index === 0) {
-          if (this.session.claimedSeat >= 0) this.openChat(0); //open chat box if user is a player
+          if (this.session.claimedSeat >= 0) openChat(0); //open chat box if user is a player
         }
       } else {
         this.commands.commit("players/setFabled", { index });
-      }
-    },
-    removePlayer(playerIndex) {
-      if (this.session.isSpectator || this.voting.lockedVote) return;
-      const { nomination } = this.voting;
-      if (nomination) {
-        if (nomination.includes(playerIndex)) {
-          // abort vote if removed player is either nominator or nominee
-          this.commands.commit("session/nomination");
-        } else if (nomination[0] > playerIndex || nomination[1] > playerIndex) {
-          // update nomination array if removed player has lower index
-          this.commands.commit("session/setNomination", [
-            nomination[0] > playerIndex ? nomination[0] - 1 : nomination[0],
-            nomination[1] > playerIndex ? nomination[1] - 1 : nomination[1],
-          ]);
-        }
-      }
-      this.commands.commit("players/remove", playerIndex);
-    },
-    swapPlayer(from, to) {
-      if (this.session.isSpectator || this.voting.lockedVote) return;
-      if (to === undefined) {
-        this.cancel();
-        this.swap = from;
-      } else {
-        if (this.voting.nomination) {
-          // update nomination if one of the involved players is swapped
-          const swapTo = this.players.indexOf(to);
-          const updatedNomination = this.voting.nomination.map((nom) => {
-            if (nom === this.swap) return swapTo;
-            if (nom === swapTo) return this.swap;
-            return nom;
-          });
-          if (
-            this.voting.nomination[0] !== updatedNomination[0] ||
-            this.voting.nomination[1] !== updatedNomination[1]
-          ) {
-            this.commands.commit("session/setNomination", updatedNomination);
-          }
-        }
-        this.commands.commit("players/swap", [
-          this.swap,
-          this.players.indexOf(to),
-        ]);
-        this.cancel();
-      }
-    },
-    movePlayer(from, to) {
-      if (this.session.isSpectator || this.voting.lockedVote) return;
-      if (to === undefined) {
-        this.cancel();
-        this.move = from;
-      } else {
-        if (this.voting.nomination) {
-          // update nomination if it is affected by the move
-          const moveTo = this.players.indexOf(to);
-          const updatedNomination = this.voting.nomination.map((nom) => {
-            if (nom === this.move) return moveTo;
-            if (nom > this.move && nom <= moveTo) return nom - 1;
-            if (nom < this.move && nom >= moveTo) return nom + 1;
-            return nom;
-          });
-          if (
-            this.voting.nomination[0] !== updatedNomination[0] ||
-            this.voting.nomination[1] !== updatedNomination[1]
-          ) {
-            this.commands.commit("session/setNomination", updatedNomination);
-          }
-        }
-        this.commands.commit("players/move", [
-          this.move,
-          this.players.indexOf(to),
-        ]);
-        this.cancel();
-      }
-    },
-    nominatePlayer(from, to) {
-      if (this.session.isSpectator || this.voting.lockedVote) return;
-      if (to === undefined) {
-        this.cancel();
-        if (from !== this.nominate) {
-          this.nominate = from;
-        }
-      } else {
-        const nomination = [this.nominate, this.players.indexOf(to)];
-        this.commands.commit("session/nomination", { nomination });
-        this.cancel();
-      }
-    },
-    cancel() {
-      this.move = -1;
-      this.swap = -1;
-      this.nominate = -1;
-    },
-    addVote(playerIndex) {
-      if (this.session.isSpectator) return;
-      const player = this.players[playerIndex];
-      const vote = player.votes + 1;
-      this.commands.commit("players/update", {
-        player,
-        property: "votes",
-        value: vote,
-      });
-    },
-    subtractVote(playerIndex) {
-      if (this.session.isSpectator) return;
-      const player = this.players[playerIndex];
-      const vote = player.votes - 1;
-      if (vote < 1) return;
-      this.commands.commit("players/update", {
-        player,
-        property: "votes",
-        value: vote,
-      });
-    },
-    setStoryTeller(playerIndex) {
-      if (this.session.isSpectator) return;
-      const player = this.players[playerIndex];
-      if (player.id) {
-        if (player.id != "host") return;
-        this.commands.commit("players/update", {
-          player,
-          property: "id",
-          value: "",
-        });
-        this.commands.commit("players/update", {
-          player,
-          property: "name",
-          value: "",
-        });
-        this.commands.commit("players/update", {
-          player,
-          property: "isVoteless",
-          value: false,
-        });
-        this.commands.commit("players/update", {
-          player,
-          property: "isDead",
-          value: false,
-        });
-      } else {
-        this.commands.commit("players/update", {
-          player,
-          property: "id",
-          value: "host",
-        });
-        this.commands.commit("players/update", {
-          player,
-          property: "name",
-          value: "说书人",
-        });
-        this.commands.commit("players/update", {
-          player,
-          property: "isVoteless",
-          value: true,
-        });
-        this.commands.commit("players/update", {
-          player,
-          property: "isDead",
-          value: true,
-        });
       }
     },
     openChat(playerIndex, maximise = true) {
@@ -668,9 +507,6 @@ const nightOrder = computed(() =>
   ),
 );
 const bluffSize = toRef(context, "bluffSize");
-const swap = toRef(context, "swap");
-const move = toRef(context, "move");
-const nominate = toRef(context, "nominate");
 const isBluffsOpen = toRef(context, "isBluffsOpen");
 const isFabledOpen = toRef(context, "isFabledOpen");
 const isChatMin = toRef(context, "isChatMin");
@@ -765,20 +601,128 @@ const openRoleModal = (playerIndex: number) => {
   selectedPlayer.value = playerIndex;
   commitGameCommand("toggleModal", "role");
 };
+const cancel = () => {
+  move.value = -1;
+  swap.value = -1;
+  nominate.value = -1;
+};
+const removePlayer = (playerIndex: number) => {
+  if (session.isSpectator || voting.lockedVote) return;
+  const { nomination } = voting;
+  if (nomination) {
+    if (nomination.includes(playerIndex)) {
+      commitGameCommand("session/nomination");
+    } else if (nomination[0] > playerIndex || nomination[1] > playerIndex) {
+      commitGameCommand("session/setNomination", [
+        nomination[0] > playerIndex ? nomination[0] - 1 : nomination[0],
+        nomination[1] > playerIndex ? nomination[1] - 1 : nomination[1],
+      ]);
+    }
+  }
+  commitGameCommand("players/remove", playerIndex);
+};
+const swapPlayer = (from: number, to?: unknown) => {
+  if (session.isSpectator || voting.lockedVote) return;
+  if (to === undefined) {
+    cancel();
+    swap.value = from;
+    return;
+  }
+
+  const swapTo = playersState.players.indexOf(to);
+  if (voting.nomination) {
+    const updatedNomination = voting.nomination.map((nom) => {
+      if (nom === swap.value) return swapTo;
+      if (nom === swapTo) return swap.value;
+      return nom;
+    });
+    if (
+      voting.nomination[0] !== updatedNomination[0] ||
+      voting.nomination[1] !== updatedNomination[1]
+    )
+      commitGameCommand("session/setNomination", updatedNomination);
+  }
+  commitGameCommand("players/swap", [swap.value, swapTo]);
+  cancel();
+};
+const movePlayer = (from: number, to?: unknown) => {
+  if (session.isSpectator || voting.lockedVote) return;
+  if (to === undefined) {
+    cancel();
+    move.value = from;
+    return;
+  }
+
+  const moveTo = playersState.players.indexOf(to);
+  if (voting.nomination) {
+    const updatedNomination = voting.nomination.map((nom) => {
+      if (nom === move.value) return moveTo;
+      if (nom > move.value && nom <= moveTo) return nom - 1;
+      if (nom < move.value && nom >= moveTo) return nom + 1;
+      return nom;
+    });
+    if (
+      voting.nomination[0] !== updatedNomination[0] ||
+      voting.nomination[1] !== updatedNomination[1]
+    )
+      commitGameCommand("session/setNomination", updatedNomination);
+  }
+  commitGameCommand("players/move", [move.value, moveTo]);
+  cancel();
+};
+const nominatePlayer = (from: number, to?: unknown) => {
+  if (session.isSpectator || voting.lockedVote) return;
+  if (to === undefined) {
+    cancel();
+    if (from !== nominate.value) nominate.value = from;
+    return;
+  }
+
+  commitGameCommand("session/nomination", {
+    nomination: [nominate.value, playersState.players.indexOf(to)],
+  });
+  cancel();
+};
+const updatePlayerVotes = (playerIndex: number, change: 1 | -1) => {
+  if (session.isSpectator) return;
+  const player = playersState.players[playerIndex];
+  const votes = player.votes + change;
+  if (votes < 1) return;
+  commitGameCommand("players/update", {
+    player,
+    property: "votes",
+    value: votes,
+  });
+};
+const addVote = (playerIndex: number) => updatePlayerVotes(playerIndex, 1);
+const subtractVote = (playerIndex: number) =>
+  updatePlayerVotes(playerIndex, -1);
+const setStoryTeller = (playerIndex: number) => {
+  if (session.isSpectator) return;
+  const player = playersState.players[playerIndex];
+  if (player.id && player.id !== "host") return;
+  const updates = player.id
+    ? [
+        ["id", ""],
+        ["name", ""],
+        ["isVoteless", false],
+        ["isDead", false],
+      ]
+    : [
+        ["id", "host"],
+        ["name", "说书人"],
+        ["isVoteless", true],
+        ["isDead", true],
+      ];
+  for (const [property, value] of updates)
+    commitGameCommand("players/update", { player, property, value });
+};
 
 const methodNames = Object.keys(options.methods);
 for (const name of methodNames)
   context[name] = options.methods[name].bind(context);
 const {
   removeFabled,
-  removePlayer,
-  swapPlayer,
-  movePlayer,
-  nominatePlayer,
-  cancel,
-  addVote,
-  subtractVote,
-  setStoryTeller,
   openChat,
   toggleChat,
   maximiseChat,

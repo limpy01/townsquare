@@ -102,6 +102,7 @@
 - `Menu.vue` 的麦克风模式、阈值编辑、Web Audio 分析器和说话状态命令已改为直接的 Composition API ref/function；保留原有 `setTalking` 与 `setAudioThreshold` 命令和浏览器权限行为。其余会话、分发与玩家管理方法仍在临时 Options 适配层中。
 - `Player.vue` 到 `TownSquare.vue` 的玩家操作事件已从字符串方法名动态调用改为显式联合事件与 `switch` 分发，覆盖座位、提醒、角色、换位、移动、提名、聊天和投票操作；仍由现有 Pinia 命令兼容层执行实际游戏变更。
 - `TownSquare.vue` 的当前选中玩家、坐席切换、提醒与角色弹窗已迁为直接的 Composition API 状态和函数；换位、移动、提名及聊天等交互仍将在后续批次脱离其 Options 适配器。
+- `TownSquare.vue` 的换位、移动、提名、票数和说书人席位操作已迁为 Composition API；临时 `swap`/`move`/`nominate` 状态直接驱动既有模板，并保留在座位重排时修正提名索引的旧规则。
 
 ## 本批次约束
 
