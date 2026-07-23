@@ -597,6 +597,7 @@ import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
 import { legacyCommands } from "../store/legacy-commands";
+import { readStoredArray } from "../store/storage";
 
 const emit = defineEmits(["trigger"]);
 const grimoire = useGrimoireStore();
@@ -1298,7 +1299,10 @@ const options: any = {
       if (!update) return;
       this.$store.commit("session/setUseOldRole", this.pendingOldRole);
       if (localStorage.getItem("roles"))
-        this.$store.commit("setCustomRoles", JSON.parse(localStorage.roles));
+        this.$store.commit(
+          "setCustomRoles",
+          readStoredArray(localStorage, "roles"),
+        );
       this.$store.commit("setEdition", this.edition);
     },
     async setTimer() {
