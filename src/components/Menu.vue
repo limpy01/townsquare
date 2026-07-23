@@ -626,6 +626,15 @@ const audioContext = ref<AudioContext | null>(null);
 const audioStream = ref<MediaStream | null>(null);
 const analyser = ref<AnalyserNode | null>(null);
 const audioSource = ref<MediaStreamAudioSourceNode | null>(null);
+const selectingEditions = ref(false);
+const pendingEditions = ref({
+  tb: true,
+  bmr: true,
+  snv: true,
+  exp: true,
+  hdcs: true,
+  syyl: true,
+});
 const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
@@ -657,17 +666,8 @@ const options: any = {
       distributingGrimoire: false,
       distributingTypes: false,
       isSendingBluff: true,
-      selectingEditions: false,
       selectingOldOrder: false,
       selectingOldRole: false,
-      pendingEditions: {
-        tb: true,
-        bmr: true,
-        snv: true,
-        exp: true,
-        hdcs: true,
-        syyl: true,
-      },
       pendingOldOrder: {
         pithag: false,
         professor: false,
@@ -975,40 +975,6 @@ const options: any = {
         this.distributingGrimoire = false;
       }
     },
-    selectEditionsAsk() {
-      this.selectingEditions = !this.selectingEditions;
-      if (this.selectingEditions)
-        this.pendingEditions = { ...this.selectedEditions };
-    },
-    selectEditions(update = false) {
-      this.$nextTick(() => {
-        document.getElementById("app").focus();
-      });
-
-      this.selectingEditions = false;
-      if (!update) return;
-      this.commands.commit("setSelectedEditions", this.pendingEditions);
-    },
-    async imageOptIn() {
-      const popup = this.grimoire.isImageOptIn
-        ? false
-        : await this.showInputModal({
-            inputType: "confirm",
-            inputModal: "confirm",
-            inputData: {
-              name: [
-                "确定要启用自定义游戏图标吗？木马剧本拥有者可能以此来追踪你的IP地址。",
-              ],
-            },
-          }).catch(() => {
-            return null;
-          });
-      if (popup === null) return;
-
-      if (this.grimoire.isImageOptIn || popup === true) {
-        toggleImageOptIn();
-      }
-    },
     async joinSession() {
       if (this.session.sessionId) return this.leaveSession();
       if (!this.profile.playerName) await this.changeName();
@@ -1256,10 +1222,8 @@ const distributingBluffs = toRef(context, "distributingBluffs");
 const distributingGrimoire = toRef(context, "distributingGrimoire");
 const distributingTypes = toRef(context, "distributingTypes");
 const isSendingBluff = toRef(context, "isSendingBluff");
-const selectingEditions = toRef(context, "selectingEditions");
 const selectingOldOrder = toRef(context, "selectingOldOrder");
 const selectingOldRole = toRef(context, "selectingOldRole");
-const pendingEditions = toRef(context, "pendingEditions");
 const pendingOldOrder = toRef(context, "pendingOldOrder");
 const pendingOldRole = toRef(context, "pendingOldRole");
 const formattedTime = computed(() => {
@@ -1420,6 +1384,31 @@ const toggleNight = () => {
   commitGameCommand("toggleNight");
   if (grimoire.isNight) commitGameCommand("session/setMarkedPlayer", -1);
 };
+const selectEditionsAsk = () => {
+  selectingEditions.value = !selectingEditions.value;
+  if (selectingEditions.value)
+    pendingEditions.value = { ...scenario.selectedEditions };
+};
+const selectEditions = (update = false) => {
+  nextTick(() => document.getElementById("app")?.focus());
+  selectingEditions.value = false;
+  if (update) commitGameCommand("setSelectedEditions", pendingEditions.value);
+};
+const imageOptIn = async () => {
+  const popup = grimoire.isImageOptIn
+    ? false
+    : await showInputModal({
+        inputType: "confirm",
+        inputModal: "confirm",
+        inputData: {
+          name: [
+            "确定要启用自定义游戏图标吗？木马剧本拥有者可能以此来追踪你的IP地址。",
+          ],
+        },
+      }).catch(() => null);
+  if (popup === null) return;
+  if (grimoire.isImageOptIn || popup === true) toggleImageOptIn();
+};
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
@@ -1437,9 +1426,6 @@ const {
   distributeBluffs,
   distributeGrimoireAsk,
   distributeGrimoire,
-  selectEditionsAsk,
-  selectEditions,
-  imageOptIn,
   joinSession,
   leaveSession,
   toggleIsReview,

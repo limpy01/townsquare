@@ -106,6 +106,7 @@
 - `TownSquare.vue` 的私聊与群聊开闭、发送、未读清理、亡魂转发和 DOM 滚动焦点也已迁为 Composition API；消息仍通过同一 `session/updateChatSent` 兼容命令送入既有存档与 v1 WebSocket 路径。
 - `TownSquare.vue` 已移除临时 Options/context 适配器与 `@ts-nocheck`，成为完整的 `<script setup lang="ts">` 组件；空 DOM ref、可选群聊和可用角色状态现在经 TypeScript 收窄处理。
 - `Menu.vue` 的新增/清空/随机座位、清空角色、私货商人说明和日夜切换已迁为直接 Composition API 命令；确认弹窗继续复用同一输入服务，玩家状态继续通过既有兼容命令同步。
+- `Menu.vue` 的剧本版本选择与自定义图标确认已迁为 Composition API ref/function；勾选草稿在打开对话框时仍从 scenario store 复制，提交时仍走原有 `setSelectedEditions` 命令。
 
 ## 本批次约束
 
