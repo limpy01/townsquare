@@ -1,11 +1,11 @@
 <template>
   <Modal
     class="characters"
-    @close="toggleModal('reference')"
+    @close="modals.toggle('reference')"
     v-if="modals.reference && roles.size"
   >
     <font-awesome-icon
-      @click="toggleModal('nightOrder')"
+      @click="modals.toggle('nightOrder')"
       icon="cloud-moon"
       class="toggle"
       title="Show Night Order"
@@ -45,15 +45,17 @@
               backgroundImage: `url(${
                 role.image && grimoire.isImageOptIn
                   ? role.image
-                  : require('../../assets/icons/' +
-                      (role.imageAlt || role.id.replace(/old1$/, '')) +
-                      '.png')
-              })`
+                  : require(
+                      '../../assets/icons/' +
+                        (role.imageAlt || role.id.replace(/old1$/, '')) +
+                        '.png',
+                    )
+              })`,
             }"
           ></span>
           <div class="role">
             <span class="player" v-if="Object.keys(playersByRole).length">{{
-              playersByRole[role.id] ? playersByRole[role.id].join(", ") : ""
+              (playersByRole[role.id] ?? []).join(", ")
             }}</span>
             <span class="name">{{ role.name }}</span>
             <span class="ability">{{ role.ability }}</span>
@@ -74,33 +76,37 @@
             v-if="jinx.first"
             class="icon"
             :style="{
-              backgroundImage: `url(${require('../../assets/icons/' +
-                (jinx.first.imageAlt || jinx.first.id.replace(/old1$/, '')) +
-                '.png')})`
+              backgroundImage: `url(${require(
+                '../../assets/icons/' +
+                  (jinx.first.imageAlt || jinx.first.id.replace(/old1$/, '')) +
+                  '.png',
+              )})`,
             }"
           ></span>
           <span
             v-else
             class="icon"
             :style="{
-              backgroundImage: `url(${require('../../assets/icons/custom.png')})`
+              backgroundImage: `url(${require('../../assets/icons/custom.png')})`,
             }"
           ></span>
-          <span v-if="jinx.first"
+          <span
+            v-if="jinx.first"
             class="icon"
             :style="{
-              backgroundImage: `url(${require('../../assets/icons/' +
-                (jinx.second.imageAlt || jinx.second.id.replace(/old1$/, '')) +
-                '.png')})`
+              backgroundImage: `url(${require(
+                '../../assets/icons/' +
+                  (jinx.second.imageAlt ||
+                    jinx.second.id.replace(/old1$/, '')) +
+                  '.png',
+              )})`,
             }"
           ></span>
           <div class="role">
             <span v-if="jinx.first" class="name"
               >{{ jinx.first.name }} & {{ jinx.second.name }}</span
             >
-            <span v-else class="name"
-              >{{ jinx.name }}</span
-            >
+            <span v-else class="name">{{ jinx.name }}</span>
             <span v-if="jinx.first" class="ability">{{ jinx.reason }}</span>
             <span v-else class="ability">{{ jinx.ability }}</span>
           </div>
@@ -112,97 +118,75 @@
   </Modal>
 </template>
 
-<script>
-import Modal from "./Modal";
-import { mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import { computed } from "vue";
+import Modal from "./Modal.vue";
+import { useGrimoireStore } from "../../stores/grimoire";
+import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
+import { useScenarioStore } from "../../stores/scenario";
 
-export default {
-  components: {
-    Modal
-  },
-  computed: {
-    /**
-     * Return a list of jinxes in the form of role IDs and a reason
-     * @returns {*[]} [{first, second, reason}]
-     */
-    jinxed: function() {
-      const jinxed = [];
-      const jinxNames = ["jinxes", "jinxed", "jinx", "hatred", "hate"];
-      this.roles.forEach(role => {
-        if (jinxNames.includes(role.team)) {
-          jinxed.push(role);
-        }
-        if (this.jinxes.get(role.id)) {
-          this.jinxes.get(role.id).forEach((reason, second) => {
-            if (this.roles.get(second)) {
-              jinxed.push({
-                first: role,
-                second: this.roles.get(second),
-                reason
-              });
-            }
-          });
-        }
-        const jinxName = Object.keys(role).find(key => jinxNames.includes(key));
-        if (jinxName) {
-          role[jinxName].forEach((item) => {
-            if (this.roles.get(item.id.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""))) {
-              jinxed.push({
-                first: role,
-                second: this.roles.get(item.id.toLocaleLowerCase().replace(/[^a-z0-9]/g, "")),
-                reason: item.reason
-              });
-            }
-          });
+const modals = useModalStore();
+const grimoire = useGrimoireStore();
+const playerState = usePlayersStore();
+const scenario = useScenarioStore();
+const roles = scenario.roles as Map<string, any>;
+const jinxes = scenario.jinxes as Map<string, Map<string, string>>;
+const edition = computed(() => scenario.edition ?? ({} as any));
+const states = computed(() => scenario.states as Record<string, string>[]);
+const teamsNames = scenario.teamsNames as Record<string, string>;
+
+const jinxed = computed(() => {
+  const result: any[] = [];
+  const jinxNames = ["jinxes", "jinxed", "jinx", "hatred", "hate"];
+  roles.forEach((role) => {
+    if (jinxNames.includes(role.team)) result.push(role);
+
+    jinxes.get(role.id)?.forEach((reason, second) => {
+      const secondRole = roles.get(second);
+      if (secondRole) result.push({ first: role, second: secondRole, reason });
+    });
+
+    const jinxName = Object.keys(role).find((key) => jinxNames.includes(key));
+    if (jinxName) {
+      role[jinxName].forEach((item: any) => {
+        const secondRole = roles.get(
+          item.id.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
+        );
+        if (secondRole) {
+          result.push({ first: role, second: secondRole, reason: item.reason });
         }
       });
-      return jinxed;
-    },
-    rolesGrouped: function() {
-      const rolesGrouped = {};
-      this.roles.forEach(role => {
-        if (!rolesGrouped[role.team]) {
-          rolesGrouped[role.team] = [];
-        }
-        rolesGrouped[role.team].push(role);
-      });
-      delete rolesGrouped["traveler"];
-      delete rolesGrouped["jinxed"];
-      delete rolesGrouped["jinxes"];
-      delete rolesGrouped["jinx"];
-      delete rolesGrouped["hatred"];
-      delete rolesGrouped["hate"];
-      return rolesGrouped;
-    },
-    // states: function() {
-    //   var statePresent = false;
-    //   if (key == "state"){
-    //   statePresent = true;
-    //   Vue.set(rolesCn, "状态", value);
-    // }else if (key == "status" && !statePresent){
-    //   Vue.set(rolesCn, "状态", value);
-    // }
-    // },
-    playersByRole: function() {
-      const players = {};
-      this.players.forEach(({ name, role }) => {
-        if (role && role.id && role.team !== "traveler") {
-          if (!players[role.id]) {
-            players[role.id] = [];
-          }
-          players[role.id].push(name);
-        }
-      });
-      return players;
-    },
-    ...mapState(["roles", "modals", "edition", "grimoire", "jinxes", "states", "teamsNames"]),
-    ...mapState("players", ["players"])
-  },
-  methods: {
-    ...mapMutations(["toggleModal"])
+    }
+  });
+  return result;
+});
+
+const rolesGrouped = computed(() => {
+  const grouped: Record<string, any[]> = {};
+  roles.forEach((role) => (grouped[role.team] ??= []).push(role));
+  for (const team of [
+    "traveler",
+    "jinxed",
+    "jinxes",
+    "jinx",
+    "hatred",
+    "hate",
+  ]) {
+    delete grouped[team];
   }
-};
+  return grouped;
+});
 
+const playersByRole = computed(() => {
+  const grouped: Record<string, string[]> = {};
+  playerState.players.forEach(({ name, role }) => {
+    if (role?.id && role.team !== "traveler") {
+      (grouped[role.id] ??= []).push(name);
+    }
+  });
+  return grouped;
+});
 </script>
 
 <style lang="scss" scoped>
@@ -268,14 +252,14 @@ h3 {
 }
 
 .state {
-  .explain{
+  .explain {
     left: 18px;
   }
   .name {
-    color: #CC04FF;
+    color: #cc04ff;
   }
   aside {
-    background: linear-gradient(-90deg, #CC04FF, transparent)
+    background: linear-gradient(-90deg, #cc04ff, transparent);
   }
 }
 
