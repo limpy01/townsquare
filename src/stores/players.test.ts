@@ -14,4 +14,11 @@ describe("players store", () => {
     expect(players.firstNightOrder).toEqual([]);
     expect(players.otherNightOrder).toEqual([]);
   });
+
+  it("adds the selected fabled role", () => {
+    const players = usePlayersStore();
+    players.setFabled({ fabled: { id: "bootlegger", ability: "default" } });
+
+    expect(players.fabled).toEqual([{ id: "bootlegger", ability: "default" }]);
+  });
 });

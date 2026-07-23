@@ -4,8 +4,6 @@ import type {
   LegacyMutation,
 } from "../legacy-vuex";
 import { pinia } from "../../pinia";
-import { useSessionSettingsStore } from "../../stores/session-settings";
-import { useProfileStore } from "../../stores/profile";
 import { usePlayersStore } from "../../stores/players";
 
 const NEWPLAYER = {
@@ -295,73 +293,8 @@ const mutations: Record<string, LegacyMutation> = {
   updateBluff(state, bluffs) {
     state.bluffs = bluffs;
   },
-  setFabled(
-    state,
-    { index, fabled, stImage, stName, emptyFabled = false } = {},
-  ) {
-    if (!stImage)
-      stImage =
-        useProfileStore(pinia).playerAvatar === "default.webp"
-          ? "default_storyteller.webp"
-          : useProfileStore(pinia).playerAvatar;
-    if (!stName) stName = useProfileStore(pinia).playerName;
-    if (index !== undefined) {
-      if (index == 0) return; // do not ever remove the first fabled i.e. storyteller
-
-      // 传奇角色页面的私货商人将恢复默认描述
-      if (state.fabled[index].id === "bootlegger") {
-        state.fabled[index].ability = "这个剧本包含有自制角色或自制规则。";
-      }
-
-      state.fabled.splice(index, 1);
-    } else if (fabled) {
-      const fabledStoryteller = {
-        id: "storyteller",
-        image: "https://botcgrimoire.top/avatars/" + stImage,
-        firstNightReminder: "",
-        otherNightReminder: "",
-        reminders: [],
-        setup: false,
-        name: stName,
-        team: "fabled",
-        ability: "点击和说书人私聊。",
-      };
-
-      // 加入自定义私货商人描述
-      const customBootlegger = useSessionSettingsStore(pinia).bootlegger;
-      if (Number(fabled.id === "bootlegger") & Number(!!customBootlegger)) {
-        fabled.ability = customBootlegger;
-      }
-      // 空数组时恢复默认描述
-      if (
-        Number(Array.isArray(fabled)) &
-        Number(fabled.length === 0) &
-        Number(state.fabled.length > 0)
-      ) {
-        for (let i = 0; i < state.fabled.length; i++) {
-          if (state.fabled[i].id === "bootlegger") {
-            this.commit("players/setFabled", { index: i });
-            break;
-          }
-        }
-      }
-
-      // add storyteller fabled to allow direct messages
-      if (!Array.isArray(fabled)) {
-        // if (fabled.length === 0 && fabled.id != "storyteller") state.fabled.push(fabledStoryteller);
-        state.fabled.push(fabled);
-      } else {
-        // add in Story Teller if there isn't already one
-        if (
-          !emptyFabled &&
-          ((fabled.length > 0 && fabled[0].id != "storyteller") ||
-            fabled.length === 0)
-        ) {
-          fabled.unshift(fabledStoryteller);
-        }
-        state.fabled = fabled;
-      }
-    }
+  setFabled(_state, payload = {}) {
+    usePlayersStore(pinia).setFabled(payload);
   },
   setFirstNight(state, firstNight) {
     state.firstNightOrder = firstNight;
