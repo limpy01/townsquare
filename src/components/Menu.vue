@@ -646,6 +646,11 @@ const pendingOldRole = ref({
   lycanthrope: false,
 });
 const timing = ref(false);
+const distributing = ref(false);
+const distributingBluffs = ref(false);
+const distributingGrimoire = ref(false);
+const distributingTypes = ref(false);
+const isSendingBluff = ref(true);
 const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
@@ -671,11 +676,6 @@ const options: any = {
   data() {
     return {
       tab: "grimoire",
-      distributing: false,
-      distributingBluffs: false,
-      distributingGrimoire: false,
-      distributingTypes: false,
-      isSendingBluff: true,
       recognition: null,
     };
   },
@@ -727,210 +727,6 @@ const options: any = {
           addPlayer();
         }
         copySessionUrl();
-      }
-    },
-    distributeAsk() {
-      this.distributingBluffs = false;
-      this.distributingGrimoire = false;
-      this.distributingTypes = false;
-      this.distributing = !this.distributing;
-    },
-    distributeRoles(confirm) {
-      this.$nextTick(() => {
-        document.getElementById("app").focus();
-      });
-      this.distributing = false;
-      if (!confirm) return;
-      if (this.session.isSpectator) return;
-      this.commands.commit("session/distributeRoles", true);
-      setTimeout(
-        (() => {
-          this.commands.commit("session/distributeRoles", false);
-        }).bind(this),
-        2000,
-      );
-      if (!this.isSendingBluff) return;
-      this.commands.commit("session/distributeBluffs", {
-        val: true,
-        role: "demonAll",
-      });
-      setTimeout(
-        (() => {
-          this.commands.commit("session/distributeBluffs", { val: false });
-        }).bind(this),
-        2000,
-      );
-    },
-    async distributeTypeAsk() {
-      this.distributing = false;
-      this.distributingBluffs = false;
-      this.distributingGrimoire = false;
-      this.distributingTypes = !this.distributingTypes;
-
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定要发送角色类型给玩家？"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-
-      if (confirm === true) {
-        this.distributeTypes();
-      }
-    },
-    distributeTypes() {
-      this.distributingTypes = false;
-      if (this.session.isSpectator) return;
-      this.commands.commit("session/distributeTypes", true);
-      setTimeout(
-        (() => {
-          this.commands.commit("session/distributeTypes", false);
-        }).bind(this),
-        2000,
-      );
-    },
-    distributeBluffsAsk() {
-      this.distributing = false;
-      this.distributingGrimoire = false;
-      this.distributingTypes = false;
-      this.distributingBluffs = !this.distributingBluffs;
-    },
-    async distributeBluffs(role = null, seat = false) {
-      this.$nextTick(() => {
-        document.getElementById("app").focus();
-      });
-      if (!role && !seat) {
-        this.distributingBluffs = false;
-        return;
-      }
-      let seatNum;
-      if (seat) {
-        const input = await this.showInputModal({
-          inputType: "seatNum",
-          inputModal: "input",
-          inputData: {
-            name: ["请输入座位号"],
-            length: 1,
-            placeholder: [""],
-          },
-        }).catch(() => {
-          return null;
-        });
-        if (input === null) return;
-        seatNum = input[0];
-      }
-
-      var roleText = "";
-      switch (role) {
-        case "demon":
-          roleText = "恶魔";
-          break;
-        case "lunatic":
-          roleText = "疯子";
-          break;
-        case "snitch":
-          roleText = "爪牙";
-          break;
-      }
-      const text = roleText ? roleText : seatNum + "号位";
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定要发送伪装身份给" + text + "？"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-      if (confirm === true) {
-        if (this.session.isSpectator) return;
-        this.commands.commit("session/distributeBluffs", {
-          val: true,
-          role,
-          seatNum,
-        });
-        setTimeout(
-          (() => {
-            this.commands.commit("session/distributeBluffs", { val: false });
-          }).bind(this),
-          2000,
-        );
-        this.distributingBluffs = false;
-      }
-    },
-    distributeGrimoireAsk() {
-      this.distributing = false;
-      this.distributingBluffs = false;
-      this.distributingTypes = false;
-      this.distributingGrimoire = !this.distributingGrimoire;
-    },
-    async distributeGrimoire(role = null, seat = false) {
-      this.$nextTick(() => {
-        document.getElementById("app").focus();
-      });
-      if (!role && !seat) {
-        this.distributingGrimoire = false;
-        return;
-      }
-
-      let seatNum;
-      if (seat) {
-        const input = await this.showInputModal({
-          inputType: "seatNum",
-          inputModal: "input",
-          inputData: {
-            name: ["请输入座位号"],
-            length: 1,
-            placeholder: [""],
-          },
-        }).catch(() => {
-          return null;
-        });
-        if (input === null) return;
-        seatNum = input[0];
-      }
-
-      let roleText;
-      switch (role) {
-        case "widow":
-          roleText = "寡妇";
-          break;
-        case "spy":
-          roleText = "间谍";
-          break;
-      }
-      const text = roleText ? roleText : seatNum + "号位";
-
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定要发送魔典给" + text + "？"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-
-      if (confirm === true) {
-        if (this.session.isSpectator) return;
-        this.commands.commit("session/distributeGrimoire", {
-          val: true,
-          role,
-          seatNum,
-        });
-        setTimeout(
-          (() => {
-            this.commands.commit("session/distributeGrimoire", { val: false });
-          }).bind(this),
-          2000,
-        );
-        this.distributingGrimoire = false;
       }
     },
     async joinSession() {
@@ -1104,11 +900,6 @@ const players = computed(() => playersState.players);
 const edition = computed(() => scenario.edition);
 const selectedEditions = computed(() => scenario.selectedEditions);
 const tab = toRef(context, "tab");
-const distributing = toRef(context, "distributing");
-const distributingBluffs = toRef(context, "distributingBluffs");
-const distributingGrimoire = toRef(context, "distributingGrimoire");
-const distributingTypes = toRef(context, "distributingTypes");
-const isSendingBluff = toRef(context, "isSendingBluff");
 const formattedTime = computed(() => {
   const minutes = Math.floor(timer.seconds / 60);
   const seconds = Math.ceil(timer.seconds % 60);
@@ -1366,20 +1157,133 @@ const setTimer = async () => {
   stopTimer();
   startTimer(time * 60);
 };
+const distributeAsk = () => {
+  distributingBluffs.value = false;
+  distributingGrimoire.value = false;
+  distributingTypes.value = false;
+  distributing.value = !distributing.value;
+};
+const distributeRoles = (confirmed: boolean) => {
+  void nextTick(focusApp);
+  distributing.value = false;
+  if (!confirmed || session.isSpectator) return;
+  commitGameCommand("session/distributeRoles", true);
+  setTimeout(() => commitGameCommand("session/distributeRoles", false), 2000);
+  if (!isSendingBluff.value) return;
+  commitGameCommand("session/distributeBluffs", {
+    val: true,
+    role: "demonAll",
+  });
+  setTimeout(
+    () => commitGameCommand("session/distributeBluffs", { val: false }),
+    2000,
+  );
+};
+const distributeTypes = () => {
+  distributingTypes.value = false;
+  if (session.isSpectator) return;
+  commitGameCommand("session/distributeTypes", true);
+  setTimeout(() => commitGameCommand("session/distributeTypes", false), 2000);
+};
+const distributeTypeAsk = async () => {
+  distributing.value = false;
+  distributingBluffs.value = false;
+  distributingGrimoire.value = false;
+  distributingTypes.value = !distributingTypes.value;
+  const confirmed = await showInputModal({
+    inputType: "confirm",
+    inputModal: "confirm",
+    inputData: { name: ["确定要发送角色类型给玩家？"] },
+  }).catch(() => null);
+  if (confirmed === true) distributeTypes();
+};
+const distributeBluffsAsk = () => {
+  distributing.value = false;
+  distributingGrimoire.value = false;
+  distributingTypes.value = false;
+  distributingBluffs.value = !distributingBluffs.value;
+};
+const distributeBluffs = async (role: string | null = null, seat = false) => {
+  void nextTick(focusApp);
+  if (!role && !seat) {
+    distributingBluffs.value = false;
+    return;
+  }
+  let seatNum: string | undefined;
+  if (seat) {
+    const input = await showInputModal({
+      inputType: "seatNum",
+      inputModal: "input",
+      inputData: { name: ["请输入座位号"], length: 1, placeholder: [""] },
+    }).catch(() => null);
+    if (!Array.isArray(input)) return;
+    seatNum = input[0];
+  }
+  const roleText =
+    role === "demon"
+      ? "恶魔"
+      : role === "lunatic"
+      ? "疯子"
+      : role === "snitch"
+      ? "爪牙"
+      : "";
+  const confirmed = await showInputModal({
+    inputType: "confirm",
+    inputModal: "confirm",
+    inputData: {
+      name: [`确定要发送伪装身份给${roleText || `${seatNum}号位`}？`],
+    },
+  }).catch(() => null);
+  if (confirmed !== true || session.isSpectator) return;
+  commitGameCommand("session/distributeBluffs", { val: true, role, seatNum });
+  setTimeout(
+    () => commitGameCommand("session/distributeBluffs", { val: false }),
+    2000,
+  );
+  distributingBluffs.value = false;
+};
+const distributeGrimoireAsk = () => {
+  distributing.value = false;
+  distributingBluffs.value = false;
+  distributingTypes.value = false;
+  distributingGrimoire.value = !distributingGrimoire.value;
+};
+const distributeGrimoire = async (role: string | null = null, seat = false) => {
+  void nextTick(focusApp);
+  if (!role && !seat) {
+    distributingGrimoire.value = false;
+    return;
+  }
+  let seatNum: string | undefined;
+  if (seat) {
+    const input = await showInputModal({
+      inputType: "seatNum",
+      inputModal: "input",
+      inputData: { name: ["请输入座位号"], length: 1, placeholder: [""] },
+    }).catch(() => null);
+    if (!Array.isArray(input)) return;
+    seatNum = input[0];
+  }
+  const roleText = role === "widow" ? "寡妇" : role === "spy" ? "间谍" : "";
+  const confirmed = await showInputModal({
+    inputType: "confirm",
+    inputModal: "confirm",
+    inputData: { name: [`确定要发送魔典给${roleText || `${seatNum}号位`}？`] },
+  }).catch(() => null);
+  if (confirmed !== true || session.isSpectator) return;
+  commitGameCommand("session/distributeGrimoire", { val: true, role, seatNum });
+  setTimeout(
+    () => commitGameCommand("session/distributeGrimoire", { val: false }),
+    2000,
+  );
+  distributingGrimoire.value = false;
+};
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
 );
 const {
   hostSession,
-  distributeAsk,
-  distributeRoles,
-  distributeTypeAsk,
-  distributeTypes,
-  distributeBluffsAsk,
-  distributeBluffs,
-  distributeGrimoireAsk,
-  distributeGrimoire,
   joinSession,
   leaveSession,
   toggleIsReview,

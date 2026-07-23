@@ -110,6 +110,7 @@
 - `Menu.vue` 的旧夜间顺序与旧角色能力草稿已迁为 Composition API；提交继续执行 `setUseOldOrder`/`setUseOldRole` 兼容命令、重载已有自定义角色并重新应用当前剧本。
 - `Menu.vue` 的背景、昵称与房间链接操作已迁为直接 Composition API 函数；host/join 流程也已改用同一昵称入口，移除了对已删除 Options 方法的调用。
 - `Menu.vue` 的倒计时输入、开始与停止已迁为 Composition API ref/function；仍通过 `session/startTimer` 与 `session/stopTimer` 兼容命令驱动既有 WebSocket 和持久化路径。
+- `Menu.vue` 的角色、类型、伪装和魔典分发对话框已迁为 Composition API ref/function；2 秒临时分发标记、座位输入与确认流程保持原有命令和 payload。
 
 ## 本批次约束
 
