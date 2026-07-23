@@ -59,8 +59,10 @@ import { useGrimoireStore } from "./stores/grimoire";
 import { useSessionIdentityStore } from "./stores/session-identity";
 import { useModalStore } from "./stores/modals";
 import { useInputStore } from "./stores/input";
+import { useAppMetaStore } from "./stores/app-meta";
 import { showInputModal } from "./services/input-modal";
-import store from "./store";
+import { apiBase } from "./config";
+import { emitLegacyMutation } from "./store/legacy-effects";
 import TownSquare from "./components/TownSquare.vue";
 import TownInfo from "./components/TownInfo.vue";
 import Menu from "./components/Menu.vue";
@@ -91,6 +93,7 @@ const voting = useVotingStore();
 const profile = useProfileStore();
 const interaction = useInteractionStore();
 const audio = useAudioStore();
+const appMeta = useAppMetaStore();
 const menu = ref<any>(null);
 const imageCropper = ref<any>(null);
 
@@ -99,12 +102,13 @@ async function initialize() {
   const sessionId = window.location.hash.substr(1);
 
   if (pathname === "/") {
-    store.dispatch("fetchInit");
+    void fetchInit();
 
     if (sessionId && session.sessionId === "") {
       // Set initial session state
-      store.commit("session/setSpectator", true);
-      store.commit("toggleGrimoire", false);
+      session.setSpectator(true);
+      grimoire.toggle("isPublic", false);
+      emitLegacyMutation("toggleGrimoire", false);
 
       let finalName = profile.playerName;
 
@@ -127,11 +131,14 @@ async function initialize() {
 
       // Now handle the result
       if (finalName) {
-        store.commit("session/setPlayerName", finalName);
-        store.commit("session/setSessionId", sessionId);
+        profile.setPlayerName(finalName);
+        emitLegacyMutation("session/setPlayerName", finalName);
+        session.setSessionId(sessionId);
+        emitLegacyMutation("session/setSessionId", sessionId);
       } else {
         // User cancelled input, so don't join the session
-        store.commit("session/setSessionId", "");
+        session.setSessionId("");
+        emitLegacyMutation("session/setSessionId", "");
       }
     } else if (
       pathname === "/" &&
@@ -156,6 +163,27 @@ async function initialize() {
   document.addEventListener("visibilitychange", handleVisibilityChange);
 }
 
+async function fetchInit() {
+  try {
+    const response = await fetch(`${apiBase}/dynamic/init`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const payload = JSON.parse(await response.text()).payload;
+    if (payload && typeof payload === "object") {
+      if (payload.version) appMeta.setLatestVersion(payload.version);
+      if (payload.floatingNotice)
+        appMeta.setFloatingNotice(payload.floatingNotice);
+    }
+    if (
+      appMeta.version !== appMeta.latestVersion ||
+      appMeta.latestVersion !== appMeta.lastVersion
+    ) {
+      modals.toggle("version");
+    }
+  } catch {
+    return null;
+  }
+}
+
 function handleVisibilityChange() {
   lobby.setAllowReconnect(document.visibilityState === "visible");
 }
@@ -165,10 +193,11 @@ function keyup({ key, ctrlKey, metaKey }: KeyboardEvent) {
   if (interaction.isTyping && key != "Escape") return;
   switch (key.toLocaleLowerCase()) {
     case "m":
-      store.commit("toggleMenu");
+      grimoire.toggle("isMenuOpen");
       break;
     case "g":
-      store.commit("toggleGrimoire");
+      grimoire.toggle("isPublic");
+      emitLegacyMutation("toggleGrimoire");
       break;
     // case "a":
     //   this.$refs.menu.addPlayer();
@@ -180,31 +209,31 @@ function keyup({ key, ctrlKey, metaKey }: KeyboardEvent) {
       menu.value?.joinSession();
       break;
     case "r":
-      store.commit("toggleModal", "reference");
+      modals.toggle("reference");
       break;
     case "n":
-      store.commit("toggleModal", "nightOrder");
+      modals.toggle("nightOrder");
       break;
     case "e":
       if (session.isSpectator) return;
-      store.commit("toggleModal", "edition");
+      modals.toggle("edition");
       break;
     case "c":
       if (session.isSpectator) return;
-      store.commit("toggleModal", "roles");
+      modals.toggle("roles");
       break;
     case "f":
       if (session.isSpectator) return;
-      store.commit("toggleModal", "fabled");
+      modals.toggle("fabled");
       break;
     case "v":
       if (voting.voteHistory.length || !session.isSpectator) {
-        store.commit("toggleModal", "voteHistory");
+        modals.toggle("voteHistory");
       }
       break;
     case "d":
       if (session.isSpectator) return;
-      store.commit("toggleModal", "groupChat");
+      modals.toggle("groupChat");
       break;
     case "s":
       if (session.isSpectator) return;
@@ -218,7 +247,7 @@ function keyup({ key, ctrlKey, metaKey }: KeyboardEvent) {
       if (modals.input) {
         useInputStore().close();
       } else {
-        store.commit("toggleModal");
+        modals.closeAll();
       }
       break;
     case "f2":
