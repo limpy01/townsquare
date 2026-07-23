@@ -33,4 +33,28 @@ describe("players store", () => {
     expect(player.role).toEqual({ id: "imp" });
     expect(players.bluffs).toEqual([{ id: "chef" }]);
   });
+
+  it("clears a seated player while preserving their game role", () => {
+    const players = usePlayersStore();
+    const player = {
+      id: "player-1",
+      name: "Alice",
+      image: "avatar.webp",
+      isWraith: true,
+      isUsingWraith: true,
+      role: { id: "imp" },
+    };
+    players.players = [player];
+
+    players.empty(player);
+
+    expect(player).toMatchObject({
+      id: "",
+      name: "",
+      image: "",
+      isWraith: false,
+      isUsingWraith: false,
+      role: { id: "imp" },
+    });
+  });
 });

@@ -56,6 +56,20 @@ export const usePlayersStore = defineStore("players", {
       }
       this.bluffs.splice(index, 1, role);
     },
+    empty(player: any) {
+      const changes = [
+        ["id", ""],
+        ["name", ""],
+        ["image", ""],
+        ["isWraith", false],
+        ["isUsingWraith", false],
+      ] as const;
+      return changes.map(([property, value]) => {
+        const payload = { player, property, value };
+        this.update(payload);
+        return payload;
+      });
+    },
     setFabled({
       index,
       fabled,

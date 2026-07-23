@@ -359,8 +359,8 @@ import { useVotingStore } from "../stores/voting";
 import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import store from "../store";
 import { getNightOrder } from "../domain/night-order";
+import { emitLegacyMutation } from "../store/legacy-effects";
 
 const props = defineProps<{ player: any }>();
 const emit = defineEmits(["trigger"]);
@@ -576,12 +576,18 @@ function updatePlayer(property: string, value: unknown, closeMenu = false) {
     !["reminders", "stReminders", "pronouns"].includes(property)
   )
     return;
-  store.commit("players/update", { player: props.player, property, value });
+  const payload = { player: props.player, property, value };
+  playersState.update(payload);
+  emitLegacyMutation("players/update", payload);
   if (closeMenu) isMenuOpen.value = false;
 }
 
 function emptyPlayer() {
-  store.commit("players/empty", { player: props.player, id: props.player.id });
+  const payload = { player: props.player, id: props.player.id };
+  playersState
+    .empty(props.player)
+    .forEach((change) => emitLegacyMutation("players/update", change));
+  emitLegacyMutation("players/empty", payload);
 }
 
 async function removePlayer() {
@@ -614,10 +620,12 @@ function openChat(player: any) {
 }
 function vote() {
   if (!session.isSpectator && voteLocked.value) {
-    store.commit("session/voteSync", [
+    const payload: [number, number] = [
       index.value,
       Number(voting.votes[index.value]) > 0 ? 0 : 1,
-    ]);
+    ];
+    voting.vote(payload);
+    emitLegacyMutation("session/voteSync", payload);
   }
 }
 function addVote(player: any) {
