@@ -18,6 +18,7 @@ import { useMessageOutboxStore } from "../stores/message-outbox";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 import { getCustomRolesStripped, rolesJSONbyId } from "./selectors";
+import { mutationBus } from "./mutation-bus";
 
 class LiveSession {
   constructor(store) {
@@ -2366,7 +2367,7 @@ export default (store) => {
   // setup
   const session = new LiveSession(store);
 
-  store.subscribe((mutation, state) => {
+  mutationBus.subscribe((mutation, state: any) => {
     dispatchSessionMutation(session, mutation, state);
   });
 };

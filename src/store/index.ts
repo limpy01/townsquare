@@ -14,6 +14,7 @@ import rolesJSON from "../roles.json";
 import fabledJSON from "../fabled.json";
 import { apiBase } from "../config";
 import { customRoleDefaults, rolesJSONbyId } from "./selectors";
+import { mutationBus } from "./mutation-bus";
 
 type LegacyRootState = any;
 type LegacyRootMutation = (
@@ -327,7 +328,15 @@ const rootStoreOptions: any = {
       }
     },
   } as Record<string, LegacyRootAction>,
-  plugins: [persistence, socket],
+  plugins: [
+    persistence,
+    socket,
+    (store: {
+      subscribe: (subscriber: (mutation: any, state: any) => void) => void;
+    }) => {
+      store.subscribe((mutation, state) => mutationBus.emit(mutation, state));
+    },
+  ],
 };
 
 export default new Vuex.Store(rootStoreOptions);

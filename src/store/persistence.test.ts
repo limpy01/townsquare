@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import persistence from "./persistence";
+import { mutationBus } from "./mutation-bus";
 
 const createStorage = (initial: Record<string, string> = {}) => {
   const entries = new Map(Object.entries(initial));
@@ -20,24 +21,21 @@ describe("Vuex persistence compatibility plugin", () => {
     });
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
     const commit = vi.fn();
-    let subscriber: ((mutation: any, state: any) => void) | undefined;
-
-    persistence({
+    const unsubscribe = persistence({
       commit,
       getters: {},
       state: {},
-      subscribe: (callback) => {
-        subscriber = callback;
-      },
     });
 
     expect(commit).toHaveBeenCalledWith("session/setSpectator", true);
     expect(commit).toHaveBeenCalledWith("session/setSessionId", "room1234");
 
-    subscriber?.(
+    mutationBus.emit(
       { type: "session/setSessionId", payload: "nextroom" },
       { session: { isSpectator: false } },
     );
+
+    unsubscribe?.();
 
     expect(localStorage.getItem("session")).toBe(
       JSON.stringify([false, "nextroom"]),

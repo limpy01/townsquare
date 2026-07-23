@@ -2,13 +2,11 @@ import { readStoredArray, readStoredJson, readStoredRecord } from "./storage";
 import { pinia } from "../pinia";
 import { useChatStore } from "../stores/chat";
 import { rolesJSONbyId } from "./selectors";
+import { mutationBus } from "./mutation-bus";
 type LegacyPersistenceStore = {
   commit(type: string, payload?: any): void;
   state: any;
   getters: any;
-  subscribe(
-    callback: (mutation: { type: string; payload: any }, state: any) => void,
-  ): void;
 };
 
 const isRecord = (value: any) =>
@@ -241,7 +239,7 @@ export default (store: LegacyPersistenceStore) => {
     }
   }
   // listen to mutations
-  store.subscribe(({ type, payload }, state) => {
+  return mutationBus.subscribe(({ type, payload }: any, state: any) => {
     switch (type) {
       case "toggleGrimoire":
         if (!state.grimoire.isPublic) {
