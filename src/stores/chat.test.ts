@@ -25,4 +25,16 @@ describe("chat store", () => {
 
     expect(chat.histories).toEqual([{ id: "host", chat: ["hello"] }]);
   });
+
+  it("keeps group-chat membership alongside direct-message history", () => {
+    const chat = useChatStore();
+    chat.groups.push({
+      id: "group-1",
+      name: "群聊1",
+      keep: false,
+      players: [{ id: "player", name: "Alice" }],
+    });
+
+    expect(chat.groups[0]).toMatchObject({ id: "group-1", keep: false });
+  });
 });

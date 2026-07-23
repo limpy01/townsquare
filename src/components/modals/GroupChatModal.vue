@@ -1,6 +1,6 @@
 <template>
   <Modal v-if="modals.groupChat" @close="close">
-    <div  class="group-chat-panel">
+    <div class="group-chat-panel">
       <h3>创建群聊</h3>
       <table>
         <thead>
@@ -8,49 +8,81 @@
             <td>剩1人时保留</td>
             <td>群聊</td>
             <td>玩家</td>
-            <td> </td>
+            <td></td>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="group in session.groupChats" :key="group.id" class="chat-row">
+          <tr v-for="group in chat.groups" :key="group.id" class="chat-row">
             <td>
-              <input type="checkbox" class="checkbox" :checked="group.keep" @change="toggleGroupKeep(group.id)"/>
+              <input
+                type="checkbox"
+                class="checkbox"
+                :checked="group.keep"
+                @change="toggleGroupKeep(group.id)"
+              />
             </td>
             <td>
               <span>{{ group.name }}</span>
             </td>
             <td>
-              <div v-for="player in group.players" :key="player.id" class="player-tag">
-                <span class="player-name">{{ "（" + (players.indexOf(player)+1) + "号）" + player.name }}</span>
-                <em @click="removeGroupChatMember(group.id, player)" class="remove-cross">
-                  <font-awesome-icon icon="times"/>
+              <div
+                v-for="player in group.players"
+                :key="player.id"
+                class="player-tag"
+              >
+                <span class="player-name">{{
+                  "（" + (players.indexOf(player) + 1) + "号）" + player.name
+                }}</span>
+                <em
+                  @click="removeGroupChatMember(group.id, player)"
+                  class="remove-cross"
+                >
+                  <font-awesome-icon icon="times" />
                 </em>
               </div>
             </td>
-            
+
             <td>
-              <button class="confirm-btn" @click="requestGroupChat(group.id)">添加</button>
+              <button class="confirm-btn" @click="requestGroupChat(group.id)">
+                添加
+              </button>
               &nbsp;
-              <button class="remove-btn" @click="removeGroupChat(group.id)">移除</button>
+              <button class="remove-btn" @click="removeGroupChat(group.id)">
+                移除
+              </button>
             </td>
           </tr>
         </tbody>
       </table>
-      <br/>
+      <br />
       <div class="available-list">
         <div v-if="adding">
           <button class="confirm-btn" @click="addGroupChat()">确定</button>
           &nbsp;
           <button class="remove-btn" @click="cancelGroupChat()">取消</button>
         </div>
-        <button class="confirm-btn" v-else-if="session.groupChats.length < players.length" @click="requestGroupChat()">创建</button>
-        <br/>
+        <button
+          class="confirm-btn"
+          v-else-if="chat.groups.length < players.length"
+          @click="requestGroupChat()"
+        >
+          创建
+        </button>
+        <br />
         <div v-if="adding">
           <div v-for="(player, index) in selectablePlayers" :key="player.id">
-            <input type="checkbox" class="checkbox" v-model="selectedPlayersStatus[index]"/>
-            <span class="player-name">{{ "[" + (players.indexOf(player)+1) + "号]" + player.name }}</span>
+            <input
+              type="checkbox"
+              class="checkbox"
+              v-model="selectedPlayersStatus[index]"
+            />
+            <span class="player-name">{{
+              "[" + (players.indexOf(player) + 1) + "号]" + player.name
+            }}</span>
           </div>
-          <span v-if="!!warningMessage" class="warning">{{ warningMessage }}</span>
+          <span v-if="!!warningMessage" class="warning">{{
+            warningMessage
+          }}</span>
         </div>
       </div>
     </div>
@@ -60,30 +92,34 @@
 <script>
 import { mapMutations, mapState } from "vuex";
 import Modal from "./Modal";
+import { useChatStore } from "../../stores/chat";
 
 export default {
   components: { Modal },
   computed: {
+    chat() {
+      return useChatStore();
+    },
     selectablePlayers() {
-      return this.players.filter(player => !!player.id && !player.chatGroup);
+      return this.players.filter((player) => !!player.id && !player.chatGroup);
     },
     ...mapState(["modals", "grimoire", "session"]),
     ...mapState("players", ["players"]),
   },
-  data(){
+  data() {
     return {
       adding: false,
       addingGroup: null,
       selectedPlayersStatus: [],
       warningMessage: "",
       windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight
-    }
+      windowHeight: window.innerHeight,
+    };
   },
-  mounted(){
+  mounted() {
     window.addEventListener("resize", this.handleResize);
   },
-  beforeUnmount(){
+  beforeUnmount() {
     window.removeEventListener("resize", this.handleResize);
   },
   methods: {
@@ -110,33 +146,39 @@ export default {
       }
       if (!chatId) {
         chatId = Math.random().toString(36).substr(2);
-        while (this.session.groupChats.some(group => group.id === chatId)) {
+        while (this.chat.groups.some((group) => group.id === chatId)) {
           chatId = Math.random().toString(36).substr(2);
         }
       }
-      
-      this.$store.commit("session/addGroupChat", {chatId, players: newGroupMembers});
-      
+
+      this.$store.commit("session/addGroupChat", {
+        chatId,
+        players: newGroupMembers,
+      });
+
       this.cancelGroupChat();
     },
     removeGroupChat(chatId) {
-      const index = this.session.groupChats.findIndex(group => group.id === chatId);
+      const index = this.chat.groups.findIndex((group) => group.id === chatId);
       if (index === -1) return;
 
-      const group = this.session.groupChats[index];
-      const playerIds = group.players.map(player => player.id);
-      this.$store.commit("session/removeGroupChat", {chatId, playerIds});
+      const group = this.chat.groups[index];
+      const playerIds = group.players.map((player) => player.id);
+      this.$store.commit("session/removeGroupChat", { chatId, playerIds });
     },
     removeGroupChatMember(chatId, player) {
-      const index = this.session.groupChats.findIndex(group => group.id === chatId);
+      const index = this.chat.groups.findIndex((group) => group.id === chatId);
       if (index === -1) return;
 
-      const group = this.session.groupChats[index];
-      if (group.players.length <= 1 || (group.players.length == 2 && !group.keep))  {
-        const playerIds = group.players.map(player => player.id);
-        this.$store.commit("session/removeGroupChat", {chatId, playerIds});
+      const group = this.chat.groups[index];
+      if (
+        group.players.length <= 1 ||
+        (group.players.length == 2 && !group.keep)
+      ) {
+        const playerIds = group.players.map((player) => player.id);
+        this.$store.commit("session/removeGroupChat", { chatId, playerIds });
       } else {
-        this.$store.commit("session/removeGroupChatMember", {chatId, player});
+        this.$store.commit("session/removeGroupChatMember", { chatId, player });
       }
     },
     toggleGroupKeep(chatId) {
@@ -146,12 +188,12 @@ export default {
       this.cancelGroupChat();
       this.$store.commit("toggleModal", "groupChat");
     },
-    handleResize(){
+    handleResize() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
     },
-    ...mapMutations(["toggleModal"])
-  }
+    ...mapMutations(["toggleModal"]),
+  },
 };
 </script>
 
@@ -172,11 +214,11 @@ $remove-color: #e84b20;
   margin-bottom: 25px;
   padding: 15px;
   border-radius: 6px;
-  
-  button{
-    padding: 8px 15px; 
+
+  button {
+    padding: 8px 15px;
     border: none;
-    border-radius: 20px; 
+    border-radius: 20px;
     cursor: pointer;
     font-weight: bold;
   }
@@ -185,7 +227,7 @@ $remove-color: #e84b20;
     background: $confirm-color;
     color: white;
     transition: background-color 0.3s;
-    
+
     &:hover {
       background-color: darken($confirm-color, 10%);
     }
@@ -195,12 +237,12 @@ $remove-color: #e84b20;
     background: $remove-color;
     color: white;
     transition: background-color 0.3s;
-    
+
     &:hover {
       background-color: darken($remove-color, 10%);
     }
   }
-  
+
   .remove-cross {
     // Cross icon next to the name
     background: none;
@@ -213,12 +255,12 @@ $remove-color: #e84b20;
     margin-left: 5px;
     cursor: pointer;
     transition: color 0.2s;
-    
+
     &:hover {
       color: darken($remove-color, 10%);
     }
   }
-  
+
   &:last-child {
     margin-bottom: 0;
   }
@@ -235,7 +277,7 @@ $remove-color: #e84b20;
 .player-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px; 
+  gap: 8px;
 }
 
 .player-tag {
@@ -249,7 +291,7 @@ $remove-color: #e84b20;
   font-size: 0.9em;
   font-weight: 500;
   white-space: nowrap; // Prevents the name from wrapping
-  
+
   .player-name {
     margin-right: 5px;
   }
@@ -266,7 +308,7 @@ $remove-color: #e84b20;
     margin-left: 5px;
     cursor: pointer;
     transition: color 0.2s;
-    
+
     &:hover {
       color: darken($remove-color, 10%);
     }
@@ -274,11 +316,10 @@ $remove-color: #e84b20;
 }
 
 .available-list {
-  
-  button{
-    padding: 8px 15px; 
+  button {
+    padding: 8px 15px;
     border: none;
-    border-radius: 20px; 
+    border-radius: 20px;
     cursor: pointer;
     font-weight: bold;
   }
@@ -287,7 +328,7 @@ $remove-color: #e84b20;
     background: $confirm-color;
     color: white;
     transition: background-color 0.3s;
-    
+
     &:hover {
       background-color: darken($confirm-color, 10%);
     }
@@ -297,7 +338,7 @@ $remove-color: #e84b20;
     background: $remove-color;
     color: white;
     transition: background-color 0.3s;
-    
+
     &:hover {
       background-color: darken($remove-color, 10%);
     }
@@ -344,7 +385,6 @@ table {
     word-wrap: break-word;
   }
 
-  
   tbody th:nth-child(1),
   tbody td:nth-child(1) {
     width: 8%;

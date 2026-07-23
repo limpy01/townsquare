@@ -86,6 +86,7 @@
 - 玩家昵称与头像已迁至 Pinia profile store；上传、说书人标识与 localStorage 仍经原有兼容入口工作。
 - WebSocket 出站消息队列和去重计时器已迁至 Pinia message-outbox store；原有 mutation 继续触发传输兼容层。
 - 私聊记录已迁至 Pinia chat store；历史恢复、发送确认与 localStorage JSON 格式保持兼容。
+- 群聊成员关系与保留标记已迁至 Pinia chat store；玩家席位同步、持久化与 WebSocket 广播继续复用兼容 mutation。
 
 ## 本批次约束
 

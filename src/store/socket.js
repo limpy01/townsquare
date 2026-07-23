@@ -130,7 +130,7 @@ class LiveSession {
         useInteractionStore(pinia).setChatOpen(false);
 
         // exit group chat
-        this._store.state.session.groupChats.forEach((group) => {
+        this._chat.groups.forEach((group) => {
           this._store.commit("session/removeGroupChat", { chatId: group.id });
         });
 
@@ -675,7 +675,7 @@ class LiveSession {
       const chatIds = [
         ...new Set(selectedPlayers.map((player) => player.chatGroup)),
       ];
-      const groupChats = this._store.state.session.groupChats.filter((group) =>
+      const groupChats = this._chat.groups.filter((group) =>
         chatIds.includes(group.id),
       );
       groupChats.forEach((group) => {
@@ -1947,7 +1947,7 @@ class LiveSession {
     if (this._isSpectator) return;
     if (!!playerIds && !players) return;
 
-    const allPlayersId = this._store.state.session.groupChats
+    const allPlayersId = this._chat.groups
       .filter((group) => group.id === chatId)[0]
       .players.map((player) => player.id);
     const newPlayersId = players.map((player) => player.id);
@@ -2010,11 +2010,9 @@ class LiveSession {
       id: new Date().getTime(),
     });
 
-    const index = this._store.state.session.groupChats.findIndex(
-      (group) => group.id === chatId,
-    );
+    const index = this._chat.groups.findIndex((group) => group.id === chatId);
     if (index === -1) return;
-    this._store.state.session.groupChats[index].players.forEach((member) => {
+    this._chat.groups[index].players.forEach((member) => {
       if (member.id === player.id) return;
       this._store.commit("session/addMessageQueue", {
         type: "direct",
@@ -2120,7 +2118,7 @@ class LiveSession {
 
     if (chatId === "") return;
 
-    const groupChats = this._store.state.session.groupChats;
+    const groupChats = this._chat.groups;
     if (groupChats.length === 0) return;
 
     const group = groupChats.filter((group) => group.id === chatId)[0];
@@ -2150,7 +2148,7 @@ class LiveSession {
     }
     if (!this._isSpectator) return;
 
-    const groupChats = this._store.state.session.groupChats;
+    const groupChats = this._chat.groups;
     const names = this._store.state.players.players
       .filter((player) => playerIds.includes(player.id))
       .map((player) => {
@@ -2209,7 +2207,7 @@ class LiveSession {
     }
     if (!this._isSpectator) return;
 
-    const groupChats = this._store.state.session.groupChats;
+    const groupChats = this._chat.groups;
     if (groupChats.length === 0) return;
 
     const sendingPlayerId = this._store.state.session.stId;
@@ -2236,7 +2234,7 @@ class LiveSession {
     }
     if (!this._isSpectator) return;
 
-    const groupChats = this._store.state.session.groupChats;
+    const groupChats = this._chat.groups;
     if (groupChats.length === 0) return;
     const player = groupChats[0].players.filter((player) => {
       return player.id === playerId;
@@ -2280,7 +2278,7 @@ class LiveSession {
       });
     }
 
-    const groupChats = this._store.state.session.groupChats;
+    const groupChats = this._chat.groups;
     if (groupChatPlayers.length > 0) {
       if (groupChats.length > 0) {
         groupChats[0].players.forEach((player) => {

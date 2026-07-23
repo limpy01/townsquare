@@ -23,7 +23,6 @@ const state = () => ({
   isSpectator: false,
   playerId: "",
   claimedSeat: -1,
-  groupChats: [],
 });
 
 const getters: Record<string, LegacyGetter> = {};
@@ -181,7 +180,8 @@ const mutations: Record<string, LegacyMutation> = {
     useMessageOutboxStore(pinia).checkUnique(feedback);
   },
   addGroupChat(state, { chatId, players, playerIds, keep }) {
-    if (state.groupChats.length >= 20) return;
+    const chat = useChatStore(pinia);
+    if (chat.groups.length >= 20) return;
 
     if (!!playerIds && !players) {
       players = this.state.players.players.filter((player: any) =>
@@ -189,15 +189,14 @@ const mutations: Record<string, LegacyMutation> = {
       );
     }
 
-    const groupIndex = state.groupChats.findIndex(
+    const groupIndex = chat.groups.findIndex(
       (group: any) => group.id === chatId,
     );
     // 提供id则加入已存在的群聊，否则创建新的群聊
     if (groupIndex !== -1) {
-      state.groupChats[groupIndex].players = [
-        ...state.groupChats[groupIndex].players,
-        ...players,
-      ];
+      const group = chat.groups[groupIndex];
+      if (!group) return;
+      group.players = [...group.players, ...players];
       players.forEach((player: any) => {
         this.commit("players/update", {
           player,
@@ -210,7 +209,7 @@ const mutations: Record<string, LegacyMutation> = {
 
     // 最多允许20个群聊（默认名字）
     const pattern = /^群聊(1[0-9]|20|[1-9])$/;
-    const names = state.groupChats.map((group: any) => group.name);
+    const names = chat.groups.map((group: any) => group.name);
     const allSuffixes = names
       .filter((name: any) => pattern.test(name))
       .map((name: any) => name.replace(/^群聊/, ""))
@@ -227,7 +226,7 @@ const mutations: Record<string, LegacyMutation> = {
       }
     }
     // initialise group chats
-    state.groupChats.push({
+    chat.groups.push({
       id: chatId,
       name: names.length === 0 ? "群聊1" : name,
       keep: keep === undefined ? false : keep,
@@ -242,25 +241,29 @@ const mutations: Record<string, LegacyMutation> = {
     });
   },
   removeGroupChat(state, { chatId }) {
-    const index = state.groupChats.findIndex(
-      (group: any) => group.id === chatId,
-    );
+    const chat = useChatStore(pinia);
+    const index = chat.groups.findIndex((group: any) => group.id === chatId);
     if (index === -1) return;
+    const group = chat.groups[index];
+    if (!group) return;
 
-    state.groupChats[index].players.forEach((player: any) => {
+    group.players.forEach((player: any) => {
       this.commit("players/update", {
         player,
         property: "chatGroup",
         value: "",
       });
     });
-    state.groupChats.splice(index, 1);
+    chat.groups.splice(index, 1);
   },
   removeGroupChatMember(state, { chatId, player, playerId }) {
-    const groupIndex = state.groupChats.findIndex(
+    const chat = useChatStore(pinia);
+    const groupIndex = chat.groups.findIndex(
       (group: any) => group.id === chatId,
     );
     if (groupIndex === -1) return;
+    const group = chat.groups[groupIndex];
+    if (!group) return;
 
     if (!!playerId && !player) {
       const playerArray = this.state.players.players.filter(
@@ -270,25 +273,27 @@ const mutations: Record<string, LegacyMutation> = {
       player = playerArray[0];
     }
 
-    const playerIndex = state.groupChats[groupIndex].players.findIndex(
+    const playerIndex = group.players.findIndex(
       (item: any) => item.id == player.id,
     );
     if (playerIndex === -1) return;
+    const groupPlayer = group.players[playerIndex];
+    if (!groupPlayer) return;
     this.commit("players/update", {
-      player: state.groupChats[groupIndex].players[playerIndex],
+      player: groupPlayer,
       property: "chatGroup",
       value: "",
     });
-    state.groupChats[groupIndex].players.splice(playerIndex, 1);
+    group.players.splice(playerIndex, 1);
   },
   toggleGroupKeep(state, chatId) {
-    const index = state.groupChats.findIndex(
-      (group: any) => group.id === chatId,
-    );
+    const chat = useChatStore(pinia);
+    const index = chat.groups.findIndex((group: any) => group.id === chatId);
     if (index === -1) return;
 
-    const group = state.groupChats[index];
-    state.groupChats[index].keep = !group.keep;
+    const group = chat.groups[index];
+    if (!group) return;
+    group.keep = !group.keep;
   },
   setPlayerAvatar() {
     useProfileStore(pinia).resetPlayerAvatar();

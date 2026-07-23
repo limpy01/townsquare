@@ -4,6 +4,12 @@ export const useChatStore = defineStore("chat", {
   state: () => ({
     storytellerUnread: 0,
     histories: [] as Array<{ id: string; chat: unknown[] }>,
+    groups: [] as Array<{
+      id: string;
+      name: string;
+      keep: boolean;
+      players: Array<{ id: string; name?: string }>;
+    }>,
   }),
   actions: {
     addStorytellerUnread(amount: number) {

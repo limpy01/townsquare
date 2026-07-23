@@ -304,15 +304,13 @@ export default {
     },
     isInGroup: function () {
       if (this.session.isSpectator)
-        return this.session.groupChats.length > 0 ? true : false;
+        return this.chat.groups.length > 0 ? true : false;
       return this.chattingGroup != "";
     },
     inGroupPlayers: function () {
       const group = this.session.isSpectator
-        ? this.session.groupChats
-        : this.session.groupChats.filter(
-            (group) => group.id === this.chattingGroup,
-          );
+        ? this.chat.groups
+        : this.chat.groups.filter((group) => group.id === this.chattingGroup);
       if (group.length === 0) return [];
 
       const players = [];
@@ -391,7 +389,7 @@ export default {
         });
       },
     },
-    "session.groupChats": {
+    "chat.groups": {
       handler() {
         this.$nextTick(() => {
           if (this.interaction.isChatOpen && this.session.isSpectator) {
@@ -628,7 +626,7 @@ export default {
 
       // display player name or ST in the chat title
       if (this.session.isSpectator) {
-        const groupChats = this.session.groupChats;
+        const groupChats = this.chat.groups;
         const name = groupChats.length === 0 ? this.fabled[0].name : "群聊"; //if fabled is messed up this may cause issues
         this.$refs.chatWith.innerText = name;
         if (maximise) this.chat.clearStorytellerUnread();
@@ -638,7 +636,7 @@ export default {
         const name =
           this.chattingGroup === ""
             ? this.players[playerIndex].name
-            : this.session.groupChats.filter(
+            : this.chat.groups.filter(
                 (group) => group.id === this.chattingGroup,
               )[0].name;
         this.$refs.chatWith.innerText = name;
@@ -700,7 +698,7 @@ export default {
           receivingPlayerId,
         });
       } else {
-        const group = this.session.groupChats.filter(
+        const group = this.chat.groups.filter(
           (group) => group.id === this.chattingGroup,
         )[0];
         const playerIds = group.players.map((player) => player.id);

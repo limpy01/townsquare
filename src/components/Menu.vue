@@ -1123,7 +1123,7 @@ export default {
         useInteractionStore().setChatOpen(false);
 
         // exit group chat
-        this.session.groupChats.forEach((group) => {
+        this.chat.groups.forEach((group) => {
           this.$store.commit("session/removeGroupChat", { chatId: group.id });
         });
 
