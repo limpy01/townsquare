@@ -596,7 +596,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { gameCommands } from "../store/legacy-commands";
+import { commitGameCommand, gameCommands } from "../store/legacy-commands";
 import { clearTownsquareStorage, readStoredArray } from "../store/storage";
 
 const emit = defineEmits(["trigger"]);
@@ -1005,7 +1005,7 @@ const options: any = {
       if (popup === null) return;
 
       if (this.grimoire.isImageOptIn || popup === true) {
-        this.toggleImageOptIn();
+        toggleImageOptIn();
       }
     },
     async joinSession() {
@@ -1042,7 +1042,7 @@ const options: any = {
       if (sessionId) {
         this.commands.commit("session/clearVoteHistory", []);
         this.commands.commit("session/setSpectator", true);
-        this.commands.commit("toggleGrimoire", false);
+        commitGameCommand("toggleGrimoire", false);
         this.commands.commit("session/setSessionId", sessionId);
       }
     },
@@ -1455,33 +1455,6 @@ const options: any = {
       });
       return;
     },
-    toggleGrimoire() {
-      this.commands.commit("toggleGrimoire");
-    },
-    toggleMenu() {
-      this.commands.commit("toggleMenu");
-    },
-    toggleImageOptIn() {
-      this.commands.commit("toggleImageOptIn");
-    },
-    toggleForwardEvilInfo() {
-      this.commands.commit("toggleForwardEvilInfo");
-    },
-    toggleMuted() {
-      this.commands.commit("toggleMuted");
-    },
-    toggleNightOrder() {
-      this.commands.commit("toggleNightOrder");
-    },
-    toggleStatic() {
-      this.commands.commit("toggleStatic");
-    },
-    setZoom(value) {
-      this.commands.commit("setZoom", value);
-    },
-    toggleModal(name) {
-      this.commands.commit("toggleModal", name);
-    },
   },
 };
 
@@ -1525,6 +1498,15 @@ const isHandHeld = computed(() => {
   console.log(deviceType);
   return /mobile|android|touch|webos|iphone|ipod/i.test(deviceType);
 });
+const toggleGrimoire = () => commitGameCommand("toggleGrimoire");
+const toggleMenu = () => commitGameCommand("toggleMenu");
+const toggleImageOptIn = () => commitGameCommand("toggleImageOptIn");
+const toggleForwardEvilInfo = () => commitGameCommand("toggleForwardEvilInfo");
+const toggleMuted = () => commitGameCommand("toggleMuted");
+const toggleNightOrder = () => commitGameCommand("toggleNightOrder");
+const toggleStatic = () => commitGameCommand("toggleStatic");
+const setZoom = (value: number) => commitGameCommand("setZoom", value);
+const toggleModal = (name: string) => commitGameCommand("toggleModal", name);
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
@@ -1570,15 +1552,6 @@ const {
   syncAudioThresholdSlider,
   syncAudioThresholdNumber,
   clearLocalStorage,
-  toggleGrimoire,
-  toggleMenu,
-  toggleImageOptIn,
-  toggleForwardEvilInfo,
-  toggleMuted,
-  toggleNightOrder,
-  toggleStatic,
-  setZoom,
-  toggleModal,
 } = methodBindings;
 watch(
   () => grimoire.audioThreshold,
