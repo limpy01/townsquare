@@ -3,17 +3,12 @@ import persistence from "./persistence";
 import socket from "./socket";
 import { pinia } from "../pinia";
 import { useModalStore } from "../stores/modals";
-import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useAppMetaStore } from "../stores/app-meta";
 import { useScenarioStore } from "../stores/scenario";
 import players from "./modules/players";
 import session from "./modules/session";
-import editionJSON from "../editions.json";
-import rolesJSON from "../roles.json";
-import fabledJSON from "../fabled.json";
 import { apiBase } from "../config";
-import { customRoleDefaults, rolesJSONbyId } from "./selectors";
 import { mutationBus } from "./mutation-bus";
 
 type LegacyRootState = any;
@@ -23,36 +18,6 @@ type LegacyRootMutation = (
   payload?: any,
 ) => void;
 type LegacyRootAction = (this: any, ...args: any[]) => any;
-
-// helper functions
-const getRolesByEdition = (edition: any = editionJSON[0]) => {
-  if (edition.id === "all") {
-    return new Map(
-      rolesJSON
-        .sort((a, b) => b.team.localeCompare(a.team))
-        .map((role) => [role.id, role]),
-    );
-  }
-  return new Map(
-    rolesJSON
-      .filter((r) => r.edition === edition.id || edition.roles.includes(r.id))
-      .sort((a, b) => b.team.localeCompare(a.team))
-      .map((role) => [role.id, role]),
-  );
-};
-
-const getTravelersNotInEdition = (edition: any = editionJSON[0]) => {
-  return new Map(
-    rolesJSON
-      .filter(
-        (r) =>
-          r.team === "traveler" &&
-          r.edition !== edition.id &&
-          !edition.roles.includes(r.id),
-      )
-      .map((role) => [role.id, role]),
-  );
-};
 
 const set =
   (key: string) =>
@@ -69,13 +34,6 @@ const toggle =
       grimoire[key] = !grimoire[key];
     }
   };
-
-const clean = (id: any) => id.toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
-
-// global data maps
-const editionJSONbyId = new Map(
-  editionJSON.map((edition) => [edition.id, edition]),
-);
 
 const scenarioStateKeys = [
   "edition",
@@ -142,177 +100,31 @@ const rootStoreOptions: any = {
     toggleModal(_state, name) {
       useModalStore(pinia).toggle(name);
     },
-    /**
-     * Store custom roles
-     * @param state
-     * @param roles Array of role IDs or full role definitions
-     */
-    setCustomRoles(state, roles) {
+    setCustomRoles(_state, roles) {
       useScenarioStore(pinia).setCustomRoles(roles);
-      return;
-      const { useOldRole } = useLegacyOptionsStore(pinia);
-      const oldRoles = (
-        Object.keys(useOldRole) as Array<keyof typeof useOldRole>
-      ).filter((key) => useOldRole[key] === true);
-      roles = roles.map((role: any) => {
-        return oldRoles.includes(role.id)
-          ? { ...role, id: role.id + "old1" }
-          : role; // use role if not ticked, add old1 if ticked
-      });
-      const processedRoles = roles
-        // replace numerical role object keys with matching key names
-        .map((role: any) => {
-          if (role[0]) {
-            const customKeys: any = Object.keys(customRoleDefaults);
-            const mappedRole: Record<string, any> = {};
-            for (let prop in role) {
-              if (customKeys[prop]) {
-                mappedRole[customKeys[prop]] = role[prop];
-              }
-            }
-            return mappedRole;
-          } else {
-            return role;
-          }
-        })
-        // clean up role.id
-        .map((role: any) => {
-          role.id = clean(role.id);
-          return role;
-        })
-        // map existing roles to base definition or pre-populate custom roles to ensure all properties
-        .map(
-          (role: any) =>
-            rolesJSONbyId.get(role.id) ||
-            state.roles.get(role.id) ||
-            Object.assign({}, customRoleDefaults, role),
-        )
-        // default empty icons and placeholders, clean up firstNight / otherNight
-        .map((role: any) => {
-          if (rolesJSONbyId.get(role.id)) return role;
-          role.imageAlt = // map team to generic icon
-            (
-              {
-                townsfolk: "good",
-                outsider: "outsider",
-                minion: "minion",
-                demon: "evil",
-                fabled: /^bootlegger\d+$/.test(role.id)
-                  ? "bootlegger"
-                  : "fabled", // 直接使用私货商人图标
-                loric: /^bootlegger\d+$/.test(role.id) ? "bootlegger" : "loric",
-              } as Record<string, string>
-            )[role.team] || "custom";
-          role.firstNight = Math.abs(role.firstNight);
-          role.otherNight = Math.abs(role.otherNight);
-          return role;
-        })
-        // filter out roles that don't match an existing role and also don't have name/ability/team
-        .filter((role: any) => role.name && role.ability && role.team)
-        // sort by team
-        .sort((a: any, b: any) => b.team.localeCompare(a.team));
-      // convert to Map without Fabled
-      state.roles = new Map(
-        processedRoles
-          .filter(
-            (role: any) => role.team !== "fabled" && role.team !== "loric",
-          )
-          .map((role: any) => {
-            if (role.team === "traveller") role.team = "traveler";
-            return role;
-          })
-          .map((role: any) => [role.id, role]),
-      );
-      // update Fabled to include custom Fabled from this script
-      state.fabled = new Map([
-        ...processedRoles
-          .filter((r: any) => r.team === "fabled" || r.team === "loric")
-          .map((r: any) => [r.id, r]),
-        ...fabledJSON.map((role) => [role.id, role]),
-      ]);
-      // update extraTravelers map to only show travelers not in this script
-      state.otherTravelers = new Map(
-        rolesJSON
-          .filter(
-            (r) =>
-              r.team === "traveler" && !roles.some((i: any) => i.id === r.id),
-          )
-          .map((role) => [role.id, role]),
-      );
     },
-    setSelectedEditions(state, selectedEditions) {
+    setSelectedEditions(_state, selectedEditions) {
       const scenario = useScenarioStore(pinia);
       scenario.setSelectedEditions(selectedEditions);
       if (scenario.edition.id === "all")
         this.commit("setEdition", scenario.edition);
-      return;
-      state.selectedEditions = { ...selectedEditions };
-      if (state.edition.id === "all") this.commit("setEdition", state.edition);
     },
-    setStates(state, states) {
+    setStates(_state, states) {
       useScenarioStore(pinia).setStates(states);
-      return;
-      state.states = states;
     },
-    setTeamsNames(state, names) {
+    setTeamsNames(_state, names) {
       useScenarioStore(pinia).setTeamsNames(names);
-      return;
-      state.teamsNames = names;
     },
-    setFirstNight(state, firstNight) {
+    setFirstNight(_state, firstNight) {
       useScenarioStore(pinia).setFirstNight(firstNight);
-      return;
-      state.firstNight = firstNight;
-      this.commit("players/setFirstNight", firstNight);
     },
-    setOtherNight(state, otherNight) {
+    setOtherNight(_state, otherNight) {
       useScenarioStore(pinia).setOtherNight(otherNight);
-      return;
-      state.otherNight = otherNight;
-      this.commit("players/setOtherNight", otherNight);
     },
     setEdition(state, edition) {
       const fabled = useScenarioStore(pinia).setEdition(edition);
       if (fabled && !state.session.isSpectator)
         this.commit("players/setFabled", { fabled });
-      return;
-      if (editionJSONbyId.has(edition.id)) {
-        state.edition = editionJSONbyId.get(edition.id);
-        state.roles = getRolesByEdition(state.edition);
-        if (state.edition.id === "all") {
-          //只加载勾选了的剧本
-          state.roles = new Map(
-            Array.from(state.roles.entries() as any[]).filter((role) => {
-              const value = role[1]; //value of the role
-              return state.selectedEditions[value.edition];
-            }),
-          );
-        }
-        state.otherTravelers = getTravelersNotInEdition(state.edition);
-        const fabled = Array.from(state.fabled.values() as any[]).filter(
-          (role) => {
-            return role.edition === edition.id;
-          },
-        );
-        if (!state.session.isSpectator)
-          this.commit("players/setFabled", { fabled });
-      } else {
-        state.edition = edition;
-      }
-      // 为官方角色增加原顺序选项
-      if (state.roles.get("professor")) {
-        state.roles.get("professor").otherNight = useLegacyOptionsStore(pinia)
-          .useOldOrder.professor
-          ? 79
-          : 96;
-      }
-      if (state.roles.get("pithag")) {
-        state.roles.get("pithag").otherNight = useLegacyOptionsStore(pinia)
-          .useOldOrder.pithag
-          ? 37
-          : 16;
-      }
-      state.modals.edition = false;
     },
   } as Record<string, LegacyRootMutation>,
   actions: {
