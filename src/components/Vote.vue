@@ -160,7 +160,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useVotingStore } from "../stores/voting";
 import { usePlayersStore } from "../stores/players";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import store from "../store";
+import { emitLegacyMutation } from "../store/legacy-effects";
 
 const voting = useVotingStore();
 const playerState = usePlayersStore();
@@ -244,32 +244,52 @@ function clearVoteTimer() {
   voteTimer.value = null;
 }
 
+function setVoteInProgress(value: boolean) {
+  voting.setVoteInProgress(value);
+  emitLegacyMutation("session/setVoteInProgress", value);
+}
+
+function lockVote(value?: number) {
+  voting.lockVote(value);
+  emitLegacyMutation("session/lockVote", value);
+}
+
+function setVotingSpeedValue(value: number) {
+  voting.setVotingSpeed(value);
+  emitLegacyMutation("session/setVotingSpeed", value);
+}
+
+function voteSync(payload: [number, boolean | number]) {
+  voting.vote(payload);
+  emitLegacyMutation("session/voteSync", payload);
+}
+
 function advanceVote() {
-  store.commit("session/lockVote");
+  lockVote();
   if (voting.lockedVote > players.value.length) {
     clearVoteTimer();
-    store.commit("session/setVoteInProgress", false);
+    setVoteInProgress(false);
   }
 }
 
 function countdown() {
-  store.commit("session/lockVote", 0);
-  store.commit("session/setVoteInProgress", true);
+  lockVote(0);
+  setVoteInProgress(true);
   voteTimer.value = setInterval(start, 4000);
 }
 
 function start() {
-  store.commit("session/lockVote", 1);
-  store.commit("session/setVoteInProgress", true);
+  lockVote(1);
+  setVoteInProgress(true);
   clearVoteTimer();
   voteTimer.value = setInterval(advanceVote, voting.votingSpeed);
 }
 
 function start0() {
   const speed = voting.votingSpeed;
-  store.commit("session/setVotingSpeed", 0);
+  setVotingSpeedValue(0);
   start();
-  store.commit("session/setVotingSpeed", speed);
+  setVotingSpeedValue(speed);
 }
 
 function pause() {
@@ -282,19 +302,35 @@ function pause() {
 
 function stop() {
   clearVoteTimer();
-  store.commit("session/setVoteInProgress", false);
-  store.commit("session/lockVote", 0);
+  setVoteInProgress(false);
+  lockVote(0);
 }
 
 function finish() {
   clearVoteTimer();
-  store.commit("session/addHistory", players.value);
-  store.commit("session/addVoteSelected", {
+  const entry = voting.createHistoryEntry(players.value, {
+    isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
+    isSpectator: session.isSpectator,
+  });
+  if (entry) {
+    voting.addVotes(entry);
+    emitLegacyMutation("session/addVotes", entry);
+  }
+  const selection = {
     selected: false,
     players: players.value,
     save: true,
+  };
+  voting.addVoteSelected(selection, {
+    isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
+    isSpectator: session.isSpectator,
   });
-  store.commit("session/nomination");
+  emitLegacyMutation("session/addVoteSelected", selection);
+  voting.setNomination(undefined, {
+    isSecretVote: voting.isSecretVote,
+    claimedSeat: session.claimedSeat,
+  });
+  emitLegacyMutation("session/nomination");
 }
 
 function vote(vote: boolean | number) {
@@ -308,29 +344,34 @@ function vote(vote: boolean | number) {
         : vote
         ? limit
         : 0;
-    store.commit("session/voteSync", [index, votes]);
+    voteSync([index, votes]);
   }
 }
 
 function setVotingSpeed(diff: number) {
   const speed = Math.round(voting.votingSpeed + diff);
-  if (speed > 0) store.commit("session/setVotingSpeed", speed);
+  if (speed > 0) setVotingSpeedValue(speed);
 }
 
 function setMarked() {
-  store.commit("session/setMarkedPlayer", {
+  const payload = {
     val: nomination.value[1],
     force: true,
-  });
+  };
+  voting.setMarkedPlayer(payload, { isSecretVote: voting.isSecretVote });
+  emitLegacyMutation("session/setMarkedPlayer", payload);
 }
 
 function removeMarked() {
-  store.commit("session/setMarkedPlayer", { val: -1, force: true });
+  const payload = { val: -1, force: true };
+  voting.setMarkedPlayer(payload, { isSecretVote: voting.isSecretVote });
+  emitLegacyMutation("session/setMarkedPlayer", payload);
 }
 
 function setSecretVote() {
   if (session.isSpectator || voting.isVoteInProgress) return;
-  store.commit("session/setSecretVote", !voting.isSecretVote);
+  voting.setSecretVote(!voting.isSecretVote);
+  emitLegacyMutation("session/setSecretVote", voting.isSecretVote);
 }
 
 watch(
@@ -345,7 +386,7 @@ watch(
       !!voting.votes[index] &&
       Number(voting.votes[index]) > 1
     ) {
-      store.commit("session/voteSync", [index, 1]);
+      voteSync([index, 1]);
     }
   },
   { immediate: true },
