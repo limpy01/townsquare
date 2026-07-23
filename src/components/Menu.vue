@@ -9,12 +9,12 @@
     >
       <font-awesome-icon
         icon="microphone"
-        v-if="microphoneSetting === 'free' && listeningFrame"
+        v-if="microphoneSetting === 'free' && audio.listeningFrame"
         @click="stopListening(microphoneSetting)"
       />
       <font-awesome-icon
         icon="microphone-slash"
-        v-if="microphoneSetting === 'free' && !listeningFrame"
+        v-if="microphoneSetting === 'free' && !audio.listeningFrame"
         @click="startListening(microphoneSetting)"
       />
       <font-awesome-icon
@@ -583,6 +583,7 @@ import { useLobbyStore } from "../stores/lobby";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
 import { useSessionConnectionStore } from "../stores/session-connection";
+import { useAudioStore } from "../stores/audio";
 
 export default {
   computed: {
@@ -600,6 +601,9 @@ export default {
     connection() {
       return useSessionConnectionStore();
     },
+    audio() {
+      return useAudioStore();
+    },
     formattedTime() {
       const minutes = Math.floor(this.session.timer / 60);
       const seconds = Math.ceil(this.session.timer % 60);
@@ -612,7 +616,7 @@ export default {
     },
     keyboardIcon() {
       return {
-        color: this.listeningFrame ? "red" : "white",
+        color: this.audio.listeningFrame ? "red" : "white",
       };
     },
     isHandHeld() {
@@ -661,7 +665,6 @@ export default {
       audioStream: null,
       analyser: null,
       source: null,
-      listeningFrame: null, // also in session.js for global reference
       audioThresholdNumber: 150,
       audioThresholdSlider: 150,
       isEditingThreshold: false,
@@ -1362,14 +1365,15 @@ export default {
           }
         }
 
-        this.listeningFrame = requestAnimationFrame(detectSpeechActivity);
-        this.$store.commit("session/setListeningFrame", this.listeningFrame);
+        this.audio.setListeningFrame(
+          requestAnimationFrame(detectSpeechActivity),
+        );
       };
 
       detectSpeechActivity();
     },
     startListening(mode) {
-      if (this.listeningFrame) return;
+      if (this.audio.listeningFrame) return;
       if (mode != this.microphoneSetting) return;
 
       this.initAudio().then(() => {
@@ -1377,13 +1381,12 @@ export default {
       });
     },
     stopListening(mode) {
-      if (!this.listeningFrame) return;
+      if (!this.audio.listeningFrame) return;
       if (mode != this.microphoneSetting) return;
 
-      if (this.listeningFrame) {
-        cancelAnimationFrame(this.listeningFrame);
-        this.listeningFrame = null;
-        this.$store.commit("session/setListeningFrame", null);
+      if (this.audio.listeningFrame) {
+        cancelAnimationFrame(this.audio.listeningFrame);
+        this.audio.setListeningFrame(null);
       }
       this.$store.commit("session/setTalking", {
         seatNum: this.session.claimedSeat,

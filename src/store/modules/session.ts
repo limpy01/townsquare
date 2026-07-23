@@ -76,7 +76,6 @@ const state = () => ({
   lastUpdateTime: null,
   interval: null,
   isTalking: false,
-  listeningFrame: null,
 });
 
 const getters: Record<string, LegacyGetter> = {};
@@ -104,7 +103,6 @@ const mutations: Record<string, LegacyMutation> = {
   },
   setNomination: set("nomination"),
   setVoteHistoryAllowed: set("isVoteHistoryAllowed"),
-  setListeningFrame: set("listeningFrame"),
   setSecretVote: set("isSecretVote"),
   setBootlegger: set("bootlegger"),
   setUseOldOrder: set("isUseOldOrder"),

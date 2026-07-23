@@ -51,6 +51,7 @@
 import { mapState } from "vuex";
 import { useLobbyStore } from "./stores/lobby";
 import { useInteractionStore } from "./stores/interaction";
+import { useAudioStore } from "./stores/audio";
 import { showInputModal } from "./services/input-modal";
 import { version } from "../package.json";
 import TownSquare from "./components/TownSquare";
@@ -100,6 +101,9 @@ export default {
     ...mapState("players", ["players"]),
     interaction() {
       return useInteractionStore();
+    },
+    audio() {
+      return useAudioStore();
     },
   },
   data() {
@@ -252,7 +256,7 @@ export default {
       switch (key.toLocaleLowerCase()) {
         case "f2":
           if (this.session.claimedSeat < 0) return;
-          if (this.session.listeningFrame) return;
+          if (this.audio.listeningFrame) return;
           this.$refs.menu.startListening("keyboard");
           break;
       }
