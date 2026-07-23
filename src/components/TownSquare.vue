@@ -251,7 +251,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { legacyCommands as gameCommands } from "../store/legacy-commands";
+import { gameCommands } from "../store/legacy-commands";
 import Player from "./Player.vue";
 import Token from "./Token.vue";
 import ReminderModal from "./modals/ReminderModal.vue";

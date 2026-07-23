@@ -26,7 +26,7 @@ const emit = (type: string, payload?: unknown) =>
  * vocabulary while executing Pinia actions directly, so component migration
  * does not retain the previous state-management runtime.
  */
-export const legacyCommit = (type: string, payload?: any) => {
+export const commitGameCommand = (type: string, payload?: any) => {
   const grimoire = useGrimoireStore(pinia);
   const players = usePlayersStore(pinia);
   const session = useSessionIdentityStore(pinia);
@@ -297,7 +297,7 @@ export const legacyCommit = (type: string, payload?: any) => {
   return emit(type, payload);
 };
 
-export const legacyDispatch = (type: string, payload?: any) => {
+export const dispatchGameCommand = (type: string, payload?: any) => {
   const players = usePlayersStore(pinia);
   switch (type) {
     case "players/randomize":
@@ -315,13 +315,13 @@ export const legacyDispatch = (type: string, payload?: any) => {
   return emit(type, payload);
 };
 
-export const legacyCommands = {
-  commit: legacyCommit,
-  dispatch: legacyDispatch,
+export const gameCommands = {
+  commit: commitGameCommand,
+  dispatch: dispatchGameCommand,
 };
 
-/** A read-only legacy-shaped state projection for transports during the cutover. */
-export const legacyRuntime = {
+/** A read-only command/state projection for persistence and transport effects. */
+export const gameRuntime = {
   get state() {
     const scenario = useScenarioStore(pinia);
     const identity = useSessionIdentityStore(pinia);
@@ -339,6 +339,6 @@ export const legacyRuntime = {
       },
     };
   },
-  commit: legacyCommit,
-  dispatch: legacyDispatch,
+  commit: commitGameCommand,
+  dispatch: dispatchGameCommand,
 };

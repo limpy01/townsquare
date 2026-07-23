@@ -1,6 +1,6 @@
 import initializePersistence from "./persistence";
 import initializeSocket from "./socket";
-import { legacyRuntime } from "./legacy-commands";
+import { gameRuntime } from "./legacy-commands";
 
 let initialized = false;
 
@@ -8,6 +8,6 @@ let initialized = false;
 export const initializeRuntime = () => {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
-  initializePersistence(legacyRuntime);
-  initializeSocket(legacyRuntime);
+  initializePersistence(gameRuntime);
+  initializeSocket(gameRuntime);
 };
