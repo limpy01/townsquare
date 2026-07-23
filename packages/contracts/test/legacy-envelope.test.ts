@@ -6,6 +6,7 @@ import {
   encodeLegacyEnvelope,
   parseAvatarUpload,
   parseCustomScript,
+  parseDynamicInitResponse,
   parseGameState,
 } from "../src/index.js";
 
@@ -72,6 +73,22 @@ describe("custom script input", () => {
 });
 
 describe("HTTP boundary input", () => {
+  it("accepts the dynamic initialization response", () => {
+    expect(
+      parseDynamicInitResponse({
+        payload: { version: "3.3.1", floatingNotice: "维护通知" },
+      }),
+    ).toEqual({
+      payload: { version: "3.3.1", floatingNotice: "维护通知" },
+    });
+  });
+
+  it("rejects malformed dynamic initialization responses", () => {
+    expect(() =>
+      parseDynamicInitResponse({ payload: { version: 3 } }),
+    ).toThrow();
+  });
+
   it("accepts a complete avatar upload request", () => {
     expect(
       parseAvatarUpload({

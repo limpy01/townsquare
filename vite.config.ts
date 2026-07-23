@@ -17,6 +17,9 @@ export default defineConfig({
       "@townsquare/contracts/game-state": fileURLToPath(
         new URL("./packages/contracts/src/game-state.ts", import.meta.url),
       ),
+      "@townsquare/contracts/dynamic-init": fileURLToPath(
+        new URL("./packages/contracts/src/dynamic-init.ts", import.meta.url),
+      ),
     },
   },
   build: {

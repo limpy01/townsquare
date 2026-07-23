@@ -22,6 +22,11 @@
       "types": "./dist/game-state.d.ts",
       "require": "./dist/game-state.js",
       "default": "./dist/game-state.js"
+    },
+    "./dynamic-init": {
+      "types": "./dist/dynamic-init.d.ts",
+      "require": "./dist/dynamic-init.js",
+      "default": "./dist/dynamic-init.js"
     }
   },
   "files": [

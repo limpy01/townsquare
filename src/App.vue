@@ -49,6 +49,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { parseDynamicInitResponse } from "@townsquare/contracts/dynamic-init";
 import { useLobbyStore } from "./stores/lobby";
 import { useInteractionStore } from "./stores/interaction";
 import { useAudioStore } from "./stores/audio";
@@ -167,12 +168,9 @@ async function fetchInit() {
   try {
     const response = await fetch(`${apiBase}/dynamic/init`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const payload = JSON.parse(await response.text()).payload;
-    if (payload && typeof payload === "object") {
-      if (payload.version) appMeta.setLatestVersion(payload.version);
-      if (payload.floatingNotice)
-        appMeta.setFloatingNotice(payload.floatingNotice);
-    }
+    const { payload } = parseDynamicInitResponse(await response.json());
+    appMeta.setLatestVersion(payload.version);
+    appMeta.setFloatingNotice(payload.floatingNotice);
     if (
       appMeta.version !== appMeta.latestVersion ||
       appMeta.latestVersion !== appMeta.lastVersion
