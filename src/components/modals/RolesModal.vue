@@ -95,7 +95,7 @@ import Modal from "./Modal.vue";
 import gameJSON from "../../game.json";
 import Token from "../Token.vue";
 import { useDrawStore } from "../../stores/draw";
-import store from "../../store";
+import { emitLegacyMutation } from "../../store/legacy-effects";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useReviewStore } from "../../stores/review";
@@ -167,16 +167,21 @@ function selectRandomRoles() {
 }
 function assignRoles(allowReview = true) {
   if (selectedRoles.value > nonTravelers.value || !selectedRoles.value) return;
-  if (!allowReview && review.isReview)
-    store.commit("session/setIsReview", false);
+  if (!allowReview && review.isReview) {
+    review.setReview(false);
+    emitLegacyMutation("session/setIsReview", false);
+  }
   const assigned = selectedAndShuffledRoles();
   players.value.forEach((player) => {
-    if (player.role.team !== "traveler" && assigned.length)
-      store.commit("players/update", {
+    if (player.role.team !== "traveler" && assigned.length) {
+      const payload = {
         player,
         property: "role",
         value: assigned.pop(),
-      });
+      };
+      playerState.update(payload);
+      emitLegacyMutation("players/update", payload);
+    }
   });
   modals.toggle("roles");
 }

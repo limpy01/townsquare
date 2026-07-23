@@ -21,4 +21,16 @@ describe("players store", () => {
 
     expect(players.fabled).toEqual([{ id: "bootlegger", ability: "default" }]);
   });
+
+  it("updates player properties and bluff slots", () => {
+    const players = usePlayersStore();
+    const player = { id: "player-1", role: {} };
+    players.players = [player];
+
+    players.update({ player, property: "role", value: { id: "imp" } });
+    players.setBluff({ index: 0, role: { id: "chef" } });
+
+    expect(player.role).toEqual({ id: "imp" });
+    expect(players.bluffs).toEqual([{ id: "chef" }]);
+  });
 });

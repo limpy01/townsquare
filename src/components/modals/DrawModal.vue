@@ -56,7 +56,7 @@ import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
 import { useSessionIdentityStore } from "../../stores/session-identity";
-import store from "../../store";
+import { emitLegacyMutation } from "../../store/legacy-effects";
 import Modal from "./Modal.vue";
 import Token from "../Token.vue";
 
@@ -117,11 +117,13 @@ function finishDraw() {
   let skip = 0;
   for (let index = 0; index < selectedRoles.length; index++) {
     while (players.value[index + skip].role.team === "traveler") skip++;
-    store.commit("players/update", {
+    const payload = {
       player: players.value[index + skip],
       property: "role",
       value: selectedRoles[index],
-    });
+    };
+    playerState.update(payload);
+    emitLegacyMutation("players/update", payload);
   }
   close();
 }

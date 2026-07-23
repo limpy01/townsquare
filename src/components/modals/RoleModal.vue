@@ -104,7 +104,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import Modal from "./Modal.vue";
 import Token from "../Token.vue";
-import store from "../../store";
+import { emitLegacyMutation } from "../../store/legacy-effects";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
@@ -147,17 +147,21 @@ function handleResize() {
 
 function setRole(role: any) {
   if (playerIndex < 0) {
-    store.commit("players/setBluff", {
+    const payload = {
       index: playerIndex * -1 - 1,
       role,
-    });
+    };
+    playerState.setBluff(payload);
+    emitLegacyMutation("players/setBluff", payload);
   } else {
     if (session.isSpectator && role.team === "traveler") return;
-    store.commit("players/update", {
+    const payload = {
       player: players.value[playerIndex],
       property: "role",
       value: role,
-    });
+    };
+    playerState.update(payload);
+    emitLegacyMutation("players/update", payload);
   }
   tab.value = "editionRoles";
   modals.toggle("role");

@@ -2,6 +2,8 @@ import { defineStore } from "pinia";
 import { pinia } from "../pinia";
 import { useProfileStore } from "./profile";
 import { useSessionSettingsStore } from "./session-settings";
+import { useSessionIdentityStore } from "./session-identity";
+import { useVotingStore } from "./voting";
 
 type PlayersState = {
   players: any[];
@@ -30,6 +32,30 @@ export const usePlayersStore = defineStore("players", {
     image: "",
   }),
   actions: {
+    update({
+      player,
+      property,
+      value,
+    }: {
+      player: any;
+      property: string;
+      value: any;
+    }) {
+      if (this.players.includes(player)) player[property] = value;
+      if (player.id !== useSessionIdentityStore(pinia).playerId) return;
+      if (property === "id") {
+        useVotingStore(pinia).setPlayerVotes(player.votes);
+      } else if (property === "votes") {
+        useVotingStore(pinia).setPlayerVotes(value);
+      }
+    },
+    setBluff({ index, role }: { index?: number; role?: any } = {}) {
+      if (index === undefined) {
+        this.bluffs = [];
+        return;
+      }
+      this.bluffs.splice(index, 1, role);
+    },
     setFabled({
       index,
       fabled,
