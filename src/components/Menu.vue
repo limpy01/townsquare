@@ -597,7 +597,7 @@ import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
 import { gameCommands } from "../store/legacy-commands";
-import { readStoredArray } from "../store/storage";
+import { clearTownsquareStorage, readStoredArray } from "../store/storage";
 
 const emit = defineEmits(["trigger"]);
 const grimoire = useGrimoireStore();
@@ -1443,7 +1443,7 @@ const options: any = {
       if (clear === null) return;
 
       if (!clear) return;
-      localStorage.clear();
+      clearTownsquareStorage(window.localStorage);
       await this.showInputModal({
         inputType: "alert",
         inputModal: "text",

@@ -30,3 +30,47 @@ export function readStoredRecord(
     ? (value as Record<string, unknown>)
     : {};
 }
+
+export const townsquareStorageKeys = [
+  "audioThreshold",
+  "background",
+  "bluffs",
+  "chatHistory",
+  "claimedSeat",
+  "customBootlegger",
+  "edition",
+  "fabled",
+  "firstNight",
+  "groupChats",
+  "imageOptIn",
+  "isGrimoire",
+  "isReview",
+  "isRole",
+  "lastVersion",
+  "muted",
+  "otherNight",
+  "playerAvatar",
+  "playerId",
+  "playerName",
+  "playerProfileImage",
+  "playerVotes",
+  "players",
+  "roles",
+  "secretVote",
+  "selectedEditions",
+  "session",
+  "stId",
+  "stSecret",
+  "states",
+  "static",
+  "teamsNames",
+  "useOldOrder",
+  "useOldRole",
+  "votes",
+  "votesSelected",
+  "zoom",
+] as const;
+
+export function clearTownsquareStorage(storage: Pick<Storage, "removeItem">) {
+  townsquareStorageKeys.forEach((key) => storage.removeItem(key));
+}

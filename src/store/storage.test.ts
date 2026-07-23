@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { readStoredArray, readStoredJson, readStoredRecord } from "./storage";
+import {
+  clearTownsquareStorage,
+  readStoredArray,
+  readStoredJson,
+  readStoredRecord,
+  townsquareStorageKeys,
+} from "./storage";
 
 const storage = (values: Record<string, string>) => ({
   getItem(key: string) {
@@ -17,5 +23,13 @@ describe("stored JSON readers", () => {
   it("only accepts the expected container shape", () => {
     expect(readStoredArray(storage({ value: "{}" }), "value")).toEqual([]);
     expect(readStoredRecord(storage({ value: "[]" }), "value")).toEqual({});
+  });
+
+  it("only clears keys owned by Town Square", () => {
+    const removed: string[] = [];
+    clearTownsquareStorage({ removeItem: (key) => removed.push(key) });
+
+    expect(removed).toEqual(townsquareStorageKeys);
+    expect(removed).not.toContain("unrelated-application-key");
   });
 });
