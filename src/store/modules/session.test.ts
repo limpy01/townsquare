@@ -7,6 +7,7 @@ import { useTimerStore } from "../../stores/timer";
 import { useVotingStore } from "../../stores/voting";
 import { useRoleActivityStore } from "../../stores/role-activity";
 import { useProfileStore } from "../../stores/profile";
+import { useSessionIdentityStore } from "../../stores/session-identity";
 import sessionModule from "./session";
 
 describe("session Vuex compatibility module", () => {
@@ -111,5 +112,17 @@ describe("session Vuex compatibility module", () => {
       playerName: "Alice",
       playerAvatar: "alice.webp",
     });
+  });
+
+  it("exposes the Pinia session identity through legacy state accessors", () => {
+    const identity = useSessionIdentityStore(pinia);
+    identity.$reset();
+    const state = sessionModule.state();
+
+    sessionModule.mutations.setSpectator(state, true);
+    state.claimedSeat = 2;
+
+    expect(state.isSpectator).toBe(true);
+    expect(identity.claimedSeat).toBe(2);
   });
 });

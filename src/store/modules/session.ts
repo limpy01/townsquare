@@ -15,15 +15,52 @@ import { useRoleActivityStore } from "../../stores/role-activity";
 import { useProfileStore } from "../../stores/profile";
 import { useMessageOutboxStore } from "../../stores/message-outbox";
 import { useChatStore } from "../../stores/chat";
+import { useSessionIdentityStore } from "../../stores/session-identity";
 
-const state = () => ({
-  sessionId: "",
-  StId: null,
-  stSecret: "",
-  isSpectator: false,
-  playerId: "",
-  claimedSeat: -1,
-});
+const state = () => {
+  const session: Record<string, unknown> = {};
+  const identity = useSessionIdentityStore(pinia);
+  const fields = {
+    sessionId: {
+      get: () => identity.sessionId,
+      set: (value: unknown) => identity.setSessionId(value as string),
+    },
+    StId: {
+      get: () => identity.stId,
+      set: (value: unknown) => identity.setStId(value as string | null),
+    },
+    stId: {
+      get: () => identity.stId,
+      set: (value: unknown) => identity.setStId(value as string | null),
+    },
+    stSecret: {
+      get: () => identity.stSecret,
+      set: (value: unknown) => identity.setStSecret(value as string),
+    },
+    isSpectator: {
+      get: () => identity.isSpectator,
+      set: (value: unknown) => identity.setSpectator(value as boolean),
+    },
+    playerId: {
+      get: () => identity.playerId,
+      set: (value: unknown) => identity.setPlayerId(value as string),
+    },
+    claimedSeat: {
+      get: () => identity.claimedSeat,
+      set: (value: unknown) => identity.claimSeat(value as number),
+    },
+  };
+
+  Object.entries(fields).forEach(([field, accessor]) => {
+    Object.defineProperty(session, field, {
+      enumerable: true,
+      get: accessor.get,
+      set: accessor.set,
+    });
+  });
+
+  return session;
+};
 
 const getters: Record<string, LegacyGetter> = {};
 
@@ -37,10 +74,18 @@ const set =
   };
 
 const mutations: Record<string, LegacyMutation> = {
-  setPlayerId: set("playerId"),
-  setStId: set("stId"),
-  setStSecret: set("stSecret"),
-  setSpectator: set("isSpectator"),
+  setPlayerId(_state, playerId) {
+    useSessionIdentityStore(pinia).setPlayerId(playerId);
+  },
+  setStId(_state, stId) {
+    useSessionIdentityStore(pinia).setStId(stId);
+  },
+  setStSecret(_state, stSecret) {
+    useSessionIdentityStore(pinia).setStSecret(stSecret);
+  },
+  setSpectator(_state, isSpectator) {
+    useSessionIdentityStore(pinia).setSpectator(isSpectator);
+  },
   setPlayerVotes(_state, playerVotes) {
     useVotingStore(pinia).setPlayerVotes(playerVotes);
   },
@@ -79,7 +124,9 @@ const mutations: Record<string, LegacyMutation> = {
   setIsReview(_state, isReview) {
     useReviewStore(pinia).setReview(isReview);
   },
-  claimSeat: set("claimedSeat"),
+  claimSeat(_state, claimedSeat) {
+    useSessionIdentityStore(pinia).claimSeat(claimedSeat);
+  },
   distributeRoles(_state, active) {
     useDistributionStore(pinia).setRoles(active);
   },
@@ -93,10 +140,7 @@ const mutations: Record<string, LegacyMutation> = {
     useDistributionStore(pinia).setGrimoire(val);
   },
   setSessionId(state, sessionId) {
-    state.sessionId = sessionId
-      .toLocaleLowerCase()
-      .replace(/[^0-9a-z]/g, "")
-      .substr(0, 10);
+    useSessionIdentityStore(pinia).setSessionId(sessionId);
   },
   setPlayerName(_state, playerName) {
     useProfileStore(pinia).setPlayerName(playerName);
