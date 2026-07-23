@@ -681,15 +681,6 @@ const options: any = {
       isEditingThreshold: false,
     };
   },
-  watch: {
-    "grimoire.audioThreshold": {
-      handler(val) {
-        this.audioThresholdNumber = val;
-        this.audioThresholdSlider = val;
-      },
-      immediate: true,
-    },
-  },
   methods: {
     showInputModal,
     async setBackground() {
@@ -1591,8 +1582,10 @@ const {
 } = methodBindings;
 watch(
   () => grimoire.audioThreshold,
-  (value) =>
-    options.watch["grimoire.audioThreshold"].handler.call(context, value),
+  (value) => {
+    audioThresholdNumber.value = value;
+    audioThresholdSlider.value = value;
+  },
   { immediate: true },
 );
 

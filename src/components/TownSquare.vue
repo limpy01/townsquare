@@ -312,52 +312,6 @@ const options: any = {
       message: "",
     };
   },
-  watch: {
-    "chat.histories": {
-      handler() {
-        this.$nextTick(() => {
-          if (
-            this.$refs.chatContent.scrollTop >= -20 &&
-            this.interaction.isChatOpen &&
-            !this.isChatMin
-          ) {
-            this.scrollToBottom();
-          }
-        });
-      },
-    },
-    "voting.isVoteInProgress": {
-      handler() {
-        this.$nextTick(() => {
-          if (this.voting.isVoteInProgress && !this.voting.lockedVote) {
-            if (!this.grimoire.isMuted) {
-              this.$refs.countdownAudio.currentTime = 0;
-              this.$refs.countdownAudio.play();
-            }
-          } else {
-            this.$refs.countdownAudio.pause();
-            this.$refs.countdownAudio.currentTime = 0;
-          }
-        });
-      },
-    },
-    "chat.groups": {
-      handler() {
-        this.$nextTick(() => {
-          if (this.interaction.isChatOpen && this.session.isSpectator) {
-            this.openChat(0, false);
-          } else if (this.interaction.isChatOpen && !this.session.isSpectator) {
-            const index = this.players.findIndex(
-              (player) => player.id === this.chattingPlayer,
-            );
-            if (index === -1) return;
-            this.openChat(index, false);
-          }
-        });
-      },
-      deep: true,
-    },
-  },
   methods: {
     toggleBluffs() {
       this.isBluffsOpen = !this.isBluffsOpen;
@@ -854,16 +808,50 @@ const {
 
 watch(
   () => chat.histories,
-  () => options.watch["chat.histories"].handler.call(context),
+  () => {
+    nextTick(() => {
+      if (
+        chatContent.value.scrollTop >= -20 &&
+        interaction.isChatOpen &&
+        !isChatMin.value
+      ) {
+        scrollToBottom();
+      }
+    });
+  },
   { deep: true },
 );
 watch(
   () => voting.isVoteInProgress,
-  () => options.watch["voting.isVoteInProgress"].handler.call(context),
+  () => {
+    nextTick(() => {
+      if (voting.isVoteInProgress && !voting.lockedVote) {
+        if (!grimoire.isMuted) {
+          countdownAudio.value.currentTime = 0;
+          countdownAudio.value.play();
+        }
+      } else {
+        countdownAudio.value.pause();
+        countdownAudio.value.currentTime = 0;
+      }
+    });
+  },
 );
 watch(
   () => chat.groups,
-  () => options.watch["chat.groups"].handler.call(context),
+  () => {
+    nextTick(() => {
+      if (interaction.isChatOpen && session.isSpectator) {
+        openChat(0, false);
+      } else if (interaction.isChatOpen && !session.isSpectator) {
+        const index = playersState.players.findIndex(
+          (player) => player.id === chattingPlayer.value,
+        );
+        if (index === -1) return;
+        openChat(index, false);
+      }
+    });
+  },
   { deep: true },
 );
 </script>
