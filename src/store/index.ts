@@ -4,6 +4,7 @@ import socket from "./socket";
 import { pinia } from "../pinia";
 import { useModalStore } from "../stores/modals";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
+import { useGrimoireStore } from "../stores/grimoire";
 import players from "./modules/players";
 import session from "./modules/session";
 import editionJSON from "../editions.json";
@@ -123,19 +124,9 @@ const rootStoreOptions: any = {
     latestVersion: "",
     lastVersion: "",
     floatingNotice: "",
-    grimoire: {
-      isNight: false,
-      isNightOrder: true,
-      isPublic: false,
-      isMenuOpen: false,
-      isStatic: false,
-      isMuted: false,
-      isImageOptIn: true,
-      isForwardEvilInfo: false,
-      zoom: 0,
-      background: "",
-      audioThreshold: 150,
-    },
+    // Compatibility projection for Options API and WebSocket consumers.
+    // Pinia owns this reactive object; remove this alias with Vuex.
+    grimoire: useGrimoireStore(pinia).$state,
     // Compatibility projection for Options API components that still use mapState.
     // Pinia owns this reactive object; remove this alias once those consumers move.
     modals: useModalStore(pinia).$state,

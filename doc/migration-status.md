@@ -88,6 +88,7 @@
 - 私聊记录已迁至 Pinia chat store；历史恢复、发送确认与 localStorage JSON 格式保持兼容。
 - 群聊成员关系与保留标记已迁至 Pinia chat store；玩家席位同步、持久化与 WebSocket 广播继续复用兼容 mutation。
 - 房间身份、说书人凭据、玩家标识与席位已迁至 Pinia session-identity store；Vuex session 仅保留转发访问器以保障旧组件、存档和 WebSocket 生命周期兼容。
+- 游戏面板显示状态已迁至 Pinia grimoire store；根 Vuex 仅引用同一响应式对象以兼容现有 mutation 广播。
 
 ## 本批次约束
 
