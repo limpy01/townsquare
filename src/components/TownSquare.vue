@@ -229,22 +229,14 @@
 
 <script setup lang="ts">
 // @ts-nocheck
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  reactive,
-  ref,
-  toRef,
-  watch,
-} from "vue";
+import { computed, nextTick, reactive, ref, toRef, watch } from "vue";
 import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import { useRoleActivityStore } from "../stores/role-activity";
 import { getNightOrder } from "../domain/night-order";
+import { useViewport } from "../composables/use-viewport";
 import { useProfileStore } from "../stores/profile";
 import { useAppMetaStore } from "../stores/app-meta";
 import { usePlayersStore } from "../stores/players";
@@ -268,6 +260,7 @@ const connection = useSessionConnectionStore();
 const voting = useVotingStore();
 const roleActivity = useRoleActivityStore();
 const profile = useProfileStore();
+const { width: windowWidth, height: windowHeight } = useViewport();
 const countdownAudio = ref<HTMLAudioElement | null>(null);
 const bluffsElement = ref<HTMLElement | null>(null);
 const chatWith = ref<HTMLElement | null>(null);
@@ -288,6 +281,8 @@ Object.defineProperties(context, {
   voting: { get: () => voting },
   roleActivity: { get: () => roleActivity },
   profile: { get: () => profile },
+  windowWidth: { get: () => windowWidth.value },
+  windowHeight: { get: () => windowHeight.value },
   $refs: {
     get: () => ({
       countdownAudio: countdownAudio.value,
@@ -387,8 +382,6 @@ const options: any = {
       chattingGroup: "",
       isShowGroup: false,
       message: "",
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
     };
   },
   watch: {
@@ -437,12 +430,6 @@ const options: any = {
       deep: true,
     },
   },
-  mounted() {
-    window.addEventListener("resize", this.handleResize);
-  },
-  beforeUnmount() {
-    window.removeEventListener("resize", this.handleResize);
-  },
   methods: {
     toggleBluffs() {
       this.isBluffsOpen = !this.isBluffsOpen;
@@ -466,10 +453,6 @@ const options: any = {
       if (typeof this[method] === "function") {
         this[method](playerIndex, params);
       }
-    },
-    handleResize() {
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
     },
     claimSeat(playerIndex) {
       if (!this.session.isSpectator) return;
@@ -874,13 +857,12 @@ const message = toRef(context, "message");
 const methodNames = Object.keys(options.methods);
 for (const name of methodNames)
   context[name] = options.methods[name].bind(context);
-const [
+const {
   toggleBluffs,
   toggleFabled,
   toggleGroups,
   removeFabled,
   handleTrigger,
-  handleResize,
   claimSeat,
   openReminderModal,
   openRoleModal,
@@ -902,7 +884,7 @@ const [
   typing,
   notTyping,
   setUsingWraith,
-] = methodNames.map((name) => context[name]);
+} = context;
 
 watch(
   () => chat.histories,
@@ -918,8 +900,6 @@ watch(
   () => options.watch["chat.groups"].handler.call(context),
   { deep: true },
 );
-onMounted(() => options.mounted.call(context));
-onBeforeUnmount(() => options.beforeUnmount.call(context));
 </script>
 
 <style lang="scss">
