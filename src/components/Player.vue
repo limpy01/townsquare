@@ -333,7 +333,7 @@
     <div
       v-if="!session.isSpectator || !review.isReview"
       class="reminder add"
-      @click="$emit('trigger', ['openReminderModal'])"
+      @click="emit('trigger', ['openReminderModal'])"
     >
       <span class="icon"></span>
     </div>
@@ -363,7 +363,20 @@ import { getNightOrder } from "../domain/night-order";
 import { emitLegacyMutation } from "../store/legacy-effects";
 
 const props = defineProps<{ player: any }>();
-const emit = defineEmits(["trigger"]);
+type PlayerTrigger =
+  | ["openReminderModal"]
+  | ["openRoleModal"]
+  | ["removePlayer"]
+  | ["swapPlayer", unknown?]
+  | ["movePlayer", unknown?]
+  | ["nominatePlayer", unknown?]
+  | ["cancel"]
+  | ["claimSeat"]
+  | ["setStoryTeller"]
+  | ["openChat"]
+  | ["addVote", unknown?]
+  | ["subtractVote", unknown?];
+const emit = defineEmits<{ trigger: [payload: PlayerTrigger] }>();
 const playersState = usePlayersStore();
 const grimoire = useGrimoireStore();
 const session = useSessionIdentityStore();
@@ -603,20 +616,31 @@ async function removePlayer() {
   }
 }
 
-function emitPlayerAction(action: string, player?: any) {
+function emitPlayerAction(
+  action: "swapPlayer" | "movePlayer" | "nominatePlayer",
+  player?: unknown,
+) {
   isMenuOpen.value = false;
-  emit("trigger", player === undefined ? [action] : [action, player]);
+  if (player === undefined) emit("trigger", [action]);
+  else emit("trigger", [action, player]);
 }
 const swapPlayer = (player?: any) => emitPlayerAction("swapPlayer", player);
 const movePlayer = (player?: any) => emitPlayerAction("movePlayer", player);
 const nominatePlayer = (player?: any) =>
   emitPlayerAction("nominatePlayer", player);
 const cancel = () => emit("trigger", ["cancel"]);
-const claimSeat = () => emitPlayerAction("claimSeat");
-const setStoryTeller = (player: any) =>
-  emitPlayerAction("setStoryTeller", player);
+const claimSeat = () => {
+  isMenuOpen.value = false;
+  emit("trigger", ["claimSeat"]);
+};
+const setStoryTeller = (_player: any) => {
+  isMenuOpen.value = false;
+  emit("trigger", ["setStoryTeller"]);
+};
 function openChat(player: any) {
-  if (player.id) emitPlayerAction("openChat");
+  if (!player.id) return;
+  isMenuOpen.value = false;
+  emit("trigger", ["openChat"]);
 }
 function vote() {
   if (!session.isSpectator && voteLocked.value) {

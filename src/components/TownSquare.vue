@@ -322,11 +322,6 @@ const options: any = {
         this.commands.commit("players/setFabled", { index });
       }
     },
-    handleTrigger(playerIndex, [method, params]) {
-      if (typeof this[method] === "function") {
-        this[method](playerIndex, params);
-      }
-    },
     claimSeat(playerIndex) {
       if (!this.session.isSpectator) return;
       if (this.session.playerId === this.players[playerIndex].id) {
@@ -778,7 +773,6 @@ for (const name of methodNames)
   context[name] = options.methods[name].bind(context);
 const {
   removeFabled,
-  handleTrigger,
   claimSeat,
   openReminderModal,
   openRoleModal,
@@ -800,6 +794,50 @@ const {
   typing,
   notTyping,
 } = context;
+type PlayerTrigger =
+  | ["openReminderModal"]
+  | ["openRoleModal"]
+  | ["removePlayer"]
+  | ["swapPlayer", unknown?]
+  | ["movePlayer", unknown?]
+  | ["nominatePlayer", unknown?]
+  | ["cancel"]
+  | ["claimSeat"]
+  | ["setStoryTeller"]
+  | ["openChat"]
+  | ["addVote", unknown?]
+  | ["subtractVote", unknown?];
+const handleTrigger = (
+  playerIndex: number,
+  [action, target]: PlayerTrigger,
+) => {
+  switch (action) {
+    case "openReminderModal":
+      return openReminderModal(playerIndex);
+    case "openRoleModal":
+      return openRoleModal(playerIndex);
+    case "removePlayer":
+      return removePlayer(playerIndex);
+    case "swapPlayer":
+      return swapPlayer(playerIndex, target);
+    case "movePlayer":
+      return movePlayer(playerIndex, target);
+    case "nominatePlayer":
+      return nominatePlayer(playerIndex, target);
+    case "cancel":
+      return cancel();
+    case "claimSeat":
+      return claimSeat(playerIndex);
+    case "setStoryTeller":
+      return setStoryTeller(playerIndex);
+    case "openChat":
+      return openChat(playerIndex);
+    case "addVote":
+      return addVote(playerIndex);
+    case "subtractVote":
+      return subtractVote(playerIndex);
+  }
+};
 
 watch(
   () => chat.histories,

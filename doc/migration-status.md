@@ -100,6 +100,7 @@
 - `LiveSession.disconnect()` 会释放 ping、消息队列、重连及授权计时器；fake-timer 回归测试保证断开后不保留 transport 计时器。
 - App、Intro、Menu 与 ImageCropper 的跨组件命令已收敛为三个类型化事件，移除了根组件的动态字符串调用和 `any` 模板 ref；Menu 与 TownSquare 仍有临时 Options 上下文，未将其标记为完成。
 - `Menu.vue` 的麦克风模式、阈值编辑、Web Audio 分析器和说话状态命令已改为直接的 Composition API ref/function；保留原有 `setTalking` 与 `setAudioThreshold` 命令和浏览器权限行为。其余会话、分发与玩家管理方法仍在临时 Options 适配层中。
+- `Player.vue` 到 `TownSquare.vue` 的玩家操作事件已从字符串方法名动态调用改为显式联合事件与 `switch` 分发，覆盖座位、提醒、角色、换位、移动、提名、聊天和投票操作；仍由现有 Pinia 命令兼容层执行实际游戏变更。
 
 ## 本批次约束
 
