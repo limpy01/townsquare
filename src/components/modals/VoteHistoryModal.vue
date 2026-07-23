@@ -1,7 +1,7 @@
 <template>
   <Modal
     class="vote-history"
-    v-if="modals.voteHistory && (session.voteHistory || !session.isSpectator)"
+    v-if="modals.voteHistory && (voting.voteHistory || !session.isSpectator)"
     @close="toggleModal('voteHistory')"
   >
     <font-awesome-icon
@@ -20,14 +20,17 @@
           <font-awesome-icon
             :icon="[
               'fas',
-              session.isVoteHistoryAllowed ? 'check-square' : 'square'
+              voting.isVoteHistoryAllowed ? 'check-square' : 'square',
             ]"
           />
           玩家可查看
         </div>
         <div class="option" @click="clearVoteHistory">
           <font-awesome-icon icon="trash-alt" />
-          清除<span v-if="!session.voteSelected.every(selected => selected === false)">选中</span><span v-else>全部</span>记录
+          清除<span
+            v-if="!voting.voteSelected.every((selected) => selected === false)"
+            >选中</span
+          ><span v-else>全部</span>记录
         </div>
       </div>
     </template>
@@ -38,7 +41,10 @@
             <font-awesome-icon
               :icon="[
                 'fas',
-                session.voteSelected.length > 0 && session.voteSelected.every(selected => selected === true) ? 'check-square' : 'square'
+                voting.voteSelected.length > 0 &&
+                voting.voteSelected.every((selected) => selected === true)
+                  ? 'check-square'
+                  : 'square',
               ]"
               @click="setVoteSelected(-1)"
               class="checkbox"
@@ -58,28 +64,20 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(vote, index) in session.voteHistory" :key="index">
+        <tr v-for="(vote, index) in voting.voteHistory" :key="index">
           <td>
             <font-awesome-icon
               :icon="[
                 'fas',
-                session.voteSelected[index] ? 'check-square' : 'square'
+                voting.voteSelected[index] ? 'check-square' : 'square',
               ]"
               @click="setVoteSelected(index)"
               class="checkbox"
             />
           </td>
           <td>
-            {{
-              vote.timestamp
-                .getHours()
-                .toString()
-                .padStart(2, "0")
-            }}:{{
-              vote.timestamp
-                .getMinutes()
-                .toString()
-                .padStart(2, "0")
+            {{ vote.timestamp.getHours().toString().padStart(2, "0") }}:{{
+              vote.timestamp.getMinutes().toString().padStart(2, "0")
             }}
           </td>
           <td>{{ vote.nominator }}</td>
@@ -95,7 +93,7 @@
             <font-awesome-icon
               :icon="[
                 'fas',
-                vote.votes >= vote.majority ? 'check-square' : 'square'
+                vote.votes >= vote.majority ? 'check-square' : 'square',
               ]"
             />
           </td>
@@ -111,47 +109,59 @@
 <script>
 import Modal from "./Modal";
 import { mapMutations, mapState } from "vuex";
+import { useVotingStore } from "../../stores/voting";
 
 export default {
   components: {
-    Modal
+    Modal,
   },
   computed: {
-    ...mapState(["session", "modals"])
+    ...mapState(["session", "modals"]),
+    voting() {
+      return useVotingStore();
+    },
   },
   methods: {
     setVoteSelected(index) {
       if (index >= 0) {
-        this.$store.commit("session/setVoteSelected", {index, value: !this.session.voteSelected[index]});
+        this.$store.commit("session/setVoteSelected", {
+          index,
+          value: !this.voting.voteSelected[index],
+        });
       } else {
-        const selectedAll = this.session.voteSelected.every(selected => selected === true);
-        for (let i=0; i<this.session.voteSelected.length; i++) {
-          this.$store.commit("session/setVoteSelected", {index: i, value: !selectedAll});
+        const selectedAll = this.voting.voteSelected.every(
+          (selected) => selected === true,
+        );
+        for (let i = 0; i < this.voting.voteSelected.length; i++) {
+          this.$store.commit("session/setVoteSelected", {
+            index: i,
+            value: !selectedAll,
+          });
         }
       }
     },
     clearVoteHistory() {
-      const someSelected = !this.session.voteSelected.every(selected => selected === false);
+      const someSelected = !this.voting.voteSelected.every(
+        (selected) => selected === false,
+      );
       if (someSelected) {
         const selected = [];
-        for (let i=0; i<this.session.voteSelected.length; i++) {
-          if (this.session.voteSelected[i]) selected.push(i);
+        for (let i = 0; i < this.voting.voteSelected.length; i++) {
+          if (this.voting.voteSelected[i]) selected.push(i);
         }
         this.$store.commit("session/clearVoteHistory", selected);
-      }
-      else {
+      } else {
         this.$store.commit("session/clearVoteHistory", []);
       }
-      
     },
     setRecordVoteHistory() {
       this.$store.commit(
         "session/setVoteHistoryAllowed",
-        !this.session.isVoteHistoryAllowed
+        !this.voting.isVoteHistoryAllowed,
       );
     },
-    ...mapMutations(["toggleModal"])
-  }
+    ...mapMutations(["toggleModal"]),
+  },
 };
 </script>
 

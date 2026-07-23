@@ -9,6 +9,7 @@ import { useAudioStore } from "../stores/audio";
 import { useReviewStore } from "../stores/review";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useSessionConnectionStore } from "../stores/session-connection";
+import { useVotingStore } from "../stores/voting";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 
@@ -25,6 +26,7 @@ class LiveSession {
     this._connection = useSessionConnectionStore(pinia);
     this._review = useReviewStore(pinia);
     this._legacyOptions = useLegacyOptionsStore(pinia);
+    this._voting = useVotingStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -84,7 +86,7 @@ class LiveSession {
         this._connection.setIsHostAllowed(null);
         this._connection.setIsJoinAllowed(null);
         // clear seats and return to intro
-        if (this._store.state.session.nomination) {
+        if (this._voting.nomination) {
           this._store.commit("session/nomination");
         }
         // this._store.commit("players/clear", true);
@@ -95,12 +97,12 @@ class LiveSession {
         }
 
         // reset allowed votes
-        if (this._store.state.session.playerVotes > 1) {
+        if (this._voting.playerVotes > 1) {
           this._store.commit("session/setPlayerVotes", 1);
         }
 
         // reset secret vote
-        if (this._store.state.session.isSecretVote) {
+        if (this._voting.isSecretVote) {
           this._store.commit("session/setSecretVote", false);
         }
 
@@ -601,14 +603,15 @@ class LiveSession {
         isLightweight,
       });
     } else {
-      const { session, grimoire, states, teamsNames, firstNight, otherNight } =
+      const { grimoire, states, teamsNames, firstNight, otherNight } =
         this._store.state;
+      const voting = this._voting;
       const { fabled } = this._store.state.players;
       this.sendEdition(playerId);
-      let votes = session.nomination ? Array.from(session.votes) : []; // 调整闭眼投票，只会发送各玩家自己的真实投票情况，其余均为不投票
-      if (session.isSecretVote && playerId === "") {
+      let votes = voting.nomination ? Array.from(voting.votes) : []; // 调整闭眼投票，只会发送各玩家自己的真实投票情况，其余均为不投票
+      if (voting.isSecretVote && playerId === "") {
         votes = [];
-      } else if (session.isSecretVote && votes.length > 0) {
+      } else if (voting.isSecretVote && votes.length > 0) {
         const playerIndex = this._store.state.players.players.findIndex(
           (player) => player.id === playerId,
         );
@@ -620,22 +623,22 @@ class LiveSession {
       this._sendDirect(playerId, "gs", {
         gamestate: this._gamestate,
         isNight: grimoire.isNight,
-        isVoteHistoryAllowed: session.isVoteHistoryAllowed,
-        isSecretVote: session.isSecretVote,
+        isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
+        isSecretVote: voting.isSecretVote,
         isUseOldOrder: this._legacyOptions.useOldOrder,
         isUseOldRole: this._legacyOptions.useOldRole,
         isReview: this._review.isReview,
-        nomination: session.nomination,
-        votingSpeed: session.votingSpeed,
-        lockedVote: session.lockedVote,
-        isVoteInProgress: session.isVoteInProgress,
-        markedPlayer: session.isSecretVote ? session.markedPlayer : -1,
+        nomination: voting.nomination,
+        votingSpeed: voting.votingSpeed,
+        lockedVote: voting.lockedVote,
+        isVoteInProgress: voting.isVoteInProgress,
+        markedPlayer: voting.isSecretVote ? voting.markedPlayer : -1,
         fabled,
         states,
         teamsNames,
         firstNight,
         otherNight,
-        ...(session.nomination ? { votes } : {}),
+        ...(voting.nomination ? { votes } : {}),
       });
     }
 
@@ -1640,7 +1643,7 @@ class LiveSession {
       !nomination ||
       (players.length > nomination[0] && players.length > nomination[1])
     ) {
-      this.setVotingSpeed(this._store.state.session.votingSpeed);
+      this.setVotingSpeed(this._voting.votingSpeed);
       this._send("nomination", nomination);
     }
   }
@@ -1650,7 +1653,7 @@ class LiveSession {
    */
   setVoteInProgress() {
     if (this._isSpectator) return;
-    this._send("isVoteInProgress", this._store.state.session.isVoteInProgress);
+    this._send("isVoteInProgress", this._voting.isVoteInProgress);
   }
 
   /**
@@ -1666,10 +1669,7 @@ class LiveSession {
    */
   setVoteHistoryAllowed() {
     if (this._isSpectator) return;
-    this._send(
-      "isVoteHistoryAllowed",
-      this._store.state.session.isVoteHistoryAllowed,
-    );
+    this._send("isVoteHistoryAllowed", this._voting.isVoteHistoryAllowed);
   }
 
   /**
@@ -1689,7 +1689,7 @@ class LiveSession {
    */
   setMarked(playerIndex) {
     if (this._isSpectator) return;
-    if (this._store.state.session.isSecretVote) return;
+    if (this._voting.isSecretVote) return;
     this._send("marked", playerIndex);
   }
 
@@ -1713,16 +1713,15 @@ class LiveSession {
       !this._isSpectator
     ) {
       if (
-        this._store.state.players.players[
-          this._store.state.session.nomination[1]
-        ].role.team === "traveler" ||
-        !this._store.state.session.isSecretVote
+        this._store.state.players.players[this._voting.nomination[1]].role
+          .team === "traveler" ||
+        !this._voting.isSecretVote
       ) {
         // send to everyone if exile or secret vote is off
         // send vote only if it is your own vote or you are the storyteller
         this._send("vote", [
           index,
-          this._store.state.session.votes[index],
+          this._voting.votes[index],
           !this._isSpectator,
         ]);
       } else {
@@ -1730,13 +1729,13 @@ class LiveSession {
         if (this._isSpectator) {
           this._sendDirect("host", "vote", [
             index,
-            this._store.state.session.votes[index],
+            this._voting.votes[index],
             !this._isSpectator,
           ]);
         } else {
           this._sendDirect(player.id, "vote", [
             index,
-            this._store.state.session.votes[index],
+            this._voting.votes[index],
             !this._isSpectator,
           ]);
         }
@@ -1754,7 +1753,7 @@ class LiveSession {
 
   _handleSecretVote(isSecretVote) {
     if (!this._isSpectator) return;
-    this._store.state.session.isSecretVote = isSecretVote;
+    this._voting.setSecretVote(isSecretVote);
   }
 
   setBootlegger(content) {
@@ -1850,17 +1849,18 @@ class LiveSession {
     if (
       this._isSpectator &&
       voteId != this._store.state.session.playerId &&
-      this._store.state.session.isSecretVote &&
-      this._store.state.players.players[this._store.state.session.nomination[1]]
-        .role.team != "traveler"
+      this._voting.isSecretVote &&
+      this._store.state.players.players[this._voting.nomination[1]].role.team !=
+        "traveler"
     )
       return;
 
-    const { session, players } = this._store.state;
+    const { players } = this._store.state;
+    const voting = this._voting;
     const playerCount = players.players.length;
     const indexAdjusted =
-      (index - 1 + playerCount - session.nomination[1]) % playerCount;
-    if (fromST || indexAdjusted >= session.lockedVote - 1) {
+      (index - 1 + playerCount - voting.nomination[1]) % playerCount;
+    if (fromST || indexAdjusted >= voting.lockedVote - 1) {
       this._store.commit("session/vote", [index, vote]);
     }
   }
@@ -1870,10 +1870,10 @@ class LiveSession {
    */
   lockVote() {
     if (this._isSpectator) return;
-    const { lockedVote, votes, nomination } = this._store.state.session;
+    const { lockedVote, votes, nomination } = this._voting;
     const { players } = this._store.state.players;
     const index = (nomination[1] + lockedVote - 1) % players.length;
-    this._send("lock", [this._store.state.session.lockedVote, votes[index]]);
+    this._send("lock", [this._voting.lockedVote, votes[index]]);
   }
 
   /**
@@ -1887,12 +1887,12 @@ class LiveSession {
     this._store.commit("session/lockVote", lock);
 
     if (lock > 1) {
-      const { lockedVote, nomination } = this._store.state.session;
+      const { lockedVote, nomination } = this._voting;
       const { players } = this._store.state.players;
       const index = (nomination[1] + lockedVote - 1) % players.length;
       // record as not voted when anonymous voting is in progress
-      const displayVote = this._store.state.session.isSecretVote ? false : vote;
-      if (this._store.state.session.votes[index] !== vote) {
+      const displayVote = this._voting.isSecretVote ? false : vote;
+      if (this._voting.votes[index] !== vote) {
         this._store.commit("session/vote", [index, displayVote]);
       }
     }
@@ -2260,7 +2260,7 @@ class LiveSession {
     if (!this._isSpectator) return;
     if (this._store.state.session.claimedSeat === -1) return;
 
-    if (this._store.state.session.isSecretVote && isSecretVoteless) {
+    if (this._voting.isSecretVote && isSecretVoteless) {
       this._store.commit("players/update", {
         player:
           this._store.state.players.players[

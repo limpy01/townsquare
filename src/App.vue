@@ -24,7 +24,7 @@
     <div class="backdrop"></div>
     <transition name="blur">
       <Intro v-if="!players.length" @trigger="handleTrigger($event)"></Intro>
-      <TownInfo v-else-if="!session.nomination"></TownInfo>
+      <TownInfo v-else-if="!voting.nomination"></TownInfo>
       <Vote v-else></Vote>
     </transition>
     <TownSquare></TownSquare>
@@ -52,6 +52,7 @@ import { mapState } from "vuex";
 import { useLobbyStore } from "./stores/lobby";
 import { useInteractionStore } from "./stores/interaction";
 import { useAudioStore } from "./stores/audio";
+import { useVotingStore } from "./stores/voting";
 import { showInputModal } from "./services/input-modal";
 import { version } from "../package.json";
 import TownSquare from "./components/TownSquare";
@@ -99,6 +100,9 @@ export default {
   computed: {
     ...mapState(["grimoire", "session", "lobby", "modals"]),
     ...mapState("players", ["players"]),
+    voting() {
+      return useVotingStore();
+    },
     interaction() {
       return useInteractionStore();
     },
@@ -223,7 +227,7 @@ export default {
           this.$store.commit("toggleModal", "fabled");
           break;
         case "v":
-          if (this.session.voteHistory.length || !this.session.isSpectator) {
+          if (this.voting.voteHistory.length || !this.session.isSpectator) {
             this.$store.commit("toggleModal", "voteHistory");
           }
           break;

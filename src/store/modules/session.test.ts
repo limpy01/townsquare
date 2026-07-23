@@ -4,6 +4,7 @@ import { useDistributionStore } from "../../stores/distribution";
 import { useLegacyOptionsStore } from "../../stores/legacy-options";
 import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
+import { useVotingStore } from "../../stores/voting";
 import sessionModule from "./session";
 
 describe("session Vuex compatibility module", () => {
@@ -17,14 +18,25 @@ describe("session Vuex compatibility module", () => {
 
   it("ignores vote changes when no nomination is active", () => {
     const state = sessionModule.state();
-    state.votes = [false];
+    const voting = useVotingStore(pinia);
+    voting.$reset();
+    voting.votes = [false];
 
     sessionModule.mutations.vote(state, [0, true]);
-    expect(state.votes).toEqual([false]);
+    expect(voting.votes).toEqual([false]);
 
-    state.nomination = [0, 1];
+    voting.nomination = [0, 1];
     sessionModule.mutations.vote(state, [0, true]);
-    expect(state.votes).toEqual([true]);
+    expect(voting.votes).toEqual([true]);
+  });
+
+  it("accepts the legacy nomination array payload", () => {
+    const voting = useVotingStore(pinia);
+    voting.$reset();
+
+    sessionModule.mutations.setNomination(sessionModule.state(), [2, 4]);
+
+    expect(voting.nomination).toEqual([2, 4]);
   });
 
   it("delegates timer commands to the Pinia timer store", () => {

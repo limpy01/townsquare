@@ -5,7 +5,7 @@
     :class="{
       public: grimoire.isPublic,
       spectator: session.isSpectator,
-      vote: session.nomination,
+      vote: voting.nomination,
     }"
   >
     <audio
@@ -232,6 +232,7 @@ import { mapGetters, mapState } from "vuex";
 import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
+import { useVotingStore } from "../stores/voting";
 import Player from "./Player";
 import Token from "./Token";
 import ReminderModal from "./modals/ReminderModal";
@@ -257,6 +258,9 @@ export default {
     },
     connection() {
       return useSessionConnectionStore();
+    },
+    voting() {
+      return useVotingStore();
     },
     orientation: function () {
       const ratio = this.windowWidth / this.windowHeight;
@@ -364,10 +368,10 @@ export default {
         });
       },
     },
-    "session.isVoteInProgress": {
+    "voting.isVoteInProgress": {
       handler() {
         this.$nextTick(() => {
-          if (this.session.isVoteInProgress && !this.session.lockedVote) {
+          if (this.voting.isVoteInProgress && !this.voting.lockedVote) {
             if (!this.grimoire.isMuted) {
               this.$refs.countdownAudio.currentTime = 0;
               this.$refs.countdownAudio.play();
@@ -451,8 +455,8 @@ export default {
       this.$store.commit("toggleModal", "role");
     },
     removePlayer(playerIndex) {
-      if (this.session.isSpectator || this.session.lockedVote) return;
-      const { nomination } = this.session;
+      if (this.session.isSpectator || this.voting.lockedVote) return;
+      const { nomination } = this.voting;
       if (nomination) {
         if (nomination.includes(playerIndex)) {
           // abort vote if removed player is either nominator or nominee
@@ -468,22 +472,22 @@ export default {
       this.$store.commit("players/remove", playerIndex);
     },
     swapPlayer(from, to) {
-      if (this.session.isSpectator || this.session.lockedVote) return;
+      if (this.session.isSpectator || this.voting.lockedVote) return;
       if (to === undefined) {
         this.cancel();
         this.swap = from;
       } else {
-        if (this.session.nomination) {
+        if (this.voting.nomination) {
           // update nomination if one of the involved players is swapped
           const swapTo = this.players.indexOf(to);
-          const updatedNomination = this.session.nomination.map((nom) => {
+          const updatedNomination = this.voting.nomination.map((nom) => {
             if (nom === this.swap) return swapTo;
             if (nom === swapTo) return this.swap;
             return nom;
           });
           if (
-            this.session.nomination[0] !== updatedNomination[0] ||
-            this.session.nomination[1] !== updatedNomination[1]
+            this.voting.nomination[0] !== updatedNomination[0] ||
+            this.voting.nomination[1] !== updatedNomination[1]
           ) {
             this.$store.commit("session/setNomination", updatedNomination);
           }
@@ -496,23 +500,23 @@ export default {
       }
     },
     movePlayer(from, to) {
-      if (this.session.isSpectator || this.session.lockedVote) return;
+      if (this.session.isSpectator || this.voting.lockedVote) return;
       if (to === undefined) {
         this.cancel();
         this.move = from;
       } else {
-        if (this.session.nomination) {
+        if (this.voting.nomination) {
           // update nomination if it is affected by the move
           const moveTo = this.players.indexOf(to);
-          const updatedNomination = this.session.nomination.map((nom) => {
+          const updatedNomination = this.voting.nomination.map((nom) => {
             if (nom === this.move) return moveTo;
             if (nom > this.move && nom <= moveTo) return nom - 1;
             if (nom < this.move && nom >= moveTo) return nom + 1;
             return nom;
           });
           if (
-            this.session.nomination[0] !== updatedNomination[0] ||
-            this.session.nomination[1] !== updatedNomination[1]
+            this.voting.nomination[0] !== updatedNomination[0] ||
+            this.voting.nomination[1] !== updatedNomination[1]
           ) {
             this.$store.commit("session/setNomination", updatedNomination);
           }
@@ -525,7 +529,7 @@ export default {
       }
     },
     nominatePlayer(from, to) {
-      if (this.session.isSpectator || this.session.lockedVote) return;
+      if (this.session.isSpectator || this.voting.lockedVote) return;
       if (to === undefined) {
         this.cancel();
         if (from !== this.nominate) {

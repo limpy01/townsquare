@@ -64,14 +64,14 @@
 
     <span
       class="nomlog-summary"
-      v-show="session.voteHistory.length && session.sessionId"
+      v-show="voting.voteHistory.length && session.sessionId"
       @click="toggleModal('voteHistory')"
-      :title="`${session.voteHistory.length} recent ${
-        session.voteHistory.length == 1 ? 'nomination' : 'nominations'
+      :title="`${voting.voteHistory.length} recent ${
+        voting.voteHistory.length == 1 ? 'nomination' : 'nominations'
       }`"
     >
       <font-awesome-icon icon="book-dead" />
-      {{ session.voteHistory.length }}
+      {{ voting.voteHistory.length }}
     </span>
     <span
       class="session"
@@ -289,7 +289,7 @@
                 <em><font-awesome-icon icon="book" /></em>
               </li>
               <li
-                v-if="session.voteHistory.length || !session.isSpectator"
+                v-if="voting.voteHistory.length || !session.isSpectator"
                 @click="toggleModal('voteHistory')"
               >
                 投票记录<em>[V]</em>
@@ -587,6 +587,7 @@ import { useAudioStore } from "../stores/audio";
 import { useTimerStore } from "../stores/timer";
 import { useReviewStore } from "../stores/review";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
+import { useVotingStore } from "../stores/voting";
 
 export default {
   computed: {
@@ -615,6 +616,9 @@ export default {
     },
     legacyOptions() {
       return useLegacyOptionsStore();
+    },
+    voting() {
+      return useVotingStore();
     },
     formattedTime() {
       const minutes = Math.floor(this.timer.seconds / 60);
@@ -1078,7 +1082,7 @@ export default {
         this.connection.setIsJoinAllowed(null);
 
         // clear seats and return to intro
-        if (this.session.nomination) {
+        if (this.voting.nomination) {
           this.$store.commit("session/nomination");
         }
         this.$store.commit("players/clear", true);
@@ -1089,12 +1093,12 @@ export default {
         }
 
         // reset allowed votes
-        if (this.session.playerVotes > 1) {
+        if (this.voting.playerVotes > 1) {
           this.$store.commit("session/setPlayerVotes", 1);
         }
 
         // reset secret vote
-        if (this.session.isSecretVote) {
+        if (this.voting.isSecretVote) {
           this.$store.commit("session/setSecretVote", false);
         }
 
@@ -1171,7 +1175,7 @@ export default {
 
       if (confirm === true) {
         // abort vote if in progress
-        if (this.session.nomination) {
+        if (this.voting.nomination) {
           this.$store.commit("session/nomination");
         }
         if (this.session.sessionId) {

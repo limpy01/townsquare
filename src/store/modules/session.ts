@@ -9,20 +9,7 @@ import { useDistributionStore } from "../../stores/distribution";
 import { useLegacyOptionsStore } from "../../stores/legacy-options";
 import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
-
-/**
- * Handle a vote request.
- * If the vote is from a seat that is already locked, ignore it.
- * @param state session state
- * @param index seat of the player in the circle
- * @param vote true or false
- */
-
-const handleVote: LegacyMutation = (state, [index, vote]) => {
-  if (!state.nomination) return;
-  state.votes = [...state.votes];
-  state.votes[index] = vote === undefined ? 0 : vote;
-};
+import { useVotingStore } from "../../stores/voting";
 
 const state = () => ({
   sessionId: "",
@@ -33,8 +20,6 @@ const state = () => ({
   playerName: "",
   playerAvatar: "default.webp",
   claimedSeat: -1,
-  nomination: false,
-  playerVotes: 1,
   isRole: {
     wraith: {
       active: false, // player
@@ -45,15 +30,6 @@ const state = () => ({
       probMax: 0.1, // st
     },
   },
-  votes: [],
-  lockedVote: 0,
-  votingSpeed: 500,
-  isVoteInProgress: false,
-  isSecretVote: false,
-  voteHistory: [],
-  voteSelected: [],
-  markedPlayer: -1,
-  isVoteHistoryAllowed: true,
   messageQueue: [],
   messageUniqueQueue: [],
   chatHistory: [],
@@ -77,16 +53,32 @@ const mutations: Record<string, LegacyMutation> = {
   setStId: set("stId"),
   setStSecret: set("stSecret"),
   setSpectator: set("isSpectator"),
-  setPlayerVotes: set("playerVotes"),
-  setVotingSpeed: set("votingSpeed"),
-  setVoteInProgress: set("isVoteInProgress"),
-  setMarkedPlayer(state, { val, force }) {
-    if (!force && state.isSecretVote && val >= 0) return;
-    state.markedPlayer = val;
+  setPlayerVotes(_state, playerVotes) {
+    useVotingStore(pinia).setPlayerVotes(playerVotes);
   },
-  setNomination: set("nomination"),
-  setVoteHistoryAllowed: set("isVoteHistoryAllowed"),
-  setSecretVote: set("isSecretVote"),
+  setVotingSpeed(_state, votingSpeed) {
+    useVotingStore(pinia).setVotingSpeed(votingSpeed);
+  },
+  setVoteInProgress(_state, isVoteInProgress) {
+    useVotingStore(pinia).setVoteInProgress(isVoteInProgress);
+  },
+  setMarkedPlayer(state, markedPlayer) {
+    useVotingStore(pinia).setMarkedPlayer(markedPlayer, {
+      isSecretVote: useVotingStore(pinia).isSecretVote,
+    });
+  },
+  setNomination(state, nomination) {
+    useVotingStore(pinia).setNomination(nomination, {
+      isSecretVote: useVotingStore(pinia).isSecretVote,
+      claimedSeat: state.claimedSeat,
+    });
+  },
+  setVoteHistoryAllowed(_state, isVoteHistoryAllowed) {
+    useVotingStore(pinia).setVoteHistoryAllowed(isVoteHistoryAllowed);
+  },
+  setSecretVote(_state, isSecretVote) {
+    useVotingStore(pinia).setSecretVote(isSecretVote);
+  },
   setBootlegger: set("bootlegger"),
   setUseOldOrder(_state, useOldOrder) {
     useLegacyOptionsStore(pinia).setUseOldOrder(useOldOrder);
@@ -119,34 +111,11 @@ const mutations: Record<string, LegacyMutation> = {
   setPlayerName(state, name) {
     state.playerName = name;
   },
-  nomination(
-    state,
-    {
-      nomination,
-      votes,
-      votingSpeed,
-      lockedVote,
-      isVoteInProgress,
-      nominatedPlayer = null,
-    } = {},
-  ) {
-    state.nomination = nomination || false;
-    if (
-      !!nomination &&
-      !!nominatedPlayer &&
-      state.isSecretVote &&
-      nominatedPlayer.role.team != "traveler"
-    ) {
-      for (let i = 0; i < votes.length; i++) {
-        if (i != state.claimedSeat) {
-          votes[i] = false;
-        }
-      }
-    }
-    state.votes = votes || [];
-    state.votingSpeed = votingSpeed || state.votingSpeed;
-    state.lockedVote = lockedVote || 0;
-    state.isVoteInProgress = isVoteInProgress || false;
+  nomination(state, nomination = {}) {
+    useVotingStore(pinia).setNomination(nomination, {
+      isSecretVote: useVotingStore(pinia).isSecretVote,
+      claimedSeat: state.claimedSeat,
+    });
   },
   /**
    * Create an entry in the vote history log. Requires current player array because it might change later in the game.
@@ -155,101 +124,28 @@ const mutations: Record<string, LegacyMutation> = {
    * @param players
    */
   addHistory(state, players) {
-    if (!state.isVoteHistoryAllowed && state.isSpectator) return;
-    if (!state.nomination || state.lockedVote <= players.length) return;
-    const isExile = players[state.nomination[1]].role.team === "traveler";
-    const playerList: any[] = Array.from(players as any[]);
-    const votedPlayers = playerList.filter(
-      (player: any, index: number) => state.votes[index],
-    );
-    votedPlayers.forEach((player: any) => {
-      player.seat = players.indexOf(player) + 1;
-      player.votes = state.votes[players.indexOf(player)];
+    const voting = useVotingStore(pinia);
+    const entry = voting.createHistoryEntry(players, {
+      isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
+      isSpectator: state.isSpectator,
     });
-    this.commit("session/addVotes", {
-      timestamp: new Date(),
-      nominator:
-        (state.nomination[0] + 1).toString() +
-        ". " +
-        (players[state.nomination[0]].id
-          ? players[state.nomination[0]].name
-          : ""),
-      nominee:
-        (state.nomination[1] + 1).toString() +
-        ". " +
-        (players[state.nomination[1]].id
-          ? players[state.nomination[1]].name
-          : ""),
-      type: isExile ? "流放" : "处决",
-      mode: state.isSecretVote ? "闭眼" : "睁眼",
-      votes: state.votes
-        .filter((item: any) => typeof item === "number")
-        .reduce((item: number, sum: number) => item + sum, 0),
-      majority: Math.ceil(
-        playerList.filter((player: any) => !player.isDead || isExile).length /
-          2,
-      ),
-      votedPlayers: votedPlayers.map(
-        ({ seat, name, votes }: any) =>
-          seat + ". " + name + (votes > 1 ? " *" + votes + "票" : ""),
-      ),
-      save: true,
+    if (entry) this.commit("session/addVotes", entry);
+  },
+  addVotes(_state, entry) {
+    useVotingStore(pinia).addVotes(entry);
+  },
+  addVoteSelected(state, payload) {
+    const voting = useVotingStore(pinia);
+    voting.addVoteSelected(payload, {
+      isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
+      isSpectator: state.isSpectator,
     });
   },
-  addVotes(
-    state,
-    {
-      timestamp,
-      nominator,
-      nominee,
-      type,
-      mode,
-      votes,
-      majority,
-      votedPlayers,
-      save,
-    },
-  ) {
-    // 重写时间
-    const newTime = save ? timestamp : new Date(timestamp);
-    state.voteHistory.push({
-      timestamp: newTime,
-      nominator,
-      nominee,
-      type,
-      mode,
-      votes,
-      majority,
-      votedPlayers,
-    });
+  setVoteSelected(_state, selection) {
+    useVotingStore(pinia).setVoteSelected(selection);
   },
-  addVoteSelected(state, { selected, players, save }) {
-    if (save && !players && !state.isVoteHistoryAllowed && state.isSpectator)
-      return;
-    if (
-      save &&
-      !players &&
-      (!state.nomination || state.lockedVote <= players.length)
-    )
-      return;
-    state.voteSelected.push(selected);
-  },
-  setVoteSelected(state, { index, value }) {
-    state.voteSelected[index] = value;
-  },
-  clearVoteHistory(state, voteIndex = null) {
-    if (voteIndex == null || voteIndex.length === 0) {
-      state.voteHistory = [];
-      state.voteSelected = [];
-      return;
-    } else {
-      state.voteHistory = state.voteHistory.filter(
-        (_: any, index: number) => !voteIndex.includes(index),
-      );
-      state.voteSelected = state.voteSelected.filter(
-        (_: any, index: number) => !voteIndex.includes(index),
-      );
-    }
+  clearVoteHistory(_state, voteIndexes = null) {
+    useVotingStore(pinia).clearVoteHistory(voteIndexes);
   },
   /**
    * Store a vote with and without syncing it to the live session.
@@ -257,10 +153,14 @@ const mutations: Record<string, LegacyMutation> = {
    * @param state
    * @param vote
    */
-  vote: handleVote,
-  voteSync: handleVote,
-  lockVote(state, lock) {
-    state.lockedVote = lock !== undefined ? lock : state.lockedVote + 1;
+  vote(_state, vote) {
+    useVotingStore(pinia).vote(vote);
+  },
+  voteSync(_state, vote) {
+    useVotingStore(pinia).vote(vote);
+  },
+  lockVote(_state, lock) {
+    useVotingStore(pinia).lockVote(lock);
   },
   createChatHistory(state, playerId) {
     if (playerId === "") return;

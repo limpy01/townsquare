@@ -6,9 +6,9 @@
       :class="[
         {
           dead: player.isDead,
-          marked: session.markedPlayer === index,
+          marked: voting.markedPlayer === index,
           'no-vote': player.isVoteless,
-          'vote-yes': session.votes[index],
+          'vote-yes': voting.votes[index],
           'vote-lock': voteLocked,
           talking: player.isTalking && player.id,
         },
@@ -68,12 +68,12 @@
           tag="div"
           class="overlay"
           appear
-          v-show="!!session.votes[index] && session.votes[index] > 1"
+          v-show="!!voting.votes[index] && voting.votes[index] > 1"
         >
           <font-awesome-icon
-            v-for="(n, id) in session.votes[index]"
+            v-for="(n, id) in voting.votes[index]"
             :key="n"
-            :style="{ transform: getVoteTransform(id, session.votes[index]) }"
+            :style="{ transform: getVoteTransform(id, voting.votes[index]) }"
             icon="hand-paper"
             class="vote"
             title="Hand UP"
@@ -81,7 +81,7 @@
           />
         </transition-group>
         <font-awesome-icon
-          v-show="!session.votes || session.votes[index] <= 1"
+          v-show="!voting.votes || voting.votes[index] <= 1"
           icon="hand-paper"
           class="vote"
           title="Hand UP"
@@ -234,15 +234,15 @@
             <li @click="changeName">
               <font-awesome-icon icon="user-edit" />改名
             </li>
-            <li @click="movePlayer()" :class="{ disabled: session.lockedVote }">
+            <li @click="movePlayer()" :class="{ disabled: voting.lockedVote }">
               <font-awesome-icon icon="redo-alt" />
               移动玩家
             </li>
-            <li @click="swapPlayer()" :class="{ disabled: session.lockedVote }">
+            <li @click="swapPlayer()" :class="{ disabled: voting.lockedVote }">
               <font-awesome-icon icon="exchange-alt" />
               交换座位
             </li>
-            <li @click="removePlayer" :class="{ disabled: session.lockedVote }">
+            <li @click="removePlayer" :class="{ disabled: voting.lockedVote }">
               <font-awesome-icon icon="times-circle" />
               移除座位
             </li>
@@ -253,7 +253,7 @@
               <font-awesome-icon icon="chair" />
               踢出游戏
             </li>
-            <template v-if="!session.nomination">
+            <template v-if="!voting.nomination">
               <li @click="nominatePlayer()">
                 <font-awesome-icon icon="hand-point-right" />
                 提名
@@ -344,6 +344,7 @@ import { apiBase } from "../config";
 import { showInputModal } from "../services/input-modal";
 import { useDistributionStore } from "../stores/distribution";
 import { useReviewStore } from "../stores/review";
+import { useVotingStore } from "../stores/voting";
 // import Vue from "vue";
 
 export default {
@@ -366,17 +367,20 @@ export default {
     review() {
       return useReviewStore();
     },
+    voting() {
+      return useVotingStore();
+    },
     ...mapGetters({ nightOrder: "players/nightOrder" }),
     index: function () {
       return this.players.indexOf(this.player);
     },
     voteLocked: function () {
-      const session = this.session;
+      const voting = this.voting;
       const players = this.players.length;
-      if (!session.nomination) return false;
+      if (!voting.nomination) return false;
       const indexAdjusted =
-        (this.index - 1 + players - session.nomination[1]) % players;
-      return indexAdjusted < session.lockedVote - 1;
+        (this.index - 1 + players - voting.nomination[1]) % players;
+      return indexAdjusted < voting.lockedVote - 1;
     },
     zoom: function () {
       const unit = this.windowWidth > this.windowHeight ? "vh" : "vw";
@@ -536,7 +540,7 @@ export default {
     },
     toggleVote() {
       if (!this.player.isDead) return;
-      if (this.session.isSecretVote && !this.player.isSecretVoteless) {
+      if (this.voting.isSecretVote && !this.player.isSecretVoteless) {
         this.updatePlayer("isSecretVoteless", true);
       } else {
         this.updatePlayer("isVoteless", true);
@@ -706,7 +710,7 @@ export default {
       if (!this.voteLocked) return;
       this.$store.commit("session/voteSync", [
         this.index,
-        this.session.votes[this.index] > 0 ? 0 : 1,
+        this.voting.votes[this.index] > 0 ? 0 : 1,
       ]);
     },
     addVote(player) {
