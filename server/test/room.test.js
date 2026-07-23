@@ -120,6 +120,9 @@ test("rejects malformed nested WebSocket payloads", async (t) => {
     [["vote", [0, true, "host"]], /Invalid vote payload/],
     [["lock", [1]], /Invalid lock payload/],
     [["stId", 42], /Invalid stId payload/],
+    [["marked", { val: -1 }], /Invalid marked payload/],
+    [["move", [0, "1"]], /Invalid move payload/],
+    [["ping", ["player-a", "other"]], /Invalid ping payload/],
   ]) {
     const client = await openClient(
       `${wsBase}/ws/42/${Math.random().toString(36).slice(2)}`,

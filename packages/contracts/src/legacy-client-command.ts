@@ -66,11 +66,32 @@ const legacyScalarPayloadSchemas: Partial<
     z.number().int().nonnegative(),
     z.union([z.boolean(), z.number().finite(), z.null()]),
   ]),
+  marked: z.union([
+    z.number().int().min(-1),
+    z
+      .object({
+        val: z.number().int().min(-1),
+        force: z.boolean(),
+      })
+      .strict(),
+  ]),
+  move: z.tuple([
+    z.number().int().nonnegative(),
+    z.number().int().nonnegative(),
+  ]),
+  ping: z.tuple([
+    z.union([z.string(), z.number().int().nonnegative()]),
+    z.literal("latency"),
+  ]),
   secretVote: z.boolean(),
   setTimer: z.number().finite().nonnegative(),
   startTimer: z.number().finite().nonnegative(),
   stId: z.string(),
   stopTimer: z.union([z.null(), z.undefined()]),
+  swap: z.tuple([
+    z.number().int().nonnegative(),
+    z.number().int().nonnegative(),
+  ]),
   votingSpeed: z.number().finite().positive(),
   vote: z.tuple([
     z.number().int().nonnegative(),
