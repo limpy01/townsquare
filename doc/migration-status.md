@@ -117,6 +117,7 @@
 - v1 WebSocket 的稳定标量命令（布尔状态、计时器、投票速度及无参数命令）现于服务端转发前经 contracts 校验；畸形 payload 以 1008 拒绝，嵌套命令仍按现有专用 schema 分批收紧。
 - 浏览器 session transport 的 v1 envelope 编码与解码已从 `socket.ts` 提取为独立类型化模块；仍使用 contracts source 子入口，避免 Vite 开发环境误加载过期 workspace 构建产物。
 - 浏览器 session 的持久化出站队列分流已从 `socket.ts` 提取为纯 dispatcher；direct、request、upload 和房间广播仍走相同 v1 传输助手，并有独立回归覆盖。
+- 服务端 v1 WebSocket 校验已扩展至稳定的投票、锁票、说书人标识和私货商人标量 payload；错误的元组形状或标量类型会在房间广播前以 1008 拒绝。
 
 ## 本批次约束
 

@@ -57,15 +57,26 @@ const legacyScalarPayloadSchemas: Partial<
   Record<LegacyClientCommand, z.ZodType>
 > = {
   clearVoteHistory: z.union([z.null(), z.undefined()]),
+  bootlegger: z.string(),
   isNight: z.boolean(),
   isReview: z.boolean(),
   isVoteHistoryAllowed: z.boolean(),
   isVoteInProgress: z.boolean(),
+  lock: z.tuple([
+    z.number().int().nonnegative(),
+    z.union([z.boolean(), z.number().finite(), z.null()]),
+  ]),
   secretVote: z.boolean(),
   setTimer: z.number().finite().nonnegative(),
   startTimer: z.number().finite().nonnegative(),
+  stId: z.string(),
   stopTimer: z.union([z.null(), z.undefined()]),
   votingSpeed: z.number().finite().positive(),
+  vote: z.tuple([
+    z.number().int().nonnegative(),
+    z.union([z.boolean(), z.number().finite(), z.null()]),
+    z.boolean(),
+  ]),
 };
 
 export function isLegacyClientPayload(
