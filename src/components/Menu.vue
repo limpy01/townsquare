@@ -635,6 +635,16 @@ const pendingEditions = ref({
   hdcs: true,
   syyl: true,
 });
+const selectingOldOrder = ref(false);
+const selectingOldRole = ref(false);
+const pendingOldOrder = ref({ pithag: false, professor: false });
+const pendingOldRole = ref({
+  balloonist: false,
+  acrobat: false,
+  lilmonsta: false,
+  alchemist: false,
+  lycanthrope: false,
+});
 const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
@@ -666,19 +676,6 @@ const options: any = {
       distributingGrimoire: false,
       distributingTypes: false,
       isSendingBluff: true,
-      selectingOldOrder: false,
-      selectingOldRole: false,
-      pendingOldOrder: {
-        pithag: false,
-        professor: false,
-      },
-      pendingOldRole: {
-        balloonist: false,
-        acrobat: false,
-        lilmonsta: false,
-        alchemist: false,
-        lycanthrope: false,
-      },
       recognition: null,
     };
   },
@@ -1110,41 +1107,6 @@ const options: any = {
         this.commands.commit("session/setIsReview", false);
       }
     },
-    useOldOrderAsk() {
-      this.selectingOldRole = false;
-      this.selectingOldOrder = !this.selectingOldOrder;
-      if (this.selectingOldOrder)
-        this.pendingOldOrder = { ...this.legacyOptions.useOldOrder };
-    },
-    selectOldOrder(update = false) {
-      this.$nextTick(() => {
-        document.getElementById("app").focus();
-      });
-      this.selectingOldOrder = false;
-      if (!update) return;
-      this.commands.commit("session/setUseOldOrder", this.pendingOldOrder);
-      this.commands.commit("setEdition", this.edition);
-    },
-    useOldRoleAsk() {
-      this.selectingOldOrder = false;
-      this.selectingOldRole = !this.selectingOldRole;
-      if (this.selectingOldRole)
-        this.pendingOldRole = { ...this.legacyOptions.useOldRole };
-    },
-    selectOldRole(update = false) {
-      this.$nextTick(() => {
-        document.getElementById("app").focus();
-      });
-      this.selectingOldRole = false;
-      if (!update) return;
-      this.commands.commit("session/setUseOldRole", this.pendingOldRole);
-      if (localStorage.getItem("roles"))
-        this.commands.commit(
-          "setCustomRoles",
-          readStoredArray(localStorage, "roles"),
-        );
-      this.commands.commit("setEdition", this.edition);
-    },
     async setTimer() {
       if (this.session.isSpectator || !this.session.sessionId) return;
 
@@ -1222,10 +1184,6 @@ const distributingBluffs = toRef(context, "distributingBluffs");
 const distributingGrimoire = toRef(context, "distributingGrimoire");
 const distributingTypes = toRef(context, "distributingTypes");
 const isSendingBluff = toRef(context, "isSendingBluff");
-const selectingOldOrder = toRef(context, "selectingOldOrder");
-const selectingOldRole = toRef(context, "selectingOldRole");
-const pendingOldOrder = toRef(context, "pendingOldOrder");
-const pendingOldRole = toRef(context, "pendingOldRole");
 const formattedTime = computed(() => {
   const minutes = Math.floor(timer.seconds / 60);
   const seconds = Math.ceil(timer.seconds % 60);
@@ -1409,6 +1367,35 @@ const imageOptIn = async () => {
   if (popup === null) return;
   if (grimoire.isImageOptIn || popup === true) toggleImageOptIn();
 };
+const focusApp = () => nextTick(() => document.getElementById("app")?.focus());
+const useOldOrderAsk = () => {
+  selectingOldRole.value = false;
+  selectingOldOrder.value = !selectingOldOrder.value;
+  if (selectingOldOrder.value)
+    pendingOldOrder.value = { ...legacyOptions.useOldOrder };
+};
+const selectOldOrder = (update = false) => {
+  focusApp();
+  selectingOldOrder.value = false;
+  if (!update) return;
+  commitGameCommand("session/setUseOldOrder", pendingOldOrder.value);
+  commitGameCommand("setEdition", scenario.edition);
+};
+const useOldRoleAsk = () => {
+  selectingOldOrder.value = false;
+  selectingOldRole.value = !selectingOldRole.value;
+  if (selectingOldRole.value)
+    pendingOldRole.value = { ...legacyOptions.useOldRole };
+};
+const selectOldRole = (update = false) => {
+  focusApp();
+  selectingOldRole.value = false;
+  if (!update) return;
+  commitGameCommand("session/setUseOldRole", pendingOldRole.value);
+  if (localStorage.getItem("roles"))
+    commitGameCommand("setCustomRoles", readStoredArray(localStorage, "roles"));
+  commitGameCommand("setEdition", scenario.edition);
+};
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
@@ -1429,10 +1416,6 @@ const {
   joinSession,
   leaveSession,
   toggleIsReview,
-  useOldOrderAsk,
-  selectOldOrder,
-  useOldRoleAsk,
-  selectOldRole,
   setTimer,
   startTimer,
   stopTimer,
