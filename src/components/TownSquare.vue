@@ -266,6 +266,7 @@ const bluffsElement = ref<HTMLElement | null>(null);
 const chatWith = ref<HTMLElement | null>(null);
 const chatContent = ref<HTMLElement | null>(null);
 const messageInput = ref<HTMLInputElement | null>(null);
+const selectedPlayer = ref(0);
 const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
@@ -297,7 +298,6 @@ Object.defineProperties(context, {
 const options: any = {
   data() {
     return {
-      selectedPlayer: 0,
       bluffSize: 3,
       swap: -1,
       move: -1,
@@ -321,26 +321,6 @@ const options: any = {
       } else {
         this.commands.commit("players/setFabled", { index });
       }
-    },
-    claimSeat(playerIndex) {
-      if (!this.session.isSpectator) return;
-      if (this.session.playerId === this.players[playerIndex].id) {
-        this.commands.commit("session/claimSeat", -1);
-      } else {
-        this.commands.commit("session/claimSeat", playerIndex);
-        this.commands.commit("session/createChatHistory", this.session.stId);
-      }
-    },
-    openReminderModal(playerIndex) {
-      this.selectedPlayer = playerIndex;
-      this.commands.commit("toggleModal", "reminder");
-    },
-    openRoleModal(playerIndex) {
-      const player = this.players[playerIndex];
-      if (this.session.isSpectator && player && player.role.team === "traveler")
-        return;
-      this.selectedPlayer = playerIndex;
-      this.commands.commit("toggleModal", "role");
     },
     removePlayer(playerIndex) {
       if (this.session.isSpectator || this.voting.lockedVote) return;
@@ -687,7 +667,6 @@ const nightOrder = computed(() =>
     playersState.otherNightOrder,
   ),
 );
-const selectedPlayer = toRef(context, "selectedPlayer");
 const bluffSize = toRef(context, "bluffSize");
 const swap = toRef(context, "swap");
 const move = toRef(context, "move");
@@ -767,15 +746,31 @@ const setUsingWraith = () => {
     value: !roleActivity.wraith.using,
   });
 };
+const claimSeat = (playerIndex: number) => {
+  if (!session.isSpectator) return;
+  if (session.playerId === playersState.players[playerIndex].id) {
+    commitGameCommand("session/claimSeat", -1);
+  } else {
+    commitGameCommand("session/claimSeat", playerIndex);
+    commitGameCommand("session/createChatHistory", session.stId);
+  }
+};
+const openReminderModal = (playerIndex: number) => {
+  selectedPlayer.value = playerIndex;
+  commitGameCommand("toggleModal", "reminder");
+};
+const openRoleModal = (playerIndex: number) => {
+  const player = playersState.players[playerIndex];
+  if (session.isSpectator && player?.role.team === "traveler") return;
+  selectedPlayer.value = playerIndex;
+  commitGameCommand("toggleModal", "role");
+};
 
 const methodNames = Object.keys(options.methods);
 for (const name of methodNames)
   context[name] = options.methods[name].bind(context);
 const {
   removeFabled,
-  claimSeat,
-  openReminderModal,
-  openRoleModal,
   removePlayer,
   swapPlayer,
   movePlayer,
