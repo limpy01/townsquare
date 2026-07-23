@@ -1,8 +1,4 @@
-import type {
-  LegacyAction,
-  LegacyGetter,
-  LegacyMutation,
-} from "../legacy-vuex";
+import type { LegacyAction, LegacyMutation } from "../legacy-vuex";
 import { pinia } from "../../pinia";
 import { useAudioStore } from "../../stores/audio";
 import { useDistributionStore } from "../../stores/distribution";
@@ -61,8 +57,6 @@ const state = () => {
 
   return session;
 };
-
-const getters: Record<string, LegacyGetter> = {};
 
 const actions: Record<string, LegacyAction> = {};
 
@@ -372,7 +366,6 @@ const mutations: Record<string, LegacyMutation> = {
 const sessionModule: any = {
   namespaced: true,
   state,
-  getters,
   actions,
   mutations,
 };

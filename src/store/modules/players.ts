@@ -1,11 +1,6 @@
-import type {
-  LegacyAction,
-  LegacyGetter,
-  LegacyMutation,
-} from "../legacy-vuex";
+import type { LegacyAction, LegacyMutation } from "../legacy-vuex";
 import { pinia } from "../../pinia";
 import { usePlayersStore } from "../../stores/players";
-import { getNightOrder } from "../../domain/night-order";
 
 const NEWPLAYER = {
   name: "",
@@ -49,21 +44,6 @@ const state = () => {
     });
   }
   return legacyState;
-};
-
-const getters: Record<string, LegacyGetter> = {
-  alive({ players }) {
-    return players.filter((player: any) => !player.isDead).length;
-  },
-  nonTravelers({ players }) {
-    const nonTravelers = players.filter(
-      (player: any) => player.role.team !== "traveler",
-    );
-    return Math.min(nonTravelers.length, 15);
-  },
-  nightOrder({ players, fabled, firstNightOrder, otherNightOrder }) {
-    return getNightOrder(players, fabled, firstNightOrder, otherNightOrder);
-  },
 };
 
 const actions: Record<string, LegacyAction> = {
@@ -244,7 +224,6 @@ const mutations: Record<string, LegacyMutation> = {
 const playersModule: any = {
   namespaced: true,
   state,
-  getters,
   actions,
   mutations,
 };
