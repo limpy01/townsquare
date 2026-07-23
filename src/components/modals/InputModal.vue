@@ -251,7 +251,8 @@ function handleResize() {
 </script>
 
 <style scoped lang="scss">
-@import "../../vars.scss";
+@use "sass:color";
+@use "../../vars.scss" as *;
 
 .input-box {
   display: flex;
@@ -300,7 +301,7 @@ function handleResize() {
 }
 
 .input-box button.confirm:hover {
-  background-color: darken(#0a65dd, 10%);
+  background-color: color.adjust(#0a65dd, $lightness: -10%);
 }
 
 .input-box button[type="button"] {
@@ -310,7 +311,7 @@ function handleResize() {
 }
 
 .input-box button[type="button"]:hover {
-  background-color: darken(#e84b20, 10%);
+  background-color: color.adjust(#e84b20, $lightness: -10%);
 }
 
 .warning {

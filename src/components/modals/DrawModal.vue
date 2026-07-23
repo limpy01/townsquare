@@ -146,7 +146,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
 </script>
 
 <style scoped lang="scss">
-@import "../../vars.scss";
+@use "../../vars.scss" as *;
 
 ul.tokens {
   li {

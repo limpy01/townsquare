@@ -280,7 +280,8 @@ onBeforeUnmount(() =>
 </script>
 
 <style lang="scss">
-@import "vars";
+@use "vars" as *;
+@use "media";
 
 @font-face {
   font-family: "Papyrus";
@@ -316,7 +317,7 @@ body {
   overflow: hidden;
 }
 
-@import "media";
+@include media.responsive;
 
 * {
   box-sizing: border-box;

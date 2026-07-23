@@ -396,7 +396,7 @@ onBeforeUnmount(clearVoteTimer);
 </script>
 
 <style lang="scss" scoped>
-@import "../vars.scss";
+@use "../vars.scss" as *;
 
 #vote {
   position: absolute;

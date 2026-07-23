@@ -924,7 +924,7 @@ onBeforeUnmount(() => options.beforeUnmount.call(context));
 
 <style lang="scss">
 @use "sass:math";
-@import "../vars.scss";
+@use "../vars.scss" as *;
 
 #townsquare {
   width: 100%;

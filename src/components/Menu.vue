@@ -1625,7 +1625,7 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
-@import "../vars.scss";
+@use "../vars.scss" as *;
 
 // success animation
 @keyframes greenToWhite {

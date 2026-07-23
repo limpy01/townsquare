@@ -206,7 +206,8 @@ onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
 </script>
 
 <style scoped lang="scss">
-@import "../../vars.scss";
+@use "sass:color";
+@use "../../vars.scss" as *;
 $confirm-color: #0a65dd;
 $remove-color: #e84b20;
 
@@ -237,7 +238,7 @@ $remove-color: #e84b20;
     transition: background-color 0.3s;
 
     &:hover {
-      background-color: darken($confirm-color, 10%);
+      background-color: color.adjust($confirm-color, $lightness: -10%);
     }
   }
 
@@ -247,7 +248,7 @@ $remove-color: #e84b20;
     transition: background-color 0.3s;
 
     &:hover {
-      background-color: darken($remove-color, 10%);
+      background-color: color.adjust($remove-color, $lightness: -10%);
     }
   }
 
@@ -265,7 +266,7 @@ $remove-color: #e84b20;
     transition: color 0.2s;
 
     &:hover {
-      color: darken($remove-color, 10%);
+      color: color.adjust($remove-color, $lightness: -10%);
     }
   }
 
@@ -293,7 +294,7 @@ $remove-color: #e84b20;
   display: inline-flex;
   align-items: center;
   padding: 4px 8px;
-  background-color: lighten($confirm-color, 40%);
+  background-color: color.adjust($confirm-color, $lightness: 40%);
   color: $confirm-color;
   border-radius: 4px;
   font-size: 0.9em;
@@ -318,7 +319,7 @@ $remove-color: #e84b20;
     transition: color 0.2s;
 
     &:hover {
-      color: darken($remove-color, 10%);
+      color: color.adjust($remove-color, $lightness: -10%);
     }
   }
 }
@@ -338,7 +339,7 @@ $remove-color: #e84b20;
     transition: background-color 0.3s;
 
     &:hover {
-      background-color: darken($confirm-color, 10%);
+      background-color: color.adjust($confirm-color, $lightness: -10%);
     }
   }
 
@@ -348,7 +349,7 @@ $remove-color: #e84b20;
     transition: background-color 0.3s;
 
     &:hover {
-      background-color: darken($remove-color, 10%);
+      background-color: color.adjust($remove-color, $lightness: -10%);
     }
   }
 }
