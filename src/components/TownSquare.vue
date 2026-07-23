@@ -227,8 +227,18 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapState } from "vuex";
+<script setup lang="ts">
+// @ts-nocheck
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  toRef,
+  watch,
+} from "vue";
 import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
@@ -236,43 +246,60 @@ import { useVotingStore } from "../stores/voting";
 import { useRoleActivityStore } from "../stores/role-activity";
 import { useProfileStore } from "../stores/profile";
 import { useAppMetaStore } from "../stores/app-meta";
-import Player from "./Player";
-import Token from "./Token";
-import ReminderModal from "./modals/ReminderModal";
-import RoleModal from "./modals/RoleModal";
+import { usePlayersStore } from "../stores/players";
+import { useGrimoireStore } from "../stores/grimoire";
+import { useScenarioStore } from "../stores/scenario";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import store from "../store";
+import Player from "./Player.vue";
+import Token from "./Token.vue";
+import ReminderModal from "./modals/ReminderModal.vue";
+import RoleModal from "./modals/RoleModal.vue";
 
-export default {
-  components: {
-    Player,
-    Token,
-    RoleModal,
-    ReminderModal,
+const playersState = usePlayersStore();
+const grimoire = useGrimoireStore();
+const scenario = useScenarioStore();
+const session = useSessionIdentityStore();
+const appMeta = useAppMetaStore();
+const interaction = useInteractionStore();
+const chat = useChatStore();
+const connection = useSessionConnectionStore();
+const voting = useVotingStore();
+const roleActivity = useRoleActivityStore();
+const profile = useProfileStore();
+const countdownAudio = ref<HTMLAudioElement | null>(null);
+const bluffsElement = ref<HTMLElement | null>(null);
+const chatWith = ref<HTMLElement | null>(null);
+const chatContent = ref<HTMLElement | null>(null);
+const messageInput = ref<HTMLInputElement | null>(null);
+const context: any = reactive({ $store: store, $nextTick: nextTick });
+Object.defineProperties(context, {
+  grimoire: { get: () => grimoire },
+  roles: { get: () => scenario.roles },
+  session: { get: () => session },
+  players: { get: () => playersState.players },
+  bluffs: { get: () => playersState.bluffs },
+  fabled: { get: () => playersState.fabled },
+  appMeta: { get: () => appMeta },
+  interaction: { get: () => interaction },
+  chat: { get: () => chat },
+  connection: { get: () => connection },
+  voting: { get: () => voting },
+  roleActivity: { get: () => roleActivity },
+  profile: { get: () => profile },
+  $refs: {
+    get: () => ({
+      countdownAudio: countdownAudio.value,
+      bluffs: bluffsElement.value,
+      chatWith: chatWith.value,
+      chatContent: chatContent.value,
+      message: messageInput.value,
+    }),
   },
+});
+
+const options: any = {
   computed: {
-    ...mapGetters({ nightOrder: "players/nightOrder" }),
-    ...mapState(["grimoire", "roles", "session"]),
-    ...mapState("players", ["players", "bluffs", "fabled"]),
-    appMeta() {
-      return useAppMetaStore();
-    },
-    interaction() {
-      return useInteractionStore();
-    },
-    chat() {
-      return useChatStore();
-    },
-    connection() {
-      return useSessionConnectionStore();
-    },
-    voting() {
-      return useVotingStore();
-    },
-    roleActivity() {
-      return useRoleActivityStore();
-    },
-    profile() {
-      return useProfileStore();
-    },
     orientation: function () {
       const ratio = this.windowWidth / this.windowHeight;
       const unit =
@@ -801,6 +828,90 @@ export default {
     },
   },
 };
+
+for (const [name, getter] of Object.entries(options.computed)) {
+  Object.defineProperty(context, name, {
+    enumerable: true,
+    get: () => getter.call(context),
+  });
+}
+Object.assign(context, options.data.call(context));
+
+const players = computed(() => playersState.players);
+const bluffs = computed(() => playersState.bluffs);
+const fabled = computed(() => playersState.fabled);
+const roles = computed(() => scenario.roles);
+const nightOrder = computed(() => store.getters["players/nightOrder"]);
+const orientation = computed(() => context.orientation);
+const floatingZoom = computed(() => context.floatingZoom);
+const chatStyle = computed(() => context.chatStyle);
+const groupStyle = computed(() => context.groupStyle);
+const isInGroup = computed(() => context.isInGroup);
+const inGroupPlayers = computed(() => context.inGroupPlayers);
+const isRole = computed(() => context.isRole);
+const selectedPlayer = toRef(context, "selectedPlayer");
+const bluffSize = toRef(context, "bluffSize");
+const swap = toRef(context, "swap");
+const move = toRef(context, "move");
+const nominate = toRef(context, "nominate");
+const isBluffsOpen = toRef(context, "isBluffsOpen");
+const isFabledOpen = toRef(context, "isFabledOpen");
+const isChatMin = toRef(context, "isChatMin");
+const minimising = toRef(context, "minimising");
+const chattingPlayer = toRef(context, "chattingPlayer");
+const chattingGroup = toRef(context, "chattingGroup");
+const isShowGroup = toRef(context, "isShowGroup");
+const message = toRef(context, "message");
+
+const methodNames = Object.keys(options.methods);
+for (const name of methodNames)
+  context[name] = options.methods[name].bind(context);
+const [
+  toggleBluffs,
+  toggleFabled,
+  toggleGroups,
+  removeFabled,
+  handleTrigger,
+  handleResize,
+  claimSeat,
+  openReminderModal,
+  openRoleModal,
+  removePlayer,
+  swapPlayer,
+  movePlayer,
+  nominatePlayer,
+  cancel,
+  addVote,
+  subtractVote,
+  setStoryTeller,
+  openChat,
+  toggleChat,
+  maximiseChat,
+  minimiseChat,
+  sendChat,
+  scrollToBottom,
+  checkToBottom,
+  typing,
+  notTyping,
+  setUsingWraith,
+] = methodNames.map((name) => context[name]);
+
+watch(
+  () => chat.histories,
+  () => options.watch["chat.histories"].handler.call(context),
+  { deep: true },
+);
+watch(
+  () => voting.isVoteInProgress,
+  () => options.watch["voting.isVoteInProgress"].handler.call(context),
+);
+watch(
+  () => chat.groups,
+  () => options.watch["chat.groups"].handler.call(context),
+  { deep: true },
+);
+onMounted(() => options.mounted.call(context));
+onBeforeUnmount(() => options.beforeUnmount.call(context));
 </script>
 
 <style lang="scss">
