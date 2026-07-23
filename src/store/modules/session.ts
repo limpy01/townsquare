@@ -5,6 +5,7 @@ import type {
 } from "../legacy-vuex";
 import { pinia } from "../../pinia";
 import { useAudioStore } from "../../stores/audio";
+import { useDistributionStore } from "../../stores/distribution";
 import { useTimerStore } from "../../stores/timer";
 
 /**
@@ -51,10 +52,6 @@ const state = () => ({
   voteSelected: [],
   markedPlayer: -1,
   isVoteHistoryAllowed: true,
-  isRolesDistributed: false,
-  isTypesDistributed: false,
-  isBluffsDistributed: false,
-  isGrimoireDistributed: false,
   isUseOldOrder: {
     pithag: false,
     professor: false,
@@ -105,13 +102,17 @@ const mutations: Record<string, LegacyMutation> = {
   setUseOldRole: set("isUseOldRole"),
   setIsReview: set("isReview"),
   claimSeat: set("claimedSeat"),
-  distributeRoles: set("isRolesDistributed"),
-  distributeTypes: set("isTypesDistributed"),
-  distributeBluffs(state, { val }) {
-    state.isBluffsDistributed = val;
+  distributeRoles(_state, active) {
+    useDistributionStore(pinia).setRoles(active);
   },
-  distributeGrimoire(state, { val }) {
-    state.isGrimoireDistributed = val;
+  distributeTypes(_state, active) {
+    useDistributionStore(pinia).setTypes(active);
+  },
+  distributeBluffs(_state, { val }) {
+    useDistributionStore(pinia).setBluffs(val);
+  },
+  distributeGrimoire(_state, { val }) {
+    useDistributionStore(pinia).setGrimoire(val);
   },
   setSessionId(state, sessionId) {
     state.sessionId = sessionId

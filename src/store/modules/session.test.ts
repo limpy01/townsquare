@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pinia } from "../../pinia";
+import { useDistributionStore } from "../../stores/distribution";
 import { useTimerStore } from "../../stores/timer";
 import sessionModule from "./session";
 
@@ -31,5 +32,18 @@ describe("session Vuex compatibility module", () => {
     sessionModule.mutations.setTimer(sessionModule.state(), 90);
 
     expect(timer.seconds).toBe(90);
+  });
+
+  it("delegates distribution flags to the Pinia store", () => {
+    const distribution = useDistributionStore(pinia);
+    distribution.$reset();
+
+    sessionModule.mutations.distributeRoles(sessionModule.state(), true);
+    sessionModule.mutations.distributeBluffs(sessionModule.state(), {
+      val: true,
+    });
+
+    expect(distribution.roles).toBe(true);
+    expect(distribution.bluffs).toBe(true);
   });
 });
