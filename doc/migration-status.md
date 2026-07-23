@@ -99,6 +99,7 @@
 - 服务端入站与浏览器 session 入站均有独立的 v1 command schema：未知服务端 command 会以 1008 关闭连接，未知 session command 不进入 dispatcher；`setTalking`、`direct`、`request` 与 `uploadFile` 的首批嵌套载荷 schema 已在服务端 dispatch 前校验，保留旧数组 envelope、现有 command 名称与 payload 格式。其余 payload schema 将继续按命令批次收紧。
 - `LiveSession.disconnect()` 会释放 ping、消息队列、重连及授权计时器；fake-timer 回归测试保证断开后不保留 transport 计时器。
 - App、Intro、Menu 与 ImageCropper 的跨组件命令已收敛为三个类型化事件，移除了根组件的动态字符串调用和 `any` 模板 ref；Menu 与 TownSquare 仍有临时 Options 上下文，未将其标记为完成。
+- `Menu.vue` 的麦克风模式、阈值编辑、Web Audio 分析器和说话状态命令已改为直接的 Composition API ref/function；保留原有 `setTalking` 与 `setAudioThreshold` 命令和浏览器权限行为。其余会话、分发与玩家管理方法仍在临时 Options 适配层中。
 
 ## 本批次约束
 

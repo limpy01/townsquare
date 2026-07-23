@@ -618,6 +618,14 @@ const profile = useProfileStore();
 const outbox = useMessageOutboxStore();
 const chat = useChatStore();
 const audioInputNumber = ref<HTMLInputElement | null>(null);
+const microphoneSetting = ref("free");
+const audioThresholdNumber = ref(150);
+const audioThresholdSlider = ref(150);
+const isEditingThreshold = ref(false);
+const audioContext = ref<AudioContext | null>(null);
+const audioStream = ref<MediaStream | null>(null);
+const analyser = ref<AnalyserNode | null>(null);
+const audioSource = ref<MediaStreamAudioSourceNode | null>(null);
 const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
@@ -672,15 +680,6 @@ const options: any = {
         lycanthrope: false,
       },
       recognition: null,
-      microphoneSetting: "free",
-      // 语音检测
-      audioContext: null,
-      audioStream: null,
-      analyser: null,
-      source: null,
-      audioThresholdNumber: 150,
-      audioThresholdSlider: 150,
-      isEditingThreshold: false,
     };
   },
   methods: {
@@ -1309,129 +1308,6 @@ const options: any = {
       this.commands.commit("session/stopTimer");
       this.timing = false;
     },
-    async initAudio() {
-      // Initialize audioContext and audioStream if not already done
-      if (!this.audioContext) {
-        this.audioContext = new AudioContext();
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-        this.audioStream = stream;
-
-        this.source = this.audioContext.createMediaStreamSource(stream);
-        this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 256;
-        this.source.connect(this.analyser);
-      }
-    },
-    runAudioDetection() {
-      // Web Audio API 语音检测
-      const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-      // const SILENCE_THRESHOLD = 120; // Adjust as needed
-      const HUMAN_VOICE_RANGE = { min: 250, max: 400 }; // Adjust based on actual FFT resolution
-
-      // Check for microphone activity
-      const detectSpeechActivity = () => {
-        if (!this.analyser) return;
-        this.analyser.getByteFrequencyData(dataArray);
-
-        // Analyze frequency bins corresponding to the human voice range
-        const sampleRate = this.audioContext.sampleRate;
-        const binCount = this.analyser.frequencyBinCount;
-        const binSize = sampleRate / (2 * binCount);
-        let totalVolume = 0;
-        for (let i = 0; i < binCount; i++) {
-          const frequency = i * binSize;
-          if (
-            frequency >= HUMAN_VOICE_RANGE.min &&
-            frequency <= HUMAN_VOICE_RANGE.max
-          ) {
-            totalVolume += dataArray[i];
-          }
-        }
-
-        if (
-          totalVolume > this.grimoire.audioThreshold &&
-          !this.audio.isTalking
-        ) {
-          if (!this.audio.isTalking) {
-            this.commands.commit("session/setTalking", {
-              seatNum: this.session.claimedSeat,
-              isTalking: true,
-            });
-          }
-        } else if (
-          totalVolume <= this.grimoire.audioThreshold &&
-          this.audio.isTalking
-        ) {
-          if (this.audio.isTalking) {
-            this.commands.commit("session/setTalking", {
-              seatNum: this.session.claimedSeat,
-              isTalking: false,
-            });
-          }
-        }
-
-        this.audio.setListeningFrame(
-          requestAnimationFrame(detectSpeechActivity),
-        );
-      };
-
-      detectSpeechActivity();
-    },
-    startListening(mode) {
-      if (this.audio.listeningFrame) return;
-      if (mode != this.microphoneSetting) return;
-
-      this.initAudio().then(() => {
-        this.runAudioDetection();
-      });
-    },
-    stopListening(mode) {
-      if (!this.audio.listeningFrame) return;
-      if (mode != this.microphoneSetting) return;
-
-      if (this.audio.listeningFrame) {
-        cancelAnimationFrame(this.audio.listeningFrame);
-        this.audio.setListeningFrame(null);
-      }
-      this.commands.commit("session/setTalking", {
-        seatNum: this.session.claimedSeat,
-        isTalking: false,
-      });
-    },
-    startEditingThreshold() {
-      this.isEditingThreshold = true;
-      nextTick(() => {
-        if (this.$refs.audioInputNumber) {
-          this.$refs.audioInputNumber.focus();
-          this.$refs.audioInputNumber.select();
-        }
-      });
-    },
-    stopEditingThreshold(save) {
-      this.isEditingThreshold = false;
-      if (!save || !this.audioThresholdNumber) {
-        this.audioThresholdNumber = this.audioThresholdSlider;
-        return;
-      }
-
-      this.audioThresholdNumber = Math.max(
-        0,
-        Math.min(400, Math.round(this.audioThresholdNumber)),
-      );
-      this.syncAudioThresholdSlider(save);
-    },
-    syncAudioThresholdSlider(save) {
-      this.audioThresholdSlider = this.audioThresholdNumber;
-      if (save)
-        this.commands.commit("setAudioThreshold", this.audioThresholdNumber);
-    },
-    syncAudioThresholdNumber(save) {
-      this.audioThresholdNumber = this.audioThresholdSlider;
-      if (save)
-        this.commands.commit("setAudioThreshold", this.audioThresholdSlider);
-    },
     async clearLocalStorage() {
       const clear = await this.showInputModal({
         inputType: "confirm",
@@ -1480,10 +1356,6 @@ const selectingOldRole = toRef(context, "selectingOldRole");
 const pendingEditions = toRef(context, "pendingEditions");
 const pendingOldOrder = toRef(context, "pendingOldOrder");
 const pendingOldRole = toRef(context, "pendingOldRole");
-const microphoneSetting = toRef(context, "microphoneSetting");
-const audioThresholdNumber = toRef(context, "audioThresholdNumber");
-const audioThresholdSlider = toRef(context, "audioThresholdSlider");
-const isEditingThreshold = toRef(context, "isEditingThreshold");
 const formattedTime = computed(() => {
   const minutes = Math.floor(timer.seconds / 60);
   const seconds = Math.ceil(timer.seconds % 60);
@@ -1509,6 +1381,92 @@ const toggleNightOrder = () => commitGameCommand("toggleNightOrder");
 const toggleStatic = () => commitGameCommand("toggleStatic");
 const setZoom = (value: number) => commitGameCommand("setZoom", value);
 const toggleModal = (name: string) => commitGameCommand("toggleModal", name);
+const setTalking = (isTalking: boolean) =>
+  commitGameCommand("session/setTalking", {
+    seatNum: session.claimedSeat,
+    isTalking,
+  });
+const initAudio = async () => {
+  if (audioContext.value) return;
+
+  const nextContext = new AudioContext();
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const source = nextContext.createMediaStreamSource(stream);
+  const nextAnalyser = nextContext.createAnalyser();
+  nextAnalyser.fftSize = 256;
+  source.connect(nextAnalyser);
+  audioContext.value = nextContext;
+  audioStream.value = stream;
+  audioSource.value = source;
+  analyser.value = nextAnalyser;
+};
+const runAudioDetection = () => {
+  const activeAnalyser = analyser.value;
+  const activeContext = audioContext.value;
+  if (!activeAnalyser || !activeContext) return;
+
+  const dataArray = new Uint8Array(activeAnalyser.frequencyBinCount);
+  const humanVoiceRange = { min: 250, max: 400 };
+  const detectSpeechActivity = () => {
+    if (!analyser.value || !audioContext.value) return;
+    activeAnalyser.getByteFrequencyData(dataArray);
+    const binSize =
+      activeContext.sampleRate / (2 * activeAnalyser.frequencyBinCount);
+    let totalVolume = 0;
+    for (let index = 0; index < activeAnalyser.frequencyBinCount; index++) {
+      const frequency = index * binSize;
+      if (frequency >= humanVoiceRange.min && frequency <= humanVoiceRange.max)
+        totalVolume += dataArray[index];
+    }
+
+    if (totalVolume > grimoire.audioThreshold && !audio.isTalking)
+      setTalking(true);
+    else if (totalVolume <= grimoire.audioThreshold && audio.isTalking)
+      setTalking(false);
+
+    audio.setListeningFrame(requestAnimationFrame(detectSpeechActivity));
+  };
+
+  detectSpeechActivity();
+};
+const startListening = (mode: string) => {
+  if (audio.listeningFrame || mode !== microphoneSetting.value) return;
+  void initAudio().then(runAudioDetection);
+};
+const stopListening = (mode: string) => {
+  if (!audio.listeningFrame || mode !== microphoneSetting.value) return;
+  cancelAnimationFrame(audio.listeningFrame);
+  audio.setListeningFrame(null);
+  setTalking(false);
+};
+const startEditingThreshold = () => {
+  isEditingThreshold.value = true;
+  nextTick(() => {
+    audioInputNumber.value?.focus();
+    audioInputNumber.value?.select();
+  });
+};
+const stopEditingThreshold = (save: boolean) => {
+  isEditingThreshold.value = false;
+  if (!save || !audioThresholdNumber.value) {
+    audioThresholdNumber.value = audioThresholdSlider.value;
+    return;
+  }
+
+  audioThresholdNumber.value = Math.max(
+    0,
+    Math.min(400, Math.round(audioThresholdNumber.value)),
+  );
+  syncAudioThresholdSlider(save);
+};
+const syncAudioThresholdSlider = (save: boolean) => {
+  audioThresholdSlider.value = audioThresholdNumber.value;
+  if (save) commitGameCommand("setAudioThreshold", audioThresholdNumber.value);
+};
+const syncAudioThresholdNumber = (save: boolean) => {
+  audioThresholdNumber.value = audioThresholdSlider.value;
+  if (save) commitGameCommand("setAudioThreshold", audioThresholdSlider.value);
+};
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
@@ -1545,14 +1503,6 @@ const {
   setTimer,
   startTimer,
   stopTimer,
-  initAudio,
-  runAudioDetection,
-  startListening,
-  stopListening,
-  startEditingThreshold,
-  stopEditingThreshold,
-  syncAudioThresholdSlider,
-  syncAudioThresholdNumber,
   clearLocalStorage,
 } = methodBindings;
 watch(
