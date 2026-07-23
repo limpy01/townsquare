@@ -30,7 +30,7 @@ export const decodeSessionMessage = (data: unknown) => {
   }
 };
 
-class LiveSession {
+export class LiveSession {
   constructor(store) {
     this._wss = `${wsBase}/ws/`;
     // this._wss = "ws://localhost:8081/"; // uncomment if using local server with NODE_ENV=development
@@ -467,7 +467,11 @@ class LiveSession {
     this._connection.setPlayerCount(0);
     this._connection.setPing(0);
     this._connection.setIsReconnecting(false);
+    clearTimeout(this._pingTimer);
+    this._pingTimer = null;
+    this._stopSendQueue();
     clearTimeout(this._reconnectTimer);
+    this._reconnectTimer = null;
     clearTimeout(this._joinTimeout);
     clearTimeout(this._hostTimeout);
     this._joinTimeout = null;

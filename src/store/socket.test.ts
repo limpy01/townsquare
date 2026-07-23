@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { decodeSessionMessage } from "./socket";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { decodeSessionMessage, LiveSession } from "./socket";
 
 describe("session socket message decoder", () => {
   it("decodes valid legacy envelopes", () => {
@@ -14,4 +14,24 @@ describe("session socket message decoder", () => {
     expect(decodeSessionMessage('[42, "payload"]')).toBeNull();
     expect(decodeSessionMessage({ command: "ping" })).toBeNull();
   });
+
+  it("releases ping and outbound queue timers when disconnected", () => {
+    vi.useFakeTimers();
+    const session = new LiveSession({
+      commit: vi.fn(),
+      state: {
+        players: { players: [] },
+        session: { playerId: "player-1", sessionId: "" },
+      },
+    });
+
+    session._ping();
+    session._startSendQueue();
+    expect(vi.getTimerCount()).toBe(2);
+
+    session.disconnect();
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });
+
+afterEach(() => vi.useRealTimers());
