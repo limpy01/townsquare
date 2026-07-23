@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-24（输入契约、Sass 模块化与 TypeScript 源码门禁批次完成）
+最后更新：2026-07-24（双向 WebSocket command 边界、transport 计时器释放与组件命令类型化批次完成）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -29,23 +29,23 @@
 
 ## 当前任务
 
-| ID      | 状态   | 范围                                       | 验收                                                                          | 兼容性                          |
-| ------- | ------ | ------------------------------------------ | ----------------------------------------------------------------------------- | ------------------------------- |
-| MIG-001 | 已完成 | 行为、HTTP、存档、WS command 清单          | 兼容性清单；服务端测试与构建                                                  | 只读基线，不改协议              |
-| MIG-002 | 已完成 | 服务端大粒度测试拆分                       | 7 个独立 HTTP、room、lobby、queue、版本信息测试                               | 固定 v1 消息语义                |
-| MIG-003 | 进行中 | Playwright E2E 与视觉基线                  | 首页、创建房间流程和 2 张截图通过；CI 执行 E2E                                | 固定时间、随机数和视口          |
-| MIG-004 | 进行中 | 剧本与游戏状态 characterization fixtures   | WS/自定义剧本 fixture 与 11 个单元测试                                        | 兼容历史 JSON 和存档            |
-| MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生     | lint 基线、服务端测试、构建                                                   | 不改变运行时行为                |
-| MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter | 服务端入口使用 decoder，头像 HTTP 输入使用 Zod schema；15 个 fixture 测试通过 | 网络继续传输旧三元组            |
-| MIG-007 | 待开始 | `packages/domain` 第一个纯逻辑模块         | 严格类型与高覆盖率                                                            | 不导入 Vue/Express              |
-| MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口   | 7 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                        | 旧前端可连接                    |
-| MIG-009 | 已完成 | Vue 3、Vite 运行时启动                     | typecheck、核心 E2E、视觉回归                                                 | Vite 环境变量和静态资源保持兼容 |
-| MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除               | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                          | 保持单窗口模态框与输入流程语义  |
+| ID      | 状态   | 范围                                       | 验收                                                                      | 兼容性                          |
+| ------- | ------ | ------------------------------------------ | ------------------------------------------------------------------------- | ------------------------------- |
+| MIG-001 | 已完成 | 行为、HTTP、存档、WS command 清单          | 兼容性清单；服务端测试与构建                                              | 只读基线，不改协议              |
+| MIG-002 | 已完成 | 服务端大粒度测试拆分                       | 9 个独立 HTTP、room、lobby、queue、协议和版本信息测试                     | 固定 v1 消息语义                |
+| MIG-003 | 进行中 | Playwright E2E 与视觉基线                  | 首页、创建房间流程和 2 张截图通过；CI 执行 E2E                            | 固定时间、随机数和视口          |
+| MIG-004 | 进行中 | 剧本与游戏状态 characterization fixtures   | WS/自定义剧本 fixture 与 11 个单元测试                                    | 兼容历史 JSON 和存档            |
+| MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生     | lint 基线、服务端测试、构建                                               | 不改变运行时行为                |
+| MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter | 双向 command schema、envelope decoder 与 HTTP 输入校验；25 个契约测试通过 | 网络继续传输旧三元组            |
+| MIG-007 | 待开始 | `packages/domain` 第一个纯逻辑模块         | 严格类型与高覆盖率                                                        | 不导入 Vue/Express              |
+| MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口   | 9 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                    | 旧前端可连接                    |
+| MIG-009 | 已完成 | Vue 3、Vite 运行时启动                     | typecheck、核心 E2E、视觉回归                                             | Vite 环境变量和静态资源保持兼容 |
+| MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除               | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                      | 保持单窗口模态框与输入流程语义  |
 
 ## 迁移历史与当前质量基线
 
 - Node `v25.3.0`、npm `11.9.0`；此 Node 主版本已结束支持，迁移基线改用 Node `24.18.0` LTS。
-- `npm run test:server` 通过；当前包含 8 个 HTTP、room、lobby、queue 和版本信息集成测试。
+- `npm run test:server` 通过；当前包含 9 个 HTTP、room、lobby、queue、未知 command 和版本信息集成测试。
 - `npm run build` 通过；入口产物约为 JS 1.78 MiB、CSS 250 KiB，仍存在资源体积警告。
 - ESLint：0 error、1,961 warning（34 个有告警文件）。在完全格式化前，CI 以此为不可增加的上限。
 - 当前前端为 Vue 3 + Vite + Pinia；服务端为 TypeScript、Express 5 与 `ws`。历史 Vuex/Vue CLI 记录仅用于说明迁移路径。
@@ -53,7 +53,7 @@
 - MIG-009 已将开发、构建与 E2E 启动链切换到 Vue 3、Vite 和 Vuex 4；`VITE_API_BASE`/`VITE_WS_BASE` 保持原有后端连接行为，Vue 3 移除的 filter、`$set` 与销毁钩子均已替换。未覆盖视觉基线；经定位，右上角折叠菜单在 Vue 3 下的变换栅格化最多相差 678 像素（小于目标视口的 0.1%），视觉测试以 800 像素的紧阈值继续防回归。
 - `MIG-LAW-001` 已补齐：服务端常规启动和 `--version` 均输出版权与 GPL 许可证告知；帮助菜单新增“法律与署名”入口，Playwright 覆盖其弹窗、版权和上游来源文本。
 - 服务端入口已移除 `@ts-nocheck`：为连接、房间、待投递消息、原始 WebSocket 数据、TLS 和监听地址建立了 TypeScript 类型，并继续使用 v1 旧数组 envelope decoder。HTTP/avatar 与完整的 lobby、room、离线消息队列 WebSocket 生命周期已分别拆入独立模块；入口现在只负责配置、HTTP 组装、TLS 与 upgrade 绑定。
-- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、75 个单元测试、8 个 HTTP/WS/CLI 集成测试、3 个浏览器流程和生产构建均会执行；CI 同步运行非浏览器质量门与浏览器流程，视觉截图仍固定在本地环境。
+- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、83 个单元测试、9 个 HTTP/WS/CLI 集成测试、3 个浏览器流程和生产构建均会执行；CI 同步运行非浏览器质量门与浏览器流程，视觉截图仍固定在本地环境。
 - 历史批次从独立、低风险的 lobby Vuex 模块开始；其余状态域与 transport 随后已迁至 Pinia/TypeScript，`allowJs` 和 Vuex 均已移除。
 - `Gradients.vue` 与基础 `Modal.vue` 已迁移至 `<script setup lang="ts">`；后续组件会按无状态、单一状态依赖、复杂交互的风险顺序迁移。
 - `lobby` 已成为第一个完全由 Pinia 持有的状态域：Vuex module 已删除，大厅 WebSocket、页面可见性和 UI 读取均直接使用 Pinia，并有单元测试锁定状态和房间生命周期。
@@ -96,6 +96,9 @@
 - 组件 Sass 已迁移到模块语法，旧的颜色函数已替换为 `sass:color`，构建不再产生 Sass 弃用告警；2 张视觉基线保持通过。
 - CI 的 `check:runtime-sources` 会拒绝 `src`、`server/src` 与共享包运行时源码中新增 `.js` 文件；测试和 Node 构建脚本不在该门禁范围内。
 - 会话 WebSocket 与游戏状态导入均已在共享 contracts 边界校验：畸形会话消息会中止分发，游戏状态导入会拒绝错误的关键容器类型并兼容缺省历史字段。
+- 服务端入站与浏览器 session 入站均有独立的 v1 command schema：未知服务端 command 会以 1008 关闭连接，未知 session command 不进入 dispatcher；保留旧数组 envelope、现有 command 名称与 payload 格式。payload schema 将继续按命令批次收紧。
+- `LiveSession.disconnect()` 会释放 ping、消息队列、重连及授权计时器；fake-timer 回归测试保证断开后不保留 transport 计时器。
+- App、Intro、Menu 与 ImageCropper 的跨组件命令已收敛为三个类型化事件，移除了根组件的动态字符串调用和 `any` 模板 ref；Menu 与 TownSquare 仍有临时 Options 上下文，未将其标记为完成。
 
 ## 本批次约束
 
@@ -103,4 +106,4 @@
 - 禁止：改动游戏规则、UI、网络消息格式、存档格式、角色资源或 Vue 业务组件。
 - 停止条件：任一基线命令失败，或发现改动影响页面/协议行为。
 
-下一批：继续拆分临时 Options/命令适配层，补齐存档与 WebSocket fixture，并收紧 contracts/domain adapter。
+下一批：为 WebSocket payload 与存档逐命令补 schema，继续拆分 Menu/TownSquare 的临时 Options/命令适配层，并收紧 contracts/domain adapter。
