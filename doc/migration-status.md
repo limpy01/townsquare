@@ -115,6 +115,7 @@
 - `Menu.vue` 的创建、加入与离开房间流程已迁为 Composition API，最后的 Options/context 适配器已删除；房间身份、清场、群聊退出、消息队列和亡魂重置仍走现有兼容命令。
 - `Menu.vue` 已移除 `@ts-nocheck`；模板事件、可选输入和数组访问均经 TypeScript 收窄，完整的 Vue 类型检查现覆盖该组件。
 - v1 WebSocket 的稳定标量命令（布尔状态、计时器、投票速度及无参数命令）现于服务端转发前经 contracts 校验；畸形 payload 以 1008 拒绝，嵌套命令仍按现有专用 schema 分批收紧。
+- 浏览器 session transport 的 v1 envelope 编码与解码已从 `socket.ts` 提取为独立类型化模块；仍使用 contracts source 子入口，避免 Vite 开发环境误加载过期 workspace 构建产物。
 
 ## 本批次约束
 

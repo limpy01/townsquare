@@ -1,7 +1,5 @@
 // @ts-nocheck
 import { wsBase } from "../config";
-import { decodeLegacyEnvelope } from "@townsquare/contracts/legacy-envelope";
-import { isLegacySessionCommand } from "@townsquare/contracts/legacy-session-command";
 import { pinia } from "../pinia";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
@@ -20,17 +18,10 @@ import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 import { getCustomRolesStripped, rolesJSONbyId } from "./selectors";
 import { mutationBus } from "./mutation-bus";
-
-export const decodeSessionMessage = (data: unknown) => {
-  if (typeof data !== "string") return null;
-
-  try {
-    const envelope = decodeLegacyEnvelope(JSON.parse(data));
-    return isLegacySessionCommand(envelope.command) ? envelope : null;
-  } catch {
-    return null;
-  }
-};
+import {
+  decodeSessionMessage,
+  encodeSessionMessage,
+} from "./session-socket-protocol";
 
 export class LiveSession {
   constructor(store) {
@@ -190,7 +181,7 @@ export class LiveSession {
    */
   _send(command, params, feedback = false) {
     if (this._socket && this._socket.readyState === 1) {
-      this._socket.send(JSON.stringify([command, params, feedback]));
+      this._socket.send(encodeSessionMessage(command, params, feedback));
     }
   }
 
