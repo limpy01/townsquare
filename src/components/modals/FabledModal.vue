@@ -21,7 +21,7 @@ import Token from "../Token.vue";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
-import store from "../../store";
+import { emitLegacyMutation } from "../../store/legacy-effects";
 
 const modals = useModalStore();
 const players = usePlayersStore();
@@ -39,8 +39,10 @@ const tokenWidth = computed(() =>
 );
 
 function setFabled(role: any) {
-  store.commit("players/setFabled", { fabled: role });
-  store.commit("toggleModal", "fabled");
+  const payload = { fabled: role };
+  players.setFabled(payload);
+  emitLegacyMutation("players/setFabled", payload);
+  modals.toggle("fabled");
 }
 
 function handleResize() {

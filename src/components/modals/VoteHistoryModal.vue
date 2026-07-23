@@ -111,7 +111,7 @@ import Modal from "./Modal.vue";
 import { useVotingStore } from "../../stores/voting";
 import { useModalStore } from "../../stores/modals";
 import { useSessionIdentityStore } from "../../stores/session-identity";
-import store from "../../store";
+import { emitLegacyMutation } from "../../store/legacy-effects";
 
 const modals = useModalStore();
 const session = useSessionIdentityStore();
@@ -119,7 +119,7 @@ const voting = useVotingStore();
 
 function setVoteSelected(index: number) {
   if (index >= 0) {
-    store.commit("session/setVoteSelected", {
+    voting.setVoteSelected({
       index,
       value: !voting.voteSelected[index],
     });
@@ -129,7 +129,7 @@ function setVoteSelected(index: number) {
     (selected) => selected === true,
   );
   for (let voteIndex = 0; voteIndex < voting.voteSelected.length; voteIndex++) {
-    store.commit("session/setVoteSelected", {
+    voting.setVoteSelected({
       index: voteIndex,
       value: !selectedAll,
     });
@@ -140,11 +140,16 @@ function clearVoteHistory() {
   const selected = voting.voteSelected
     .map((isSelected, index) => (isSelected ? index : -1))
     .filter((index) => index >= 0);
-  store.commit("session/clearVoteHistory", selected);
+  voting.clearVoteHistory(selected);
+  emitLegacyMutation("session/clearVoteHistory", selected);
 }
 
 function setRecordVoteHistory() {
-  store.commit("session/setVoteHistoryAllowed", !voting.isVoteHistoryAllowed);
+  voting.setVoteHistoryAllowed(!voting.isVoteHistoryAllowed);
+  emitLegacyMutation(
+    "session/setVoteHistoryAllowed",
+    voting.isVoteHistoryAllowed,
+  );
 }
 </script>
 
