@@ -77,7 +77,7 @@
       class="session"
       :class="{
         spectator: session.isSpectator,
-        reconnecting: session.isReconnecting,
+        reconnecting: connection.isReconnecting,
       }"
       v-if="
         !!session.sessionId &&
@@ -86,12 +86,12 @@
           !!session.isJoinAllowed)
       "
       @click="leaveSession"
-      :title="`${session.playerCount} other players in this session${
-        session.ping ? ' (' + session.ping + 'ms latency)' : ''
+      :title="`${connection.playerCount} other players in this session${
+        connection.ping ? ' (' + connection.ping + 'ms latency)' : ''
       }`"
     >
       <!-- <font-awesome-icon icon="broadcast-tower" />
-      {{ session.playerCount }} -->
+      {{ connection.playerCount }} -->
     </span>
     <div class="menu" :class="{ open: grimoire.isMenuOpen }">
       <font-awesome-icon icon="cog" @click="toggleMenu" />
@@ -265,9 +265,9 @@
               <li @click="joinSession">加入房间<em>[J]</em></li>
             </template>
             <template v-else>
-              <li v-if="session.ping">
+              <li v-if="connection.ping">
                 与{{ session.isSpectator ? "说书人" : "玩家" }}延迟
-                <em>{{ session.ping }}ms</em>
+                <em>{{ connection.ping }}ms</em>
               </li>
               <li @click="copySessionUrl">
                 复制链接
@@ -582,6 +582,7 @@ import { nextTick } from "vue";
 import { useLobbyStore } from "../stores/lobby";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
+import { useSessionConnectionStore } from "../stores/session-connection";
 
 export default {
   computed: {
@@ -595,6 +596,9 @@ export default {
     ...mapState("players", ["players"]),
     lobby() {
       return useLobbyStore();
+    },
+    connection() {
+      return useSessionConnectionStore();
     },
     formattedTime() {
       const minutes = Math.floor(this.session.timer / 60);

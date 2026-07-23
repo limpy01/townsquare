@@ -4,6 +4,7 @@ import { pinia } from "../pinia";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
+import { useSessionConnectionStore } from "../stores/session-connection";
 
 class LiveSession {
   constructor(store) {
@@ -15,6 +16,7 @@ class LiveSession {
     this._isAlive = true;
     this._gamestate = [];
     this._store = store;
+    this._connection = useSessionConnectionStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -46,7 +48,7 @@ class LiveSession {
           : ""),
     );
     if (this._socket === null) {
-      this._store.commit("session/setReconnecting", true);
+      this._connection.setIsReconnecting(true);
       this._reconnectTimer = setTimeout(() => this.connect(channel), 3 * 1000);
       return;
     }
@@ -58,7 +60,7 @@ class LiveSession {
       this._pingTimer = null;
       if (err.code !== 1000) {
         // connection interrupted, reconnect after 3 seconds
-        this._store.commit("session/setReconnecting", true);
+        this._connection.setIsReconnecting(true);
         this._reconnectTimer = setTimeout(
           () => this.connect(channel),
           3 * 1000,
@@ -333,7 +335,7 @@ class LiveSession {
     clearTimeout(this._pingTimer);
     this._pingTimer = setTimeout(this._ping.bind(this), this._pingInterval);
     // if (this._store.state.session.sessionId &&
-    //   !this._isAlive && !this._store.state.session.isReconnecting
+    //   !this._isAlive && !this._connection.isReconnecting
     // ) {
     //   this._isAlive = true;
     //   this.connect(this._store.state.session.sessionId);
@@ -584,8 +586,8 @@ class LiveSession {
       this._store.commit("session/setStSecret", stSecret);
     }
     this._pings = {};
-    this._store.commit("session/setPlayerCount", 0);
-    this._store.commit("session/setPing", 0);
+    this._connection.setPlayerCount(0);
+    this._connection.setPing(0);
     this._isSpectator = this._store.state.session.isSpectator;
     if (this._store.state.session.claimedSeat >= 0) {
       this._store.commit("session/setTalking", {
@@ -601,9 +603,9 @@ class LiveSession {
    */
   disconnect() {
     this._pings = {};
-    this._store.commit("session/setPlayerCount", 0);
-    this._store.commit("session/setPing", 0);
-    this._store.commit("session/setReconnecting", false);
+    this._connection.setPlayerCount(0);
+    this._connection.setPing(0);
+    this._connection.setIsReconnecting(false);
     clearTimeout(this._reconnectTimer);
     clearTimeout(this._store.state.session.joinTimeout);
     clearTimeout(this._store.state.session.hostTimeout);
@@ -1396,20 +1398,18 @@ class LiveSession {
           // ping to Players
           this._pings[playerIdOrCount] = ping;
           const pings = Object.values(this._pings);
-          this._store.commit(
-            "session/setPing",
+          this._connection.setPing(
             Math.round(pings.reduce((a, b) => a + b, 0) / pings.length),
           );
         }
       }
     } else if (latency) {
       // ping to ST
-      this._store.commit("session/setPing", parseInt(latency, 10));
+      this._connection.setPing(parseInt(latency, 10));
     }
     // update player count
     if (!this._isSpectator || playerIdOrCount) {
-      this._store.commit(
-        "session/setPlayerCount",
+      this._connection.setPlayerCount(
         this._isSpectator ? playerIdOrCount : Object.keys(this._players).length,
       );
     }
@@ -1427,10 +1427,7 @@ class LiveSession {
   _handleBye(playerId) {
     if (this._isSpectator) return;
     delete this._players[playerId];
-    this._store.commit(
-      "session/setPlayerCount",
-      Object.keys(this._players).length,
-    );
+    this._connection.setPlayerCount(Object.keys(this._players).length);
   }
 
   /**
