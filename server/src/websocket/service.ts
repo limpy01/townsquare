@@ -7,7 +7,10 @@ import WebSocket, { WebSocketServer, type RawData } from "ws";
 import {
   decodeLegacyEnvelope,
   isLegacyClientCommand,
+  legacyDirectPayloadSchema,
+  legacyRequestPayloadSchema,
   legacySetTalkingPayloadSchema,
+  legacyUploadFilePayloadSchema,
   playerIdSchema,
   roomIdSchema,
   type LegacyFeedback,
@@ -312,6 +315,21 @@ export function createWebsocketService({
         !legacySetTalkingPayloadSchema.safeParse(params).success
       )
         return closeProtocol(socket, "Invalid setTalking payload");
+      if (
+        command === "direct" &&
+        !legacyDirectPayloadSchema.safeParse(params).success
+      )
+        return closeProtocol(socket, "Invalid direct payload");
+      if (
+        command === "request" &&
+        !legacyRequestPayloadSchema.safeParse(params).success
+      )
+        return closeProtocol(socket, "Invalid request payload");
+      if (
+        command === "uploadFile" &&
+        !legacyUploadFilePayloadSchema.safeParse(params).success
+      )
+        return closeProtocol(socket, "Invalid uploadFile payload");
       // Guests can connect before a host exists so that the client receives an explicit allowJoin=false response.
       const currentRoom = rooms.get(socket.roomId) || room;
       if (command === "request")

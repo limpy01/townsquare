@@ -101,6 +101,35 @@ test("rejects malformed player talking payloads", async (t) => {
   host.socket.terminate();
 });
 
+test("rejects malformed nested WebSocket payloads", async (t) => {
+  const { wsBase } = await createTestService(t);
+
+  for (const [message, expectedReason] of [
+    [
+      ["direct", { "player-a": ["runArbitraryCode", {}] }],
+      /Invalid direct payload/,
+    ],
+    [["request", { arbitraryRequest: [] }], /Invalid request payload/],
+    [
+      ["uploadFile", { uploadAvatar: ["player-a"] }],
+      /Invalid uploadFile payload/,
+    ],
+  ]) {
+    const client = await openClient(
+      `${wsBase}/ws/42/${Math.random().toString(36).slice(2)}`,
+    );
+    client.send(message);
+    const [code, reason] = await new Promise((resolve) =>
+      client.socket.once("close", (closeCode, closeReason) =>
+        resolve([closeCode, closeReason.toString()]),
+      ),
+    );
+
+    assert.equal(code, 1008);
+    assert.match(reason, expectedReason);
+  }
+});
+
 test("announces room lifecycle to lobby clients and disconnects players after host exit", async (t) => {
   const { wsBase } = await createTestService(t);
   const lobby = await openClient(`${wsBase}/lobby/lobby-a`);

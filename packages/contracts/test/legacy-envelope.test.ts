@@ -6,9 +6,12 @@ import {
   encodeLegacyEnvelope,
   isLegacyClientCommand,
   legacyClientCommandSchema,
+  legacyDirectPayloadSchema,
+  legacyRequestPayloadSchema,
   legacySetTalkingPayloadSchema,
   isLegacySessionCommand,
   legacySessionCommandSchema,
+  legacyUploadFilePayloadSchema,
   parseAvatarUpload,
   parseCustomScript,
   parseDynamicInitResponse,
@@ -68,6 +71,40 @@ describe("legacy client command boundary", () => {
       legacySetTalkingPayloadSchema.safeParse({
         seatNum: "2",
         isTalking: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("validates direct, request, and upload payload envelopes", () => {
+    expect(
+      legacyDirectPayloadSchema.parse({
+        "player-a": ["chat", { message: "hello" }],
+      }),
+    ).toMatchObject({ "player-a": ["chat", { message: "hello" }] });
+    expect(
+      legacyDirectPayloadSchema.safeParse({ "player-a": ["unknown", {}] })
+        .success,
+    ).toBe(false);
+
+    expect(
+      legacyRequestPayloadSchema.parse({
+        deleteMessage: ["player-a", ["direct", 101]],
+      }),
+    ).toMatchObject({ deleteMessage: ["player-a", ["direct", 101]] });
+    expect(
+      legacyRequestPayloadSchema.safeParse({ arbitraryRequest: [] }).success,
+    ).toBe(false);
+
+    expect(
+      legacyUploadFilePayloadSchema.parse({
+        uploadAvatar: ["player-a", "data:image/png;base64,AA=="],
+      }),
+    ).toMatchObject({
+      uploadAvatar: ["player-a", "data:image/png;base64,AA=="],
+    });
+    expect(
+      legacyUploadFilePayloadSchema.safeParse({
+        uploadAvatar: ["player-a"],
       }).success,
     ).toBe(false);
   });
