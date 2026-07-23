@@ -4,7 +4,7 @@
       v-if="
         !!session.sessionId &&
         session.isSpectator &&
-        (!!session.isHostAllowed || !!session.isJoinAllowed)
+        (!!connection.isHostAllowed || !!connection.isJoinAllowed)
       "
     >
       <font-awesome-icon
@@ -38,8 +38,8 @@
       v-if="
         !!session.sessionId &&
         (!session.isSpectator ||
-          !!session.isHostAllowed ||
-          !!session.isJoinAllowed)
+          !!connection.isHostAllowed ||
+          !!connection.isJoinAllowed)
       "
     >
       <button
@@ -82,8 +82,8 @@
       v-if="
         !!session.sessionId &&
         (!session.isSpectator ||
-          !!session.isHostAllowed ||
-          !!session.isJoinAllowed)
+          !!connection.isHostAllowed ||
+          !!connection.isJoinAllowed)
       "
       @click="leaveSession"
       :title="`${connection.playerCount} other players in this session${
@@ -1059,8 +1059,8 @@ export default {
 
         this.$store.commit("session/setSpectator", false);
         this.$store.commit("session/setSessionId", "");
-        this.$store.commit("session/setIsHostAllowed", null);
-        this.$store.commit("session/setIsJoinAllowed", null);
+        this.connection.setIsHostAllowed(null);
+        this.connection.setIsJoinAllowed(null);
 
         // clear seats and return to intro
         if (this.session.nomination) {

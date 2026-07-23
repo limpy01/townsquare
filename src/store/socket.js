@@ -22,6 +22,8 @@ class LiveSession {
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
     this._sendTimer = null;
     this._reconnectTimer = null;
+    this._hostTimeout = null;
+    this._joinTimeout = null;
     this._players = {}; // map of players connected to a session
     this._pings = {}; // map of player IDs to ping
     // reconnect to previous session
@@ -71,8 +73,8 @@ class LiveSession {
 
         this._store.commit("session/setSessionId", "");
         this._store.commit("session/setSpectator", false);
-        this._store.commit("session/setIsHostAllowed", null);
-        this._store.commit("session/setIsJoinAllowed", null);
+        this._connection.setIsHostAllowed(null);
+        this._connection.setIsJoinAllowed(null);
         // clear seats and return to intro
         if (this._store.state.session.nomination) {
           this._store.commit("session/nomination");
@@ -311,7 +313,7 @@ class LiveSession {
         });
       }
     } else {
-      if (this._store.state.session.isHostAllowed === true) {
+      if (this._connection.isHostAllowed === true) {
         this.sendGamestate();
       } else {
         this.checkAllowHost();
@@ -607,8 +609,10 @@ class LiveSession {
     this._connection.setPing(0);
     this._connection.setIsReconnecting(false);
     clearTimeout(this._reconnectTimer);
-    clearTimeout(this._store.state.session.joinTimeout);
-    clearTimeout(this._store.state.session.hostTimeout);
+    clearTimeout(this._joinTimeout);
+    clearTimeout(this._hostTimeout);
+    this._joinTimeout = null;
+    this._hostTimeout = null;
     if (this._socket) {
       if (this._isSpectator) {
         this._sendDirect("host", "bye", this._store.state.session.playerId);
@@ -642,10 +646,10 @@ class LiveSession {
    * Send request to server to check if hosting channel is allowed (no existing hosts).
    */
   async checkAllowHost() {
-    if (this._store.state.session.isHostAllowed === true) return;
+    if (this._connection.isHostAllowed === true) return;
     this._request("checkAllowHost", this._store.state.session.playerId);
-    this._store.state.session.hostTimeout = setTimeout(async () => {
-      if (this._store.state.session.isHostAllowed === null) {
+    this._hostTimeout = setTimeout(async () => {
+      if (this._connection.isHostAllowed === null) {
         await this.showInputModal({
           inputType: "alert",
           inputModal: "text",
@@ -665,10 +669,10 @@ class LiveSession {
    * @param allow indicator to if hosting the channel is allowed
    */
   async _handleAllowHost(allow) {
-    if (this._store.state.session.isHostAllowed === true) return;
-    clearInterval(this._store.state.session.hostTimeout);
-    this._store.state.session.hostTimeout = null;
-    this._store.commit("session/setIsHostAllowed", allow ? allow : null);
+    if (this._connection.isHostAllowed === true) return;
+    clearInterval(this._hostTimeout);
+    this._hostTimeout = null;
+    this._connection.setIsHostAllowed(allow ? allow : null);
 
     if (allow) {
       this.sendGamestate();
@@ -693,10 +697,10 @@ class LiveSession {
    * Send request to server to check if joining the channel is allowed (has a host).
    */
   checkAllowJoin() {
-    if (this._store.state.session.isJoinAllowed === true) return;
+    if (this._connection.isJoinAllowed === true) return;
     this._request("checkAllowJoin", this._store.state.session.playerId);
-    this._store.state.session.joinTimeout = setTimeout(async () => {
-      if (this._store.state.session.isJoinAllowed === null) {
+    this._joinTimeout = setTimeout(async () => {
+      if (this._connection.isJoinAllowed === null) {
         await this.showInputModal({
           inputType: "alert",
           inputModal: "text",
@@ -716,10 +720,10 @@ class LiveSession {
    * @param allow indicator to if joining the session is allowed
    */
   async _handleAllowJoin(allow) {
-    if (this._store.state.session.isJoinAllowed === true) return;
-    clearInterval(this._store.state.session.joinTimeout);
-    this._store.state.session.joinTimeout = null;
-    this._store.commit("session/setIsJoinAllowed", allow ? allow : null);
+    if (this._connection.isJoinAllowed === true) return;
+    clearInterval(this._joinTimeout);
+    this._joinTimeout = null;
+    this._connection.setIsJoinAllowed(allow ? allow : null);
 
     if (allow) {
       this._sendDirect(

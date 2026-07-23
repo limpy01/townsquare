@@ -22,10 +22,6 @@ const state = () => ({
   sessionId: "",
   StId: null,
   stSecret: "",
-  isHostAllowed: null,
-  hostTimeout: null,
-  isJoinAllowed: null,
-  joinTimeout: null,
   isSpectator: false,
   playerId: "",
   playerName: "",
@@ -95,8 +91,6 @@ const set =
   };
 
 const mutations: Record<string, LegacyMutation> = {
-  setIsJoinAllowed: set("isJoinAllowed"),
-  setIsHostAllowed: set("isHostAllowed"),
   setPlayerId: set("playerId"),
   setStId: set("stId"),
   setStSecret: set("stSecret"),

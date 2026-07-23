@@ -87,7 +87,7 @@
         </li>
       </ul>
     </div>
-    <a v-if="!!session.sessionId && (!session.isSpectator || !!session.isHostAllowed || !!session.isJoinAllowed)"
+    <a v-if="!!session.sessionId && (!session.isSpectator || !!connection.isHostAllowed || !!connection.isJoinAllowed)"
     href="https://botcgrimoire.top/donation/" target="_blank"
     class="donation"
     >
@@ -164,6 +164,7 @@
 <script>
 import { mapGetters, mapState } from "vuex";
 import { useInteractionStore } from "../stores/interaction";
+import { useSessionConnectionStore } from "../stores/session-connection";
 import Player from "./Player";
 import Token from "./Token";
 import ReminderModal from "./modals/ReminderModal";
@@ -183,6 +184,9 @@ export default {
     ...mapState(["floatingNotice"]),
     interaction() {
       return useInteractionStore();
+    },
+    connection() {
+      return useSessionConnectionStore();
     },
     orientation: function(){
       const ratio = this.windowWidth / this.windowHeight;
