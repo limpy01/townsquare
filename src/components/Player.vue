@@ -68,12 +68,14 @@
           tag="div"
           class="overlay"
           appear
-          v-show="!!voting.votes[index] && voting.votes[index] > 1"
+          v-show="playerVoteCount > 1"
         >
           <font-awesome-icon
-            v-for="(n, id) in voting.votes[index]"
+            v-for="(n, id) in playerVoteCount"
             :key="n"
-            :style="{ transform: getVoteTransform(id, voting.votes[index]) }"
+            :style="{
+              transform: getVoteTransform(Number(id), playerVoteCount),
+            }"
             icon="hand-paper"
             class="vote"
             title="Hand UP"
@@ -81,7 +83,7 @@
           />
         </transition-group>
         <font-awesome-icon
-          v-show="!voting.votes || voting.votes[index] <= 1"
+          v-show="playerVoteCount <= 1"
           icon="hand-paper"
           class="vote"
           title="Hand UP"
@@ -129,7 +131,7 @@
           坐下
         </div>
         <div
-          v-if="!player.id && !session.isSpectator && grimoire.isShowVacant"
+          v-if="!player.id && !session.isSpectator && isShowVacant"
           class="sitDown"
           :style="font"
         >
@@ -217,7 +219,9 @@
             playerMenuAdjustment,
             {
               '--before':
-                (menuTop < 0 ? Math.round(menuNewTop - menuTop) + 5 : 5) + 'px',
+                ((menuTop ?? 0) < 0
+                  ? Math.round((menuNewTop ?? 0) - (menuTop ?? 0)) + 5
+                  : 5) + 'px',
             },
           ]"
         >
@@ -337,394 +341,365 @@
   </li>
 </template>
 
-<script>
-import Token from "./Token";
-import { mapGetters, mapState } from "vuex";
+<script setup lang="ts">
+import Token from "./Token.vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import { apiBase } from "../config";
 import { showInputModal } from "../services/input-modal";
 import { useDistributionStore } from "../stores/distribution";
 import { useReviewStore } from "../stores/review";
 import { useVotingStore } from "../stores/voting";
-// import Vue from "vue";
+import { usePlayersStore } from "../stores/players";
+import { useGrimoireStore } from "../stores/grimoire";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import store from "../store";
 
-export default {
-  components: {
-    Token,
+const props = defineProps<{ player: any }>();
+const emit = defineEmits(["trigger"]);
+const playersState = usePlayersStore();
+const grimoire = useGrimoireStore();
+const session = useSessionIdentityStore();
+const distribution = useDistributionStore();
+const review = useReviewStore();
+const voting = useVotingStore();
+const playerMenu = ref<HTMLElement | null>(null);
+const isMenuOpen = ref(false);
+const windowWidth = ref(window.innerWidth);
+const windowHeight = ref(window.innerHeight);
+const menuTop = ref<number | null>(null);
+const menuHeight = ref<number | null>(null);
+const menuNewTop = ref<number | null>(null);
+const isShowVacant = ref(false);
+
+const players = computed(() => playersState.players);
+const nightOrder = computed(() => {
+  const firstNight = [0];
+  const otherNight = [0];
+  const firstNightRoles = players.value
+    .map((item) => item.role)
+    .filter((role) => role.firstNight > 0)
+    .map((role) => role.id);
+  const customFirstNight = firstNightRoles.every((role) =>
+    playersState.firstNightOrder.includes(role),
+  );
+  const otherNightRoles = players.value
+    .map((item) => item.role)
+    .filter((role) => role.otherNight > 0)
+    .map((role) => role.id);
+  const customOtherNight = otherNightRoles.every((role) =>
+    playersState.otherNightOrder.includes(role),
+  );
+  [...players.value, ...playersState.fabled].forEach((item: any) => {
+    const role = item.role || item;
+    if (
+      customFirstNight &&
+      playersState.firstNightOrder.indexOf(role.id) > -1 &&
+      role.firstNight
+    ) {
+      firstNight.push(playersState.firstNightOrder.indexOf(role.id));
+    } else if (role.firstNight && !firstNight.includes(role.firstNight)) {
+      firstNight.push(role.firstNight);
+    }
+    if (
+      customOtherNight &&
+      playersState.otherNightOrder.indexOf(role.id) > -1 &&
+      role.otherNight
+    ) {
+      otherNight.push(playersState.otherNightOrder.indexOf(role.id));
+    } else if (role.otherNight && !otherNight.includes(role.otherNight)) {
+      otherNight.push(role.otherNight);
+    }
+  });
+  firstNight.sort((a, b) => a - b);
+  otherNight.sort((a, b) => a - b);
+  const result = new Map();
+  [...players.value, ...playersState.fabled].forEach((item: any) => {
+    const role = item.role || item;
+    result.set(item, {
+      first: Math.max(
+        customFirstNight
+          ? firstNight.indexOf(playersState.firstNightOrder.indexOf(role.id))
+          : firstNight.indexOf(role.firstNight),
+        0,
+      ),
+      other: Math.max(
+        customOtherNight
+          ? otherNight.indexOf(playersState.otherNightOrder.indexOf(role.id))
+          : otherNight.indexOf(role.otherNight),
+        0,
+      ),
+    });
+  });
+  return result;
+});
+const index = computed(() => players.value.indexOf(props.player));
+const playerVoteCount = computed(() => Number(voting.votes[index.value]));
+const voteLocked = computed(() => {
+  if (!voting.nomination) return false;
+  const indexAdjusted =
+    (index.value - 1 + players.value.length - voting.nomination[1]) %
+    players.value.length;
+  return indexAdjusted < voting.lockedVote - 1;
+});
+const zoom = computed(() => {
+  const unit = windowWidth.value > windowHeight.value ? "vh" : "vw";
+  const size =
+    players.value.length < 7
+      ? 18
+      : players.value.length <= 10
+      ? 16
+      : players.value.length <= 15
+      ? 14
+      : 12;
+  return { width: size + grimoire.zoom + unit };
+});
+const font = computed(
+  () =>
+    "font-size: " +
+    ((grimoire.zoom + 20) * Math.min(windowWidth.value, windowHeight.value)) /
+      1080 +
+    "px",
+);
+const playerMenuAdjustment = computed(() => {
+  if (!menuTop.value) return null;
+  return { top: "0px", height: menuHeight.value + "px" };
+});
+const reminders = computed(() =>
+  !session.isSpectator || !review.isReview
+    ? props.player.reminders
+    : props.player.stReminders,
+);
+
+function handleResize() {
+  windowWidth.value = window.innerWidth;
+  windowHeight.value = window.innerHeight;
+}
+
+function getVoteTransform(index: number, totalVotes: number, scaleValue = 1) {
+  const offsetX = 20;
+  const totalShiftX = ((totalVotes - 1) * offsetX) / 2;
+  return `translate(${
+    index * offsetX - totalShiftX
+  }px, 0px) scale(${scaleValue})`;
+}
+function clickSetRole() {
+  if (session.isSpectator && !props.player.id) {
+    claimSeat();
+    return;
+  }
+  if (!session.isSpectator || !review.isReview)
+    emit("trigger", ["openRoleModal"]);
+}
+async function changePronouns() {
+  if (session.isSpectator && props.player.id !== session.playerId) return;
+
+  const input = await showInputModal({
+    inputType: "pronouns",
+    inputModal: "input",
+    inputData: {
+      name: ["请输入人称代词"],
+      length: 1,
+      placeholder: [""],
+    },
+  }).catch(() => {
+    return null;
+  });
+  if (input === null) return;
+
+  if (!Array.isArray(input)) return;
+  const pronouns = input[0];
+  //Only update pronouns if not null (prompt was not cancelled)
+  if (pronouns !== null) {
+    updatePlayer("pronouns", pronouns, true);
+  }
+}
+function toggleStatus() {
+  if (grimoire.isPublic) {
+    if (!props.player.isDead) {
+      updatePlayer("isDead", true);
+      if (props.player.isMarked) updatePlayer("isMarked", false);
+    } else if (props.player.isVoteless) {
+      updatePlayer("isVoteless", false);
+      updatePlayer("isDead", false);
+    } else updatePlayer("isVoteless", true);
+  } else {
+    updatePlayer("isDead", !props.player.isDead);
+    if (props.player.isMarked) updatePlayer("isMarked", false);
+    if (props.player.isVoteless) updatePlayer("isVoteless", false);
+    if (props.player.isSecretVoteless) {
+      updatePlayer("isSecretVoteless", false);
+      updatePlayer("isVoteless", false);
+    }
+  }
+}
+
+function toggleVote() {
+  if (!props.player.isDead) return;
+  updatePlayer(
+    voting.isSecretVote && !props.player.isSecretVoteless
+      ? "isSecretVoteless"
+      : "isVoteless",
+    true,
+  );
+}
+
+function toggleAllowRole() {
+  if (!session.isSpectator)
+    updatePlayer("isAllowRole", !props.player.isAllowRole, true);
+}
+
+async function toggleWraith() {
+  if (session.isSpectator) return;
+  if (props.player.isWraith) {
+    updatePlayer("isWraith", false, true);
+    updatePlayer("isUsingWraith", false, true);
+    updatePlayer("isAllowRole", true, true);
+    return;
+  }
+  const confirm = await showInputModal({
+    inputType: "confirm",
+    inputModal: "confirm",
+    inputData: {
+      name: ["确定允许该玩家使用亡魂能力吗？"],
+      length: 1,
+      placeholder: [""],
+    },
+  }).catch(() => null);
+  if (confirm === true) updatePlayer("isWraith", true, true);
+  await nextTick();
+}
+
+async function changeName() {
+  if (session.isSpectator) return;
+  const input = await showInputModal({
+    inputType: "changeNameSt",
+    inputModal: "input",
+    inputData: { name: ["请输入玩家昵称"], length: 1, placeholder: [""] },
+  }).catch(() => null);
+  if (Array.isArray(input)) updatePlayer("name", input[0], true);
+}
+
+function removeReminder(reminder: any) {
+  if (review.isReview && session.isSpectator) return;
+  const updatedReminders = [...props.player.reminders];
+  updatedReminders.splice(props.player.reminders.indexOf(reminder), 1);
+  updatePlayer("reminders", updatedReminders, true);
+  if (!session.isSpectator && reminder.role !== "custom") {
+    const stReminders = [...props.player.stReminders];
+    const reminderIndex = stReminders.findIndex(
+      (item) => item.role === reminder.role,
+    );
+    if (reminderIndex === -1) return;
+    stReminders.splice(reminderIndex, 1);
+    updatePlayer("stReminders", stReminders, true);
+  }
+}
+
+async function checkOverTop(toggle = true) {
+  if (toggle) isMenuOpen.value = !isMenuOpen.value;
+  if (!isMenuOpen.value || !playerMenu.value) return;
+  await nextTick();
+  const position = playerMenu.value.getBoundingClientRect();
+  menuTop.value = position.top < 0 ? Math.floor(position.top) : 0;
+  menuHeight.value = Math.ceil(Math.abs(position.height));
+  await nextTick();
+  menuNewTop.value = playerMenu.value.getBoundingClientRect().top;
+}
+
+function resize() {
+  if (!isMenuOpen.value) return;
+  menuTop.value = null;
+  menuHeight.value = null;
+  menuNewTop.value = null;
+  checkOverTop(false);
+}
+
+function updatePlayer(property: string, value: unknown, closeMenu = false) {
+  if (
+    session.isSpectator &&
+    !["reminders", "stReminders", "pronouns"].includes(property)
+  )
+    return;
+  store.commit("players/update", { player: props.player, property, value });
+  if (closeMenu) isMenuOpen.value = false;
+}
+
+function emptyPlayer() {
+  store.commit("players/empty", { player: props.player, id: props.player.id });
+}
+
+async function removePlayer() {
+  isMenuOpen.value = false;
+  const confirm = await showInputModal({
+    inputType: "confirm",
+    inputModal: "confirm",
+    inputData: { name: ["确定要移除该座位吗？"], length: 1, placeholder: [""] },
+  }).catch(() => null);
+  if (confirm === true) {
+    if (props.player.id) emptyPlayer();
+    emit("trigger", ["removePlayer"]);
+  }
+}
+
+function emitPlayerAction(action: string, player?: any) {
+  isMenuOpen.value = false;
+  emit("trigger", player === undefined ? [action] : [action, player]);
+}
+const swapPlayer = (player?: any) => emitPlayerAction("swapPlayer", player);
+const movePlayer = (player?: any) => emitPlayerAction("movePlayer", player);
+const nominatePlayer = (player?: any) =>
+  emitPlayerAction("nominatePlayer", player);
+const cancel = () => emit("trigger", ["cancel"]);
+const claimSeat = () => emitPlayerAction("claimSeat");
+const setStoryTeller = (player: any) =>
+  emitPlayerAction("setStoryTeller", player);
+function openChat(player: any) {
+  if (player.id) emitPlayerAction("openChat");
+}
+function vote() {
+  if (!session.isSpectator && voteLocked.value) {
+    store.commit("session/voteSync", [
+      index.value,
+      Number(voting.votes[index.value]) > 0 ? 0 : 1,
+    ]);
+  }
+}
+function addVote(player: any) {
+  if (!session.isSpectator) {
+    emit("trigger", ["addVote", player]);
+    resize();
+  }
+}
+function subtractVote(player: any) {
+  if (!session.isSpectator) {
+    emit("trigger", ["subtractVote", player]);
+    resize();
+  }
+}
+
+watch(
+  isMenuOpen,
+  (open) => {
+    if (!open) {
+      menuTop.value = null;
+      menuHeight.value = null;
+    }
   },
-  props: {
-    player: {
-      type: Object,
-      required: true,
-    },
-  },
-  computed: {
-    apiBase: () => apiBase,
-    ...mapState("players", ["players"]),
-    ...mapState(["grimoire", "session"]),
-    distribution() {
-      return useDistributionStore();
-    },
-    review() {
-      return useReviewStore();
-    },
-    voting() {
-      return useVotingStore();
-    },
-    ...mapGetters({ nightOrder: "players/nightOrder" }),
-    index: function () {
-      return this.players.indexOf(this.player);
-    },
-    voteLocked: function () {
-      const voting = this.voting;
-      const players = this.players.length;
-      if (!voting.nomination) return false;
-      const indexAdjusted =
-        (this.index - 1 + players - voting.nomination[1]) % players;
-      return indexAdjusted < voting.lockedVote - 1;
-    },
-    zoom: function () {
-      const unit = this.windowWidth > this.windowHeight ? "vh" : "vw";
-      // var ratio = {};
-      if (this.players.length < 7) {
-        return { width: 18 + this.grimoire.zoom + unit };
-      } else if (this.players.length <= 10) {
-        return { width: 16 + this.grimoire.zoom + unit };
-      } else if (this.players.length <= 15) {
-        return { width: 14 + this.grimoire.zoom + unit };
-      } else {
-        return { width: 12 + this.grimoire.zoom + unit };
-      }
-    },
-    font: function () {
-      const width = this.windowWidth;
-      const height = this.windowHeight;
-      const referenceWidth = 1080;
-      return (
-        "font-size: " +
-        ((this.grimoire.zoom + 20) * Math.min(width, height)) / referenceWidth +
-        "px"
-      );
-    },
-    playerMenuAdjustment() {
-      if (!this.menuTop) return null;
-      if (this.menuTop === 0) return null;
-      const position = {
-        top: "0px",
-        height: this.menuHeight + "px",
-      };
-      return position;
-    },
-    reminders() {
-      const reminders = !this.session.isSpectator
-        ? this.player.reminders
-        : this.review.isReview
-        ? this.player.stReminders
-        : this.player.reminders;
-      return reminders;
-    },
-  },
-  data() {
-    return {
-      isMenuOpen: false,
-      isSwap: false,
-      newMessages: 0,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      menuTop: null,
-      menuHeight: null,
-      menuNewTop: null,
-      votes: 0,
-    };
-  },
-  mounted() {
-    window.addEventListener("resize", this.handleResize);
-  },
-  beforeUnmount() {
-    window.removeEventListener("resize", this.handleResize);
-  },
-  watch: {
-    isMenuOpen: {
-      handler(val) {
-        if (!val) {
-          this.menuTop = null;
-          this.menuHeight = null;
-        }
-      },
-      immediate: true,
-    },
-    "player.id": {
-      handler() {
-        this.$nextTick(() => {
-          this.resize();
-        });
-      },
-    },
-  },
-  methods: {
-    showInputModal,
-    handleResize() {
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
-    },
-    getVoteTransform(index, totalVotes, scaleValue = 1) {
-      const offsetX = 20; // Horizontal offset per icon
-      const offsetY = 0; // Vertical offset per icon
-
-      // Calculate the total shift for the entire group to keep it centered
-      const totalShiftX = ((totalVotes - 1) * offsetX) / 2;
-      const totalShiftY = ((totalVotes - 1) * offsetY) / 2;
-
-      // Calculate the specific offset for the current icon
-      const iconShiftX = index * offsetX - totalShiftX;
-      const iconShiftY = index * offsetY - totalShiftY;
-
-      return `translate(${iconShiftX}px, ${iconShiftY}px) scale(${scaleValue})`;
-    },
-    clickSetRole() {
-      if (this.session.isSpectator && !this.player.id) {
-        this.claimSeat();
-        return;
-      }
-      if (!this.session.isSpectator || !this.review.isReview)
-        this.$emit("trigger", ["openRoleModal"]);
-    },
-    async changePronouns() {
-      if (this.session.isSpectator && this.player.id !== this.session.playerId)
-        return;
-
-      const input = await this.showInputModal({
-        inputType: "pronouns",
-        inputModal: "input",
-        inputData: {
-          name: ["请输入人称代词"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-
-      const pronouns = input[0];
-      //Only update pronouns if not null (prompt was not cancelled)
-      if (pronouns !== null) {
-        this.updatePlayer("pronouns", pronouns, true);
-      }
-    },
-    toggleStatus() {
-      if (this.grimoire.isPublic) {
-        if (!this.player.isDead) {
-          this.updatePlayer("isDead", true);
-          if (this.player.isMarked) {
-            this.updatePlayer("isMarked", false);
-          }
-        } else if (this.player.isVoteless) {
-          this.updatePlayer("isVoteless", false);
-          this.updatePlayer("isDead", false);
-        } else {
-          this.updatePlayer("isVoteless", true);
-        }
-      } else {
-        this.updatePlayer("isDead", !this.player.isDead);
-        if (this.player.isMarked) {
-          this.updatePlayer("isMarked", false);
-        }
-        if (this.player.isVoteless) {
-          this.updatePlayer("isVoteless", false);
-        }
-        if (this.player.isSecretVoteless) {
-          this.updatePlayer("isSecretVoteless", false);
-          this.updatePlayer("isVoteless", false);
-        }
-      }
-    },
-    toggleVote() {
-      if (!this.player.isDead) return;
-      if (this.voting.isSecretVote && !this.player.isSecretVoteless) {
-        this.updatePlayer("isSecretVoteless", true);
-      } else {
-        this.updatePlayer("isVoteless", true);
-      }
-    },
-    toggleAllowRole() {
-      if (this.session.isSpectator) return;
-      this.updatePlayer("isAllowRole", !this.player.isAllowRole, true);
-    },
-    async toggleWraith() {
-      if (this.session.isSpectator) return;
-      if (this.player.isWraith) {
-        this.updatePlayer("isWraith", false, true);
-        this.updatePlayer("isUsingWraith", false, true);
-        this.updatePlayer("isAllowRole", true, true);
-        return;
-      }
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定允许该玩家使用亡魂能力吗？"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-
-      if (confirm === true) this.updatePlayer("isWraith", true, true);
-      await this.$nextTick();
-    },
-    async changeName() {
-      if (this.session.isSpectator) return;
-
-      const input = await this.showInputModal({
-        inputType: "changeNameSt",
-        inputModal: "input",
-        inputData: {
-          name: ["请输入玩家昵称"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-
-      const name = input[0];
-      this.updatePlayer("name", name, true);
-    },
-    removeReminder(reminder) {
-      if (this.review.isReview && this.session.isSpectator) return;
-      const reminders = [...this.player.reminders];
-      reminders.splice(this.player.reminders.indexOf(reminder), 1);
-      this.updatePlayer("reminders", reminders, true);
-      if (!this.session.isSpectator && reminder.role != "custom") {
-        const stReminders = [...this.player.stReminders];
-        const index = stReminders.findIndex(
-          (stReminder) => stReminder.role === reminder.role,
-        );
-        if (index === -1) return;
-        stReminders.splice(index, 1);
-        this.updatePlayer("stReminders", stReminders, true);
-      }
-    },
-    async checkOverTop(toggle = true) {
-      if (toggle) this.isMenuOpen = !this.isMenuOpen;
-      if (!this.isMenuOpen) return;
-
-      await this.$nextTick();
-      const position = this.$refs.playerMenu.getBoundingClientRect();
-      const top = position.top < 0 ? Math.floor(position.top) : 0;
-      this.menuTop = top;
-      this.menuHeight = Math.ceil(Math.abs(position.height));
-
-      await this.$nextTick();
-      this.menuNewTop = this.$refs.playerMenu.getBoundingClientRect().top;
-    },
-    resize() {
-      if (!this.isMenuOpen) return;
-
-      this.menuTop = null;
-      this.menuHeight = null;
-      this.menuNewTop = null;
-      this.checkOverTop(false);
-    },
-    updatePlayer(property, value, closeMenu = false) {
-      if (
-        this.session.isSpectator &&
-        property !== "reminders" &&
-        property !== "stReminders" &&
-        property !== "pronouns"
-      )
-        return;
-      this.$store.commit("players/update", {
-        player: this.player,
-        property,
-        value,
-      });
-      if (closeMenu) {
-        this.isMenuOpen = false;
-      }
-    },
-    emptyPlayer() {
-      this.$store.commit("players/empty", {
-        player: this.player,
-        id: this.player.id,
-      });
-    },
-    async removePlayer() {
-      this.isMenuOpen = false;
-
-      const confirm = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定要移除该座位吗？"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (confirm === null) return;
-
-      if (confirm === true) {
-        if (this.player.id) this.emptyPlayer();
-        this.$emit("trigger", ["removePlayer"]);
-      }
-    },
-    swapPlayer(player) {
-      this.isMenuOpen = false;
-      this.$emit("trigger", ["swapPlayer", player]);
-    },
-    movePlayer(player) {
-      this.isMenuOpen = false;
-      this.$emit("trigger", ["movePlayer", player]);
-    },
-    nominatePlayer(player) {
-      this.isMenuOpen = false;
-      this.$emit("trigger", ["nominatePlayer", player]);
-    },
-    cancel() {
-      this.$emit("trigger", ["cancel"]);
-    },
-    claimSeat() {
-      this.isMenuOpen = false;
-      this.$emit("trigger", ["claimSeat"]);
-    },
-    setStoryTeller(player) {
-      this.isMenuOpen = false;
-      this.$emit("trigger", ["setStoryTeller", player]);
-    },
-    openChat(player) {
-      // direct message in grimoire
-      this.isMenuOpen = false;
-      if (!player.id) return;
-      this.$emit("trigger", ["openChat"]);
-    },
-    /**
-     * Allow the ST to override a locked vote.
-     */
-    vote() {
-      if (this.session.isSpectator) return;
-      if (!this.voteLocked) return;
-      this.$store.commit("session/voteSync", [
-        this.index,
-        this.voting.votes[this.index] > 0 ? 0 : 1,
-      ]);
-    },
-    addVote(player) {
-      if (this.session.isSpectator) return;
-      this.$emit("trigger", ["addVote", player]);
-      this.resize();
-    },
-    subtractVote(player) {
-      if (this.session.isSpectator) return;
-      this.$emit("trigger", ["subtractVote", player]);
-      this.resize();
-    },
-  },
-};
+  { immediate: true },
+);
+watch(
+  () => props.player.id,
+  () => nextTick(resize),
+);
+onMounted(() => window.addEventListener("resize", handleResize));
+onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
 </script>
 
 <style lang="scss">
