@@ -360,6 +360,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useSessionIdentityStore } from "../stores/session-identity";
 import store from "../store";
+import { getNightOrder } from "../domain/night-order";
 
 const props = defineProps<{ player: any }>();
 const emit = defineEmits(["trigger"]);
@@ -379,66 +380,14 @@ const menuNewTop = ref<number | null>(null);
 const isShowVacant = ref(false);
 
 const players = computed(() => playersState.players);
-const nightOrder = computed(() => {
-  const firstNight = [0];
-  const otherNight = [0];
-  const firstNightRoles = players.value
-    .map((item) => item.role)
-    .filter((role) => role.firstNight > 0)
-    .map((role) => role.id);
-  const customFirstNight = firstNightRoles.every((role) =>
-    playersState.firstNightOrder.includes(role),
-  );
-  const otherNightRoles = players.value
-    .map((item) => item.role)
-    .filter((role) => role.otherNight > 0)
-    .map((role) => role.id);
-  const customOtherNight = otherNightRoles.every((role) =>
-    playersState.otherNightOrder.includes(role),
-  );
-  [...players.value, ...playersState.fabled].forEach((item: any) => {
-    const role = item.role || item;
-    if (
-      customFirstNight &&
-      playersState.firstNightOrder.indexOf(role.id) > -1 &&
-      role.firstNight
-    ) {
-      firstNight.push(playersState.firstNightOrder.indexOf(role.id));
-    } else if (role.firstNight && !firstNight.includes(role.firstNight)) {
-      firstNight.push(role.firstNight);
-    }
-    if (
-      customOtherNight &&
-      playersState.otherNightOrder.indexOf(role.id) > -1 &&
-      role.otherNight
-    ) {
-      otherNight.push(playersState.otherNightOrder.indexOf(role.id));
-    } else if (role.otherNight && !otherNight.includes(role.otherNight)) {
-      otherNight.push(role.otherNight);
-    }
-  });
-  firstNight.sort((a, b) => a - b);
-  otherNight.sort((a, b) => a - b);
-  const result = new Map();
-  [...players.value, ...playersState.fabled].forEach((item: any) => {
-    const role = item.role || item;
-    result.set(item, {
-      first: Math.max(
-        customFirstNight
-          ? firstNight.indexOf(playersState.firstNightOrder.indexOf(role.id))
-          : firstNight.indexOf(role.firstNight),
-        0,
-      ),
-      other: Math.max(
-        customOtherNight
-          ? otherNight.indexOf(playersState.otherNightOrder.indexOf(role.id))
-          : otherNight.indexOf(role.otherNight),
-        0,
-      ),
-    });
-  });
-  return result;
-});
+const nightOrder = computed(() =>
+  getNightOrder(
+    players.value,
+    playersState.fabled,
+    playersState.firstNightOrder,
+    playersState.otherNightOrder,
+  ),
+);
 const index = computed(() => players.value.indexOf(props.player));
 const playerVoteCount = computed(() => Number(voting.votes[index.value]));
 const voteLocked = computed(() => {

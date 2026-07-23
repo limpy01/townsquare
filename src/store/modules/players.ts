@@ -5,6 +5,7 @@ import type {
 } from "../legacy-vuex";
 import { pinia } from "../../pinia";
 import { usePlayersStore } from "../../stores/players";
+import { getNightOrder } from "../../domain/night-order";
 
 const NEWPLAYER = {
   name: "",
@@ -60,98 +61,8 @@ const getters: Record<string, LegacyGetter> = {
     );
     return Math.min(nonTravelers.length, 15);
   },
-  // calculate a Map of player => night order
   nightOrder({ players, fabled, firstNightOrder, otherNightOrder }) {
-    const firstNight = [0];
-    const otherNight = [0];
-    const firstNightRoles = players
-      .map((player: any) => player.role)
-      .filter((role: any) => role.firstNight > 0)
-      .map((role: any) => role.id);
-    const customFirstNight = firstNightRoles.every((role: any) =>
-      firstNightOrder.includes(role),
-    );
-    const otherNightRoles = players
-      .map((player: any) => player.role)
-      .filter((role: any) => role.otherNight > 0)
-      .map((role: any) => role.id);
-    const customOtherNight = otherNightRoles.every((role: any) =>
-      otherNightOrder.includes(role),
-    );
-    players.forEach(({ role }: any) => {
-      if (
-        customFirstNight &&
-        firstNightOrder.indexOf(role.id) > -1 &&
-        role.firstNight
-      ) {
-        firstNight.push(firstNightOrder.indexOf(role.id));
-      } else if (role.firstNight && !firstNight.includes(role.firstNight)) {
-        firstNight.push(role.firstNight);
-      }
-      if (
-        customOtherNight &&
-        otherNightOrder.indexOf(role.id) > -1 &&
-        role.otherNight
-      ) {
-        otherNight.push(otherNightOrder.indexOf(role.id));
-      } else if (role.otherNight && !otherNight.includes(role.otherNight)) {
-        otherNight.push(role.otherNight);
-      }
-    });
-    fabled.forEach((role: any) => {
-      if (
-        customFirstNight &&
-        firstNightOrder.indexOf(role.id) > -1 &&
-        role.firstNight
-      ) {
-        firstNight.push(firstNightOrder.indexOf(role.id));
-      } else if (role.firstNight && !firstNight.includes(role.firstNight)) {
-        firstNight.push(role.firstNight);
-      }
-      if (
-        customOtherNight &&
-        otherNightOrder.indexOf(role.id) > -1 &&
-        role.otherNight
-      ) {
-        otherNight.push(otherNightOrder.indexOf(role.id));
-      } else if (role.otherNight && !otherNight.includes(role.otherNight)) {
-        otherNight.push(role.otherNight);
-      }
-    });
-    firstNight.sort((a, b) => a - b);
-    otherNight.sort((a, b) => a - b);
-    const nightOrder = new Map();
-    players.forEach((player: any) => {
-      const first = Math.max(
-        customFirstNight
-          ? firstNight.indexOf(firstNightOrder.indexOf(player.role.id))
-          : firstNight.indexOf(player.role.firstNight),
-        0,
-      );
-      const other = Math.max(
-        customOtherNight
-          ? otherNight.indexOf(otherNightOrder.indexOf(player.role.id))
-          : otherNight.indexOf(player.role.otherNight),
-        0,
-      );
-      nightOrder.set(player, { first, other });
-    });
-    fabled.forEach((role: any) => {
-      const first = Math.max(
-        customFirstNight
-          ? firstNight.indexOf(firstNightOrder.indexOf(role.id))
-          : firstNight.indexOf(role.firstNight),
-        0,
-      );
-      const other = Math.max(
-        customOtherNight
-          ? otherNight.indexOf(otherNightOrder.indexOf(role.id))
-          : otherNight.indexOf(role.otherNight),
-        0,
-      );
-      nightOrder.set(role, { first, other });
-    });
-    return nightOrder;
+    return getNightOrder(players, fabled, firstNightOrder, otherNightOrder);
   },
 };
 

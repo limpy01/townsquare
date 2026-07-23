@@ -244,6 +244,7 @@ import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import { useRoleActivityStore } from "../stores/role-activity";
+import { getNightOrder } from "../domain/night-order";
 import { useProfileStore } from "../stores/profile";
 import { useAppMetaStore } from "../stores/app-meta";
 import { usePlayersStore } from "../stores/players";
@@ -841,7 +842,14 @@ const players = computed(() => playersState.players);
 const bluffs = computed(() => playersState.bluffs);
 const fabled = computed(() => playersState.fabled);
 const roles = computed(() => scenario.roles);
-const nightOrder = computed(() => store.getters["players/nightOrder"]);
+const nightOrder = computed(() =>
+  getNightOrder(
+    playersState.players,
+    playersState.fabled,
+    playersState.firstNightOrder,
+    playersState.otherNightOrder,
+  ),
+);
 const orientation = computed(() => context.orientation);
 const floatingZoom = computed(() => context.floatingZoom);
 const chatStyle = computed(() => context.chatStyle);
