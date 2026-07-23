@@ -206,9 +206,9 @@
         </div>
       </form>
     </div>
-    <div v-if="floatingNotice" id="floating-notice">
+    <div v-if="appMeta.floatingNotice" id="floating-notice">
       <div class="floating-window">
-        <span class="floating-text">{{ floatingNotice }}</span>
+        <span class="floating-text">{{ appMeta.floatingNotice }}</span>
       </div>
     </div>
     <div id="version">
@@ -235,6 +235,7 @@ import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import { useRoleActivityStore } from "../stores/role-activity";
 import { useProfileStore } from "../stores/profile";
+import { useAppMetaStore } from "../stores/app-meta";
 import Player from "./Player";
 import Token from "./Token";
 import ReminderModal from "./modals/ReminderModal";
@@ -251,7 +252,9 @@ export default {
     ...mapGetters({ nightOrder: "players/nightOrder" }),
     ...mapState(["grimoire", "roles", "session"]),
     ...mapState("players", ["players", "bluffs", "fabled"]),
-    ...mapState(["floatingNotice"]),
+    appMeta() {
+      return useAppMetaStore();
+    },
     interaction() {
       return useInteractionStore();
     },

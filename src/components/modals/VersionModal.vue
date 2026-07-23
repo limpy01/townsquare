@@ -1,9 +1,9 @@
 <template>
   <Modal v-if="modals.version" @close="close">
     <h3>更新日志</h3>
-    <div v-if="version != latestVersion">
+    <div v-if="appMeta.version != appMeta.latestVersion">
       <span class="warning">
-        当前版本并非最新版本（{{ latestVersion }}），请尝试清空缓存获取最新版本！
+        当前版本并非最新版本（{{ appMeta.latestVersion }}），请尝试清空缓存获取最新版本！
       </span>
     </div>
     <div>
@@ -36,12 +36,15 @@
 import { mapMutations, mapState } from "vuex";
 import Modal from "./Modal";
 import versionJSON from '../../version.json';
+import { useAppMetaStore } from "../../stores/app-meta";
 
 export default {
   components: { Modal },
   computed: {
     ...mapState(["modals", "grimoire", "session"]),
-    ...mapState(["version", "latestVersion", "lastVersion"])
+    appMeta() {
+      return useAppMetaStore();
+    },
   },
   data(){
     return {
@@ -65,7 +68,9 @@ export default {
   },
   methods: {
     close() {
-      if (this.version != this.lastVersion) this.$store.commit("setLastVersion", this.version); 
+      if (this.appMeta.version != this.appMeta.lastVersion) {
+        this.appMeta.setLastVersion(this.appMeta.version);
+      }
       this.$store.commit("toggleModal", "version");
     },
     handleResize(){

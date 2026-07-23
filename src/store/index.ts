@@ -5,6 +5,7 @@ import { pinia } from "../pinia";
 import { useModalStore } from "../stores/modals";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useGrimoireStore } from "../stores/grimoire";
+import { useAppMetaStore } from "../stores/app-meta";
 import players from "./modules/players";
 import session from "./modules/session";
 import editionJSON from "../editions.json";
@@ -120,10 +121,6 @@ const rootStoreOptions: any = {
     session,
   },
   state: {
-    version: "3.3.1",
-    latestVersion: "",
-    lastVersion: "",
-    floatingNotice: "",
     // Compatibility projection for Options API and WebSocket consumers.
     // Pinia owns this reactive object; remove this alias with Vuex.
     grimoire: useGrimoireStore(pinia).$state,
@@ -192,14 +189,14 @@ const rootStoreOptions: any = {
   mutations: {
     setZoom: set("zoom"),
     setBackground: set("background"),
-    setLatestVersion(state, val) {
-      state.latestVersion = val;
+    setLatestVersion(_state, val) {
+      useAppMetaStore(pinia).setLatestVersion(val);
     },
-    setLastVersion(state, val) {
-      state.lastVersion = val;
+    setLastVersion(_state, val) {
+      useAppMetaStore(pinia).setLastVersion(val);
     },
-    setFloatingNotice(state, val) {
-      state.floatingNotice = val;
+    setFloatingNotice(_state, val) {
+      useAppMetaStore(pinia).setFloatingNotice(val);
     },
     setAudioThreshold: set("audioThreshold"),
     toggleMuted: toggle("isMuted"),
@@ -388,9 +385,10 @@ const rootStoreOptions: any = {
               this.commit(mutationMapping[property], payload[property]);
           }
         }
+        const appMeta = useAppMetaStore(pinia);
         if (
-          this.state.version != this.state.latestVersion ||
-          this.state.latestVersion != this.state.lastVersion
+          appMeta.version != appMeta.latestVersion ||
+          appMeta.latestVersion != appMeta.lastVersion
         )
           useModalStore(pinia).toggle("version");
       } catch (e) {
