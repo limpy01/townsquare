@@ -6,6 +6,7 @@ import type {
 import { pinia } from "../../pinia";
 import { useSessionSettingsStore } from "../../stores/session-settings";
 import { useProfileStore } from "../../stores/profile";
+import { usePlayersStore } from "../../stores/players";
 
 const NEWPLAYER = {
   name: "",
@@ -27,13 +28,29 @@ const NEWPLAYER = {
   isTalking: false,
 };
 
-const state = () => ({
-  players: [],
-  fabled: [],
-  bluffs: [],
-  firstNightOrder: [],
-  otherNightOrder: [],
-});
+const playerStateKeys = [
+  "players",
+  "fabled",
+  "bluffs",
+  "firstNightOrder",
+  "otherNightOrder",
+  "image",
+] as const;
+
+const state = () => {
+  const legacyState: Record<string, unknown> = {};
+  const players = usePlayersStore(pinia);
+  for (const key of playerStateKeys) {
+    Object.defineProperty(legacyState, key, {
+      enumerable: true,
+      get: () => players[key],
+      set: (value) => {
+        players[key] = value as never;
+      },
+    });
+  }
+  return legacyState;
+};
 
 const getters: Record<string, LegacyGetter> = {
   alive({ players }) {

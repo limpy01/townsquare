@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { pinia } from "../../pinia";
+import { usePlayersStore } from "../../stores/players";
 import playersModule from "./players";
 
 describe("players Vuex compatibility module", () => {
@@ -12,10 +14,13 @@ describe("players Vuex compatibility module", () => {
     state.players = [player];
     state.fabled = [fabled];
 
+    expect(state.players).toEqual([player]);
+    expect(state.fabled).toEqual([fabled]);
+
     const nightOrder = playersModule.getters.nightOrder(state);
 
-    expect(nightOrder.get(player)).toEqual({ first: 1, other: 1 });
-    expect(nightOrder.get(fabled)).toEqual({ first: 2, other: 2 });
+    expect(nightOrder.get(state.players[0])).toEqual({ first: 1, other: 1 });
+    expect(nightOrder.get(state.fabled[0])).toEqual({ first: 2, other: 2 });
   });
 
   it("updates the local player and mirrors vote changes to the session", () => {
@@ -36,5 +41,11 @@ describe("players Vuex compatibility module", () => {
       property: "votes",
       value: 0,
     });
+  });
+
+  it("projects the Pinia player state for legacy consumers", () => {
+    const state = playersModule.state();
+
+    expect(state.players).toBe(usePlayersStore(pinia).players);
   });
 });
