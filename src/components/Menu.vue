@@ -645,6 +645,7 @@ const pendingOldRole = ref({
   alchemist: false,
   lycanthrope: false,
 });
+const timing = ref(false);
 const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
@@ -670,7 +671,6 @@ const options: any = {
   data() {
     return {
       tab: "grimoire",
-      timing: false,
       distributing: false,
       distributingBluffs: false,
       distributingGrimoire: false,
@@ -1068,41 +1068,6 @@ const options: any = {
         this.commands.commit("session/setIsReview", false);
       }
     },
-    async setTimer() {
-      if (this.session.isSpectator || !this.session.sessionId) return;
-
-      const input = await this.showInputModal({
-        inputType: "timer",
-        inputModal: "input",
-        inputData: {
-          name: ["输入时间（分）"],
-          length: 1,
-          placeholder: [""],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (input === null) return;
-
-      const time = input[0];
-      const timeNum = Number(time);
-      if (!timeNum) return;
-      if (timeNum <= 0) return;
-      this.timing = true;
-      this.stopTimer();
-      this.startTimer(timeNum * 60);
-    },
-    startTimer(time = null) {
-      if (this.session.isSpectator) return;
-      if (typeof time != "number") time = this.timer.seconds;
-      this.commands.commit("session/startTimer", time);
-      this.timing = true;
-    },
-    stopTimer() {
-      if (this.session.isSpectator) return;
-      this.commands.commit("session/stopTimer");
-      this.timing = false;
-    },
     async clearLocalStorage() {
       const clear = await this.showInputModal({
         inputType: "confirm",
@@ -1139,7 +1104,6 @@ const players = computed(() => playersState.players);
 const edition = computed(() => scenario.edition);
 const selectedEditions = computed(() => scenario.selectedEditions);
 const tab = toRef(context, "tab");
-const timing = toRef(context, "timing");
 const distributing = toRef(context, "distributing");
 const distributingBluffs = toRef(context, "distributingBluffs");
 const distributingGrimoire = toRef(context, "distributingGrimoire");
@@ -1378,6 +1342,30 @@ const copySessionUrl = () => {
   const url = window.location.href.split("#")[0];
   void navigator.clipboard.writeText(`${url}#${session.sessionId}`);
 };
+const startTimer = (time?: number) => {
+  if (session.isSpectator) return;
+  commitGameCommand("session/startTimer", time ?? timer.seconds);
+  timing.value = true;
+};
+const stopTimer = () => {
+  if (session.isSpectator) return;
+  commitGameCommand("session/stopTimer");
+  timing.value = false;
+};
+const setTimer = async () => {
+  if (session.isSpectator || !session.sessionId) return;
+  const input = await showInputModal({
+    inputType: "timer",
+    inputModal: "input",
+    inputData: { name: ["输入时间（分）"], length: 1, placeholder: [""] },
+  }).catch(() => null);
+  if (!Array.isArray(input)) return;
+  const time = Number(input[0]);
+  if (!time || time <= 0) return;
+  timing.value = true;
+  stopTimer();
+  startTimer(time * 60);
+};
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
@@ -1395,9 +1383,6 @@ const {
   joinSession,
   leaveSession,
   toggleIsReview,
-  setTimer,
-  startTimer,
-  stopTimer,
   clearLocalStorage,
 } = methodBindings;
 watch(
