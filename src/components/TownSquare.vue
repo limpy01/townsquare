@@ -251,7 +251,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { legacyCommands } from "../store/legacy-commands";
+import { legacyCommands as gameCommands } from "../store/legacy-commands";
 import Player from "./Player.vue";
 import Token from "./Token.vue";
 import ReminderModal from "./modals/ReminderModal.vue";
@@ -273,7 +273,7 @@ const bluffsElement = ref<HTMLElement | null>(null);
 const chatWith = ref<HTMLElement | null>(null);
 const chatContent = ref<HTMLElement | null>(null);
 const messageInput = ref<HTMLInputElement | null>(null);
-const context: any = reactive({ $store: legacyCommands, $nextTick: nextTick });
+const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
   roles: { get: () => scenario.roles },
@@ -459,7 +459,7 @@ const options: any = {
           if (this.session.claimedSeat >= 0) this.openChat(0); //open chat box if user is a player
         }
       } else {
-        this.$store.commit("players/setFabled", { index });
+        this.commands.commit("players/setFabled", { index });
       }
     },
     handleTrigger(playerIndex, [method, params]) {
@@ -474,22 +474,22 @@ const options: any = {
     claimSeat(playerIndex) {
       if (!this.session.isSpectator) return;
       if (this.session.playerId === this.players[playerIndex].id) {
-        this.$store.commit("session/claimSeat", -1);
+        this.commands.commit("session/claimSeat", -1);
       } else {
-        this.$store.commit("session/claimSeat", playerIndex);
-        this.$store.commit("session/createChatHistory", this.session.stId);
+        this.commands.commit("session/claimSeat", playerIndex);
+        this.commands.commit("session/createChatHistory", this.session.stId);
       }
     },
     openReminderModal(playerIndex) {
       this.selectedPlayer = playerIndex;
-      this.$store.commit("toggleModal", "reminder");
+      this.commands.commit("toggleModal", "reminder");
     },
     openRoleModal(playerIndex) {
       const player = this.players[playerIndex];
       if (this.session.isSpectator && player && player.role.team === "traveler")
         return;
       this.selectedPlayer = playerIndex;
-      this.$store.commit("toggleModal", "role");
+      this.commands.commit("toggleModal", "role");
     },
     removePlayer(playerIndex) {
       if (this.session.isSpectator || this.voting.lockedVote) return;
@@ -497,16 +497,16 @@ const options: any = {
       if (nomination) {
         if (nomination.includes(playerIndex)) {
           // abort vote if removed player is either nominator or nominee
-          this.$store.commit("session/nomination");
+          this.commands.commit("session/nomination");
         } else if (nomination[0] > playerIndex || nomination[1] > playerIndex) {
           // update nomination array if removed player has lower index
-          this.$store.commit("session/setNomination", [
+          this.commands.commit("session/setNomination", [
             nomination[0] > playerIndex ? nomination[0] - 1 : nomination[0],
             nomination[1] > playerIndex ? nomination[1] - 1 : nomination[1],
           ]);
         }
       }
-      this.$store.commit("players/remove", playerIndex);
+      this.commands.commit("players/remove", playerIndex);
     },
     swapPlayer(from, to) {
       if (this.session.isSpectator || this.voting.lockedVote) return;
@@ -526,10 +526,10 @@ const options: any = {
             this.voting.nomination[0] !== updatedNomination[0] ||
             this.voting.nomination[1] !== updatedNomination[1]
           ) {
-            this.$store.commit("session/setNomination", updatedNomination);
+            this.commands.commit("session/setNomination", updatedNomination);
           }
         }
-        this.$store.commit("players/swap", [
+        this.commands.commit("players/swap", [
           this.swap,
           this.players.indexOf(to),
         ]);
@@ -555,10 +555,10 @@ const options: any = {
             this.voting.nomination[0] !== updatedNomination[0] ||
             this.voting.nomination[1] !== updatedNomination[1]
           ) {
-            this.$store.commit("session/setNomination", updatedNomination);
+            this.commands.commit("session/setNomination", updatedNomination);
           }
         }
-        this.$store.commit("players/move", [
+        this.commands.commit("players/move", [
           this.move,
           this.players.indexOf(to),
         ]);
@@ -574,7 +574,7 @@ const options: any = {
         }
       } else {
         const nomination = [this.nominate, this.players.indexOf(to)];
-        this.$store.commit("session/nomination", { nomination });
+        this.commands.commit("session/nomination", { nomination });
         this.cancel();
       }
     },
@@ -587,7 +587,7 @@ const options: any = {
       if (this.session.isSpectator) return;
       const player = this.players[playerIndex];
       const vote = player.votes + 1;
-      this.$store.commit("players/update", {
+      this.commands.commit("players/update", {
         player,
         property: "votes",
         value: vote,
@@ -598,7 +598,7 @@ const options: any = {
       const player = this.players[playerIndex];
       const vote = player.votes - 1;
       if (vote < 1) return;
-      this.$store.commit("players/update", {
+      this.commands.commit("players/update", {
         player,
         property: "votes",
         value: vote,
@@ -609,43 +609,43 @@ const options: any = {
       const player = this.players[playerIndex];
       if (player.id) {
         if (player.id != "host") return;
-        this.$store.commit("players/update", {
+        this.commands.commit("players/update", {
           player,
           property: "id",
           value: "",
         });
-        this.$store.commit("players/update", {
+        this.commands.commit("players/update", {
           player,
           property: "name",
           value: "",
         });
-        this.$store.commit("players/update", {
+        this.commands.commit("players/update", {
           player,
           property: "isVoteless",
           value: false,
         });
-        this.$store.commit("players/update", {
+        this.commands.commit("players/update", {
           player,
           property: "isDead",
           value: false,
         });
       } else {
-        this.$store.commit("players/update", {
+        this.commands.commit("players/update", {
           player,
           property: "id",
           value: "host",
         });
-        this.$store.commit("players/update", {
+        this.commands.commit("players/update", {
           player,
           property: "name",
           value: "说书人",
         });
-        this.$store.commit("players/update", {
+        this.commands.commit("players/update", {
           player,
           property: "isVoteless",
           value: true,
         });
-        this.$store.commit("players/update", {
+        this.commands.commit("players/update", {
           player,
           property: "isDead",
           value: true,
@@ -672,7 +672,7 @@ const options: any = {
               )[0].name;
         this.$refs.chatWith.innerText = name;
         if (maximise)
-          this.$store.commit("players/setPlayerMessage", {
+          this.commands.commit("players/setPlayerMessage", {
             playerId: this.chattingPlayer,
             num: 0,
           });
@@ -723,7 +723,7 @@ const options: any = {
         const receivingPlayerId = this.session.isSpectator
           ? "host"
           : this.chattingPlayer;
-        this.$store.commit("session/updateChatSent", {
+        this.commands.commit("session/updateChatSent", {
           message,
           sendingPlayerId,
           receivingPlayerId,
@@ -734,7 +734,7 @@ const options: any = {
         )[0];
         const playerIds = group.players.map((player) => player.id);
         playerIds.forEach((id) => {
-          this.$store.commit("session/updateChatSent", {
+          this.commands.commit("session/updateChatSent", {
             message,
             sendingPlayerId,
             receivingPlayerId: id,
@@ -758,20 +758,20 @@ const options: any = {
               player.chatGroup === this.chattingGroup
             )
           )
-            this.$store.commit("session/updateChatSent", {
+            this.commands.commit("session/updateChatSent", {
               message: wraithMessage,
               sendingPlayerId,
               receivingPlayerId: player.id,
             });
         });
-        // this.$store.commit("session/setIsRole", {
+        // this.commands.commit("session/setIsRole", {
         //   role: 'wraith',
         //   property: 'st',
         //   value: this.roleActivity.wraith.player + 1
         // });
         // 每10次互动会让暴露概率增加1%，最高10%
         // const prob = Math.min(0.05 + Math.floor(Math.min(this.roleActivity.wraith.st, this.roleActivity.wraith.player) / 10) * 0.01, this.roleActivity.wraith.probMax);
-        // this.$store.commit("session/setIsRole", {
+        // this.commands.commit("session/setIsRole", {
         //   role: 'wraith',
         //   property: 'prob',
         //   value: prob
@@ -794,7 +794,7 @@ const options: any = {
       if (this.$refs.chatContent.scrollTop >= -20) {
         // 划至最底则删除红点
         if (!this.session.isSpectator) {
-          this.$store.commit("players/setPlayerMessage", {
+          this.commands.commit("players/setPlayerMessage", {
             playerId: this.chattingPlayer,
             num: 0,
           });
@@ -807,7 +807,7 @@ const options: any = {
       this.interaction.setTyping(true);
       if (this.$refs.chatContent.scrollTop >= -20) {
         if (!this.session.isSpectator) {
-          this.$store.commit("players/setPlayerMessage", {
+          this.commands.commit("players/setPlayerMessage", {
             playerId: this.chattingPlayer,
             num: 0,
           });
@@ -821,7 +821,7 @@ const options: any = {
     },
     setUsingWraith() {
       const usingWraith = this.roleActivity.wraith.using;
-      this.$store.commit("session/setIsRole", {
+      this.commands.commit("session/setIsRole", {
         role: "wraith",
         property: "using",
         value: !usingWraith,
