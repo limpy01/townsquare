@@ -79,11 +79,13 @@ import { ref } from "vue";
 import editionJSON from "../../editions.json";
 import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
-import store from "../../store";
+import { emitLegacyMutation } from "../../store/legacy-effects";
 import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
 
 const modals = useModalStore();
+const players = usePlayersStore();
 const scenario = useScenarioStore();
 const upload = ref<HTMLInputElement | null>(null);
 const editions = editionJSON;
@@ -164,8 +166,9 @@ function installScript(raw: unknown) {
         ability,
       }),
     );
-  store.commit("setCustomRoles", roles);
-  store.commit("setEdition", Object.assign({}, meta, { id: "custom" }));
+  scenario.setCustomRoles(roles);
+  emitLegacyMutation("setCustomRoles", roles);
+  applyEdition(Object.assign({}, meta, { id: "custom" }));
   const fabledMap = scenario.fabled as Map<any, any>;
   const fabled = roles
     .filter(
@@ -174,32 +177,37 @@ function installScript(raw: unknown) {
         (!meta.bootlegger || role.id !== "bootlegger"),
     )
     .map((role) => fabledMap.get(role.id || role));
-  if (fabled.length) store.commit("players/setFabled", { fabled });
+  if (fabled.length) {
+    const payload = { fabled };
+    players.setFabled(payload);
+    emitLegacyMutation("players/setFabled", payload);
+  }
   const states: Record<string, string>[] = [];
   (meta.state ?? meta.status ?? []).forEach((state: any) =>
     states.push({
       [state.stateName ?? state.name]: state.stateDescription ?? state.skill,
     }),
   );
-  store.commit("setStates", states);
-  store.commit("setTeamsNames", {
+  scenario.setStates(states);
+  emitLegacyMutation("setStates", states);
+  const teamsNames = {
     townsfolk: meta.townsfolksName || "镇民",
     outsider: meta.outsidersName || "外来者",
     minion: meta.minionsName || "爪牙",
     demon: meta.demonsName || "恶魔",
-  });
-  store.commit(
-    "setFirstNight",
-    (meta.firstNight ?? []).map((role: string) =>
-      role.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
-    ),
+  };
+  scenario.setTeamsNames(teamsNames);
+  emitLegacyMutation("setTeamsNames", teamsNames);
+  const firstNight = (meta.firstNight ?? []).map((role: string) =>
+    role.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
   );
-  store.commit(
-    "setOtherNight",
-    (meta.otherNight ?? []).map((role: string) =>
-      role.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
-    ),
+  scenario.setFirstNight(firstNight);
+  emitLegacyMutation("setFirstNight", firstNight);
+  const otherNight = (meta.otherNight ?? []).map((role: string) =>
+    role.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
   );
+  scenario.setOtherNight(otherNight);
+  emitLegacyMutation("setOtherNight", otherNight);
   isCustom.value = false;
 }
 async function handleUpload() {
@@ -255,9 +263,17 @@ async function readFromClipboard() {
   }
 }
 function setHomeEdition(edition: any) {
-  if (["tb", "bmr", "snv", "luf", "all", "custom_ankot"].includes(edition.id))
-    store.commit("setStates", []);
-  store.commit("setEdition", edition, scenario.selectedEditions);
+  if (["tb", "bmr", "snv", "luf", "all", "custom_ankot"].includes(edition.id)) {
+    scenario.setStates([]);
+    emitLegacyMutation("setStates", []);
+  }
+  applyEdition(edition);
+}
+
+function applyEdition(edition: any) {
+  const fabled = scenario.setEdition(edition);
+  emitLegacyMutation("setEdition", edition);
+  if (fabled) emitLegacyMutation("players/setFabled", { fabled });
 }
 </script>
 
