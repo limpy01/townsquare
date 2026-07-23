@@ -228,8 +228,7 @@
 </template>
 
 <script setup lang="ts">
-// @ts-nocheck
-import { computed, nextTick, reactive, ref, toRef, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
@@ -243,7 +242,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { commitGameCommand, gameCommands } from "../store/legacy-commands";
+import { commitGameCommand } from "../store/legacy-commands";
 import Player from "./Player.vue";
 import Token from "./Token.vue";
 import ReminderModal from "./modals/ReminderModal.vue";
@@ -276,56 +275,9 @@ const chattingPlayer = ref("");
 const chattingGroup = ref("");
 const isShowGroup = ref(false);
 const message = ref("");
-const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
-Object.defineProperties(context, {
-  grimoire: { get: () => grimoire },
-  roles: { get: () => scenario.roles },
-  session: { get: () => session },
-  players: { get: () => playersState.players },
-  bluffs: { get: () => playersState.bluffs },
-  fabled: { get: () => playersState.fabled },
-  appMeta: { get: () => appMeta },
-  interaction: { get: () => interaction },
-  chat: { get: () => chat },
-  connection: { get: () => connection },
-  voting: { get: () => voting },
-  roleActivity: { get: () => roleActivity },
-  profile: { get: () => profile },
-  windowWidth: { get: () => windowWidth.value },
-  windowHeight: { get: () => windowHeight.value },
-  $refs: {
-    get: () => ({
-      countdownAudio: countdownAudio.value,
-      bluffs: bluffsElement.value,
-      chatWith: chatWith.value,
-      chatContent: chatContent.value,
-      message: messageInput.value,
-    }),
-  },
-});
-
-const options: any = {
-  data() {
-    return {
-      bluffSize: 3,
-      isBluffsOpen: true,
-      isFabledOpen: true,
-    };
-  },
-  methods: {
-    removeFabled(index) {
-      if (this.session.isSpectator) {
-        if (index === 0) {
-          if (this.session.claimedSeat >= 0) openChat(0); //open chat box if user is a player
-        }
-      } else {
-        this.commands.commit("players/setFabled", { index });
-      }
-    },
-  },
-};
-
-Object.assign(context, options.data.call(context));
+const bluffSize = ref(3);
+const isBluffsOpen = ref(true);
+const isFabledOpen = ref(true);
 
 const players = computed(() => playersState.players);
 const bluffs = computed(() => playersState.bluffs);
@@ -339,9 +291,6 @@ const nightOrder = computed(() =>
     playersState.otherNightOrder,
   ),
 );
-const bluffSize = toRef(context, "bluffSize");
-const isBluffsOpen = toRef(context, "isBluffsOpen");
-const isFabledOpen = toRef(context, "isFabledOpen");
 const orientation = computed(() => {
   const ratio = windowWidth.value / windowHeight.value;
   return windowWidth.value > windowHeight.value
@@ -378,21 +327,17 @@ const inGroupPlayers = computed(() => {
   const groups = session.isSpectator
     ? chat.groups
     : chat.groups.filter((group) => group.id === chattingGroup.value);
-  if (groups.length === 0) return [];
+  const group = groups[0];
+  if (!group) return [];
 
-  return groups[0].players.flatMap((player) => {
+  return group.players.flatMap((player) => {
     const index = playersState.players.findIndex(
       (candidate) => candidate.id === player.id,
     );
     return index === -1 ? [] : [{ id: player.id, name: player.name, index }];
   });
 });
-const isRole = computed(() => {
-  const activeRoles = Object.keys(roleActivity.$state).filter(
-    (roleId) => roleActivity[roleId].active === true,
-  );
-  return activeRoles.length > 1 ? activeRoles.slice(0, 1) : activeRoles;
-});
+const isRole = computed(() => (roleActivity.wraith.active ? ["wraith"] : []));
 const toggleBluffs = () => {
   isBluffsOpen.value = !isBluffsOpen.value;
 };
@@ -427,6 +372,13 @@ const openRoleModal = (playerIndex: number) => {
   if (session.isSpectator && player?.role.team === "traveler") return;
   selectedPlayer.value = playerIndex;
   commitGameCommand("toggleModal", "role");
+};
+const removeFabled = (index: number) => {
+  if (session.isSpectator) {
+    if (index === 0 && session.claimedSeat >= 0) openChat(0);
+    return;
+  }
+  commitGameCommand("players/setFabled", { index });
 };
 const cancel = () => {
   move.value = -1;
@@ -652,10 +604,6 @@ const typing = () => {
 };
 const notTyping = () => interaction.setTyping(false);
 
-const methodNames = Object.keys(options.methods);
-for (const name of methodNames)
-  context[name] = options.methods[name].bind(context);
-const { removeFabled } = context;
 type PlayerTrigger =
   | ["openReminderModal"]
   | ["openRoleModal"]
@@ -705,8 +653,10 @@ watch(
   () => chat.histories,
   () => {
     nextTick(() => {
+      const content = chatContent.value;
       if (
-        chatContent.value.scrollTop >= -20 &&
+        content &&
+        content.scrollTop >= -20 &&
         interaction.isChatOpen &&
         !isChatMin.value
       ) {
@@ -720,14 +670,16 @@ watch(
   () => voting.isVoteInProgress,
   () => {
     nextTick(() => {
+      const audioElement = countdownAudio.value;
+      if (!audioElement) return;
       if (voting.isVoteInProgress && !voting.lockedVote) {
         if (!grimoire.isMuted) {
-          countdownAudio.value.currentTime = 0;
-          countdownAudio.value.play();
+          audioElement.currentTime = 0;
+          audioElement.play();
         }
       } else {
-        countdownAudio.value.pause();
-        countdownAudio.value.currentTime = 0;
+        audioElement.pause();
+        audioElement.currentTime = 0;
       }
     });
   },
