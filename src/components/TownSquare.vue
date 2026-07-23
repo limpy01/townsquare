@@ -5,10 +5,14 @@
     :class="{
       public: grimoire.isPublic,
       spectator: session.isSpectator,
-      vote: session.nomination
+      vote: session.nomination,
     }"
   >
-    <audio src="../assets/sounds/countdown.mp3" preload="auto" ref="countdownAudio"></audio>
+    <audio
+      src="../assets/sounds/countdown.mp3"
+      preload="auto"
+      ref="countdownAudio"
+    ></audio>
     <ul class="circle" :class="['size-' + players.length]" :style="orientation">
       <Player
         v-for="(player, index) in players"
@@ -19,7 +23,7 @@
           from: Math.max(swap, move, nominate) === index,
           swap: swap > -1,
           move: move > -1,
-          nominate: nominate > -1
+          nominate: nominate > -1,
         }"
       ></Player>
     </ul>
@@ -31,8 +35,10 @@
       :class="{ closed: !isBluffsOpen }"
     >
       <h3>
-        <span v-if="session.isSpectator" style="font-size: 100%;">不在场身份</span>
-        <span v-else style="font-size: 100%;">恶魔的伪装身份</span>
+        <span v-if="session.isSpectator" style="font-size: 100%"
+          >不在场身份</span
+        >
+        <span v-else style="font-size: 100%">恶魔的伪装身份</span>
         <font-awesome-icon icon="times-circle" @click.stop="toggleBluffs" />
         <font-awesome-icon icon="plus-circle" @click.stop="toggleBluffs" />
       </h3>
@@ -62,9 +68,11 @@
           @click="removeFabled(index)"
           :style="floatingZoom"
         >
-        <div v-if="index === 0">
-          <div class="newMessage" v-for="(item, position) in session.newStMessage" :key="position" v-show="item > 0">{{ item }}</div>
-        </div>
+          <div v-if="index === 0">
+            <div class="newMessage" v-show="chat.storytellerUnread > 0">
+              {{ chat.storytellerUnread }}
+            </div>
+          </div>
           <div
             class="night-order first"
             v-if="nightOrder.get(role).first && grimoire.isNightOrder"
@@ -87,16 +95,22 @@
         </li>
       </ul>
     </div>
-    <a v-if="!!session.sessionId && (!session.isSpectator || !!connection.isHostAllowed || !!connection.isJoinAllowed)"
-    href="https://botcgrimoire.top/donation/" target="_blank"
-    class="donation"
+    <a
+      v-if="
+        !!session.sessionId &&
+        (!session.isSpectator ||
+          !!connection.isHostAllowed ||
+          !!connection.isJoinAllowed)
+      "
+      href="https://botcgrimoire.top/donation/"
+      target="_blank"
+      class="donation"
     >
       <span>支持</span>
     </a>
 
-    <div v-if="session.isSpectator && isRole.length > 0"
-        class="is-role">
-      <font-awesome-icon 
+    <div v-if="session.isSpectator && isRole.length > 0" class="is-role">
+      <font-awesome-icon
         :icon="['custom', isRole]"
         size="4x"
         :class="{ 'is-using-wraith': session.isRole.wraith.using }"
@@ -107,38 +121,89 @@
     <ReminderModal :player-index="selectedPlayer"></ReminderModal>
     <RoleModal :player-index="selectedPlayer"></RoleModal>
 
-    <div v-show="interaction.isChatOpen" :class="{chat: !isChatMin, chatMin: isChatMin}" :style="chatStyle">
+    <div
+      v-show="interaction.isChatOpen"
+      :class="{ chat: !isChatMin, chatMin: isChatMin }"
+      :style="chatStyle"
+    >
       <div class="title" @click="maximiseChat()">
-        <div v-if="!isChatMin && isInGroup && isShowGroup" class="group" :style="groupStyle">
+        <div
+          v-if="!isChatMin && isInGroup && isShowGroup"
+          class="group"
+          :style="groupStyle"
+        >
           <div v-for="player in inGroupPlayers" :key="player.id">
             <span>（{{ player.index + 1 }}号）{{ player.name }}</span>
-            <br/>
+            <br />
           </div>
         </div>
         <div>
-          <span ref="chatWith" style="cursor: text; user-select: text; pointer-events: auto;"></span> &nbsp;
-          <span class="newMessage" v-for="(item, position) in session.newStMessage" :key="position" v-show="session.isSpectator && item > 0">{{ item }}</span>
+          <span
+            ref="chatWith"
+            style="cursor: text; user-select: text; pointer-events: auto"
+          ></span>
+          &nbsp;
+          <span
+            class="newMessage"
+            v-show="session.isSpectator && chat.storytellerUnread > 0"
+            >{{ chat.storytellerUnread }}</span
+          >
           <em v-if="isInGroup && !isChatMin">
-            <font-awesome-icon v-if="!isShowGroup" icon="arrow-circle-up" @click="toggleGroups()"/>
-            <font-awesome-icon v-else icon="arrow-circle-down" @click="toggleGroups()"/>
+            <font-awesome-icon
+              v-if="!isShowGroup"
+              icon="arrow-circle-up"
+              @click="toggleGroups()"
+            />
+            <font-awesome-icon
+              v-else
+              icon="arrow-circle-down"
+              @click="toggleGroups()"
+            />
           </em>
-          <span :class="{close: !isChatMin, open: isChatMin}" @click="toggleChat()">
-            <font-awesome-icon icon="times" :class="{ turnedIcon45: isChatMin}"/>
+          <span
+            :class="{ close: !isChatMin, open: isChatMin }"
+            @click="toggleChat()"
+          >
+            <font-awesome-icon
+              icon="times"
+              :class="{ turnedIcon45: isChatMin }"
+            />
           </span>
         </div>
       </div>
-      <div ref="chatContent" class="content" @scroll="checkToBottom" >
-        <div v-for="(player, index) in session.chatHistory"  :key="index" v-show="(session.isSpectator && player.id === session.stId) || (!session.isSpectator && player.id === chattingPlayer)">
-          <ul v-for="(content, chatIndex) in player.chat" :key="chatIndex">{{ content }}</ul>
+      <div ref="chatContent" class="content" @scroll="checkToBottom">
+        <div
+          v-for="(player, index) in session.chatHistory"
+          :key="index"
+          v-show="
+            (session.isSpectator && player.id === session.stId) ||
+            (!session.isSpectator && player.id === chattingPlayer)
+          "
+        >
+          <ul v-for="(content, chatIndex) in player.chat" :key="chatIndex">
+            {{
+              content
+            }}
+          </ul>
         </div>
       </div>
       <form class="chatbox" @submit.prevent="sendChat">
-        <input type="text" id="message" ref="message" autocomplete="off" class="edit" @focus="typing" @blur="notTyping" v-model="message" maxlength="250">
+        <input
+          type="text"
+          id="message"
+          ref="message"
+          autocomplete="off"
+          class="edit"
+          @focus="typing"
+          @blur="notTyping"
+          v-model="message"
+          maxlength="250"
+        />
         <button type="submit" class="send">发送</button>
-      <div class="toBottom" v-if="false">
+        <div class="toBottom" v-if="false">
           移至底部
-          <font-awesome-icon icon="arrow"/>
-      </div>
+          <font-awesome-icon icon="arrow" />
+        </div>
       </form>
     </div>
     <div v-if="floatingNotice" id="floating-notice">
@@ -147,15 +212,16 @@
       </div>
     </div>
     <div id="version">
-      <a href="https://beian.miit.gov.cn/" target="_blank">浙ICP备2024109577号-2</a>
+      <a href="https://beian.miit.gov.cn/" target="_blank"
+        >浙ICP备2024109577号-2</a
+      >
     </div>
     <div id="copyright">
+      <span> Copyright &copy; 2020 bra1n </span>
+      <br />
       <span>
-        Copyright &copy; 2020 bra1n
-      </span>
-      <br/>
-      <span>
-        Copyright &copy; 2026 <a href="mailto:admin@botcgrimoire.top">@limpy01</a>
+        Copyright &copy; 2026
+        <a href="mailto:admin@botcgrimoire.top">@limpy01</a>
       </span>
     </div>
   </div>
@@ -164,6 +230,7 @@
 <script>
 import { mapGetters, mapState } from "vuex";
 import { useInteractionStore } from "../stores/interaction";
+import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import Player from "./Player";
 import Token from "./Token";
@@ -175,7 +242,7 @@ export default {
     Player,
     Token,
     RoleModal,
-    ReminderModal
+    ReminderModal,
   },
   computed: {
     ...mapGetters({ nightOrder: "players/nightOrder" }),
@@ -185,55 +252,72 @@ export default {
     interaction() {
       return useInteractionStore();
     },
+    chat() {
+      return useChatStore();
+    },
     connection() {
       return useSessionConnectionStore();
     },
-    orientation: function(){
+    orientation: function () {
       const ratio = this.windowWidth / this.windowHeight;
-      const unit = this.windowWidth > this.windowHeight ? "height: 100%;" : "height: " + ratio * 100 + "%;";
+      const unit =
+        this.windowWidth > this.windowHeight
+          ? "height: 100%;"
+          : "height: " + ratio * 100 + "%;";
       return unit;
     },
-    floatingZoom: function(){
+    floatingZoom: function () {
       const ratio = this.windowWidth / this.windowHeight;
       const size = ratio > 1 ? 14 : 8;
       return "height: " + size + "vh; width: " + size + "vh;";
     },
-    chatStyle: function(){
+    chatStyle: function () {
       if (this.isChatMin) return;
       const ratio = this.windowWidth / this.windowHeight;
-      const width = ratio < 1 ? '300px' : '25%';
-      const height = ratio < 1 ?
-        (this.isInGroup && this.isShowGroup ? '450px' : '400px') :
-        (this.isInGroup && this.isShowGroup ? 'calc(40% + 10vh)' : '40%');
+      const width = ratio < 1 ? "300px" : "25%";
+      const height =
+        ratio < 1
+          ? this.isInGroup && this.isShowGroup
+            ? "450px"
+            : "400px"
+          : this.isInGroup && this.isShowGroup
+          ? "calc(40% + 10vh)"
+          : "40%";
       return `width: ${width}; height: ${height};`;
     },
-    groupStyle: function() {
+    groupStyle: function () {
       const ratio = this.windowWidth / this.windowHeight;
-      const height = ratio < 1 ? '50px' : '10vh';
+      const height = ratio < 1 ? "50px" : "10vh";
       return `height: ${height};`;
     },
-    isInGroup: function(){
-      if (this.session.isSpectator) return this.session.groupChats.length > 0 ? true : false;
+    isInGroup: function () {
+      if (this.session.isSpectator)
+        return this.session.groupChats.length > 0 ? true : false;
       return this.chattingGroup != "";
     },
-    inGroupPlayers: function(){
-      const group = this.session.isSpectator ? this.session.groupChats :
-      this.session.groupChats.filter(group => group.id === this.chattingGroup);
+    inGroupPlayers: function () {
+      const group = this.session.isSpectator
+        ? this.session.groupChats
+        : this.session.groupChats.filter(
+            (group) => group.id === this.chattingGroup,
+          );
       if (group.length === 0) return [];
 
       const players = [];
-      group[0].players.forEach(player => {
-        const index = this.players.findIndex(player2 => player2.id === player.id);
+      group[0].players.forEach((player) => {
+        const index = this.players.findIndex(
+          (player2) => player2.id === player.id,
+        );
         if (index === -1) return;
         players.push({
           id: player.id,
           name: player.name,
-          index
+          index,
         });
       });
       return players;
     },
-    isRole: function() {
+    isRole: function () {
       const activeRoles = [];
       for (const roleId in this.session.isRole) {
         const roleObject = this.session.isRole[roleId];
@@ -245,7 +329,7 @@ export default {
         return activeRoles.slice(0, 1);
       }
       return activeRoles;
-    }
+    },
   },
   data() {
     return {
@@ -263,18 +347,22 @@ export default {
       isShowGroup: false,
       message: "",
       windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight
+      windowHeight: window.innerHeight,
     };
   },
   watch: {
     "session.chatHistory": {
       handler() {
         this.$nextTick(() => {
-          if (this.$refs.chatContent.scrollTop >= -20 && this.interaction.isChatOpen && !this.isChatMin) {
+          if (
+            this.$refs.chatContent.scrollTop >= -20 &&
+            this.interaction.isChatOpen &&
+            !this.isChatMin
+          ) {
             this.scrollToBottom();
           }
         });
-      }
+      },
     },
     "session.isVoteInProgress": {
       handler() {
@@ -288,8 +376,8 @@ export default {
             this.$refs.countdownAudio.pause();
             this.$refs.countdownAudio.currentTime = 0;
           }
-        })
-      }
+        });
+      },
     },
     "session.groupChats": {
       handler() {
@@ -297,19 +385,21 @@ export default {
           if (this.interaction.isChatOpen && this.session.isSpectator) {
             this.openChat(0, false);
           } else if (this.interaction.isChatOpen && !this.session.isSpectator) {
-            const index = this.players.findIndex(player => player.id === this.chattingPlayer);
+            const index = this.players.findIndex(
+              (player) => player.id === this.chattingPlayer,
+            );
             if (index === -1) return;
             this.openChat(index, false);
           }
         });
       },
-      deep: true
-    }
+      deep: true,
+    },
   },
-  mounted(){
+  mounted() {
     window.addEventListener("resize", this.handleResize);
   },
-  beforeUnmount(){
+  beforeUnmount() {
     window.removeEventListener("resize", this.handleResize);
   },
   methods: {
@@ -327,8 +417,7 @@ export default {
         if (index === 0) {
           if (this.session.claimedSeat >= 0) this.openChat(0); //open chat box if user is a player
         }
-        
-      }else{
+      } else {
         this.$store.commit("players/setFabled", { index });
       }
     },
@@ -337,7 +426,7 @@ export default {
         this[method](playerIndex, params);
       }
     },
-    handleResize(){
+    handleResize() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
     },
@@ -368,14 +457,11 @@ export default {
         if (nomination.includes(playerIndex)) {
           // abort vote if removed player is either nominator or nominee
           this.$store.commit("session/nomination");
-        } else if (
-          nomination[0] > playerIndex ||
-          nomination[1] > playerIndex
-        ) {
+        } else if (nomination[0] > playerIndex || nomination[1] > playerIndex) {
           // update nomination array if removed player has lower index
           this.$store.commit("session/setNomination", [
             nomination[0] > playerIndex ? nomination[0] - 1 : nomination[0],
-            nomination[1] > playerIndex ? nomination[1] - 1 : nomination[1]
+            nomination[1] > playerIndex ? nomination[1] - 1 : nomination[1],
           ]);
         }
       }
@@ -390,7 +476,7 @@ export default {
         if (this.session.nomination) {
           // update nomination if one of the involved players is swapped
           const swapTo = this.players.indexOf(to);
-          const updatedNomination = this.session.nomination.map(nom => {
+          const updatedNomination = this.session.nomination.map((nom) => {
             if (nom === this.swap) return swapTo;
             if (nom === swapTo) return this.swap;
             return nom;
@@ -404,7 +490,7 @@ export default {
         }
         this.$store.commit("players/swap", [
           this.swap,
-          this.players.indexOf(to)
+          this.players.indexOf(to),
         ]);
         this.cancel();
       }
@@ -418,7 +504,7 @@ export default {
         if (this.session.nomination) {
           // update nomination if it is affected by the move
           const moveTo = this.players.indexOf(to);
-          const updatedNomination = this.session.nomination.map(nom => {
+          const updatedNomination = this.session.nomination.map((nom) => {
             if (nom === this.move) return moveTo;
             if (nom > this.move && nom <= moveTo) return nom - 1;
             if (nom < this.move && nom >= moveTo) return nom + 1;
@@ -433,7 +519,7 @@ export default {
         }
         this.$store.commit("players/move", [
           this.move,
-          this.players.indexOf(to)
+          this.players.indexOf(to),
         ]);
         this.cancel();
       }
@@ -460,62 +546,110 @@ export default {
       if (this.session.isSpectator) return;
       const player = this.players[playerIndex];
       const vote = player.votes + 1;
-      this.$store.commit("players/update", {player, property: "votes", value: vote});
+      this.$store.commit("players/update", {
+        player,
+        property: "votes",
+        value: vote,
+      });
     },
     subtractVote(playerIndex) {
       if (this.session.isSpectator) return;
       const player = this.players[playerIndex];
       const vote = player.votes - 1;
       if (vote < 1) return;
-      this.$store.commit("players/update", {player, property: "votes", value: vote});
+      this.$store.commit("players/update", {
+        player,
+        property: "votes",
+        value: vote,
+      });
     },
     setStoryTeller(playerIndex) {
       if (this.session.isSpectator) return;
       const player = this.players[playerIndex];
       if (player.id) {
         if (player.id != "host") return;
-        this.$store.commit("players/update", {player, property: "id", value: ""});
-        this.$store.commit("players/update", {player, property: "name", value: ""});
-        this.$store.commit("players/update", {player, property: "isVoteless", value: false});
-        this.$store.commit("players/update", {player, property: "isDead", value: false});
-      }
-      else {
-        this.$store.commit("players/update", {player, property: "id", value: "host"});
-        this.$store.commit("players/update", {player, property: "name", value: "说书人"});
-        this.$store.commit("players/update", {player, property: "isVoteless", value: true});
-        this.$store.commit("players/update", {player, property: "isDead", value: true});
+        this.$store.commit("players/update", {
+          player,
+          property: "id",
+          value: "",
+        });
+        this.$store.commit("players/update", {
+          player,
+          property: "name",
+          value: "",
+        });
+        this.$store.commit("players/update", {
+          player,
+          property: "isVoteless",
+          value: false,
+        });
+        this.$store.commit("players/update", {
+          player,
+          property: "isDead",
+          value: false,
+        });
+      } else {
+        this.$store.commit("players/update", {
+          player,
+          property: "id",
+          value: "host",
+        });
+        this.$store.commit("players/update", {
+          player,
+          property: "name",
+          value: "说书人",
+        });
+        this.$store.commit("players/update", {
+          player,
+          property: "isVoteless",
+          value: true,
+        });
+        this.$store.commit("players/update", {
+          player,
+          property: "isDead",
+          value: true,
+        });
       }
     },
-    openChat(playerIndex, maximise = true){
+    openChat(playerIndex, maximise = true) {
       if (maximise) this.maximiseChat();
-      
+
       // display player name or ST in the chat title
-      if(this.session.isSpectator){
+      if (this.session.isSpectator) {
         const groupChats = this.session.groupChats;
         const name = groupChats.length === 0 ? this.fabled[0].name : "群聊"; //if fabled is messed up this may cause issues
         this.$refs.chatWith.innerText = name;
-        if (maximise) this.$store.commit("session/setStMessage", 0);
-      }else{
+        if (maximise) this.chat.clearStorytellerUnread();
+      } else {
         this.chattingPlayer = this.players[playerIndex].id;
         this.chattingGroup = this.players[playerIndex].chatGroup;
-        const name = this.chattingGroup === "" ? this.players[playerIndex].name : this.session.groupChats.filter(group => group.id === this.chattingGroup)[0].name;
+        const name =
+          this.chattingGroup === ""
+            ? this.players[playerIndex].name
+            : this.session.groupChats.filter(
+                (group) => group.id === this.chattingGroup,
+              )[0].name;
         this.$refs.chatWith.innerText = name;
-        if (maximise) this.$store.commit("players/setPlayerMessage", {playerId: this.chattingPlayer, num: 0})
+        if (maximise)
+          this.$store.commit("players/setPlayerMessage", {
+            playerId: this.chattingPlayer,
+            num: 0,
+          });
       }
 
       this.$nextTick(() => {
         this.scrollToBottom();
       });
     },
-    toggleChat(){
-      if(this.isChatMin){
+    toggleChat() {
+      if (this.isChatMin) {
         this.maximiseChat();
-      }else{
+      } else {
         this.minimiseChat();
       }
     },
-    maximiseChat(){
-      if(this.minimising){
+    maximiseChat() {
+      if (this.minimising) {
         this.minimising = false;
         return;
       }
@@ -527,16 +661,16 @@ export default {
         this.$refs.message.focus();
       });
     },
-    minimiseChat(){
+    minimiseChat() {
       this.isChatMin = true;
       this.minimising = true;
     },
-    sendChat(){
+    sendChat() {
       if (this.message === "") return;
       if (this.session.isSpectator && this.session.claimedSeat < 0) return;
       if (!this.session.isSpectator) {
         let seated = false;
-        this.players.forEach(player => {
+        this.players.forEach((player) => {
           if (player.id === this.chattingPlayer) seated = true;
         });
         if (!seated) return;
@@ -545,21 +679,49 @@ export default {
       const sendingPlayerId = this.session.playerId;
       const message = sender.concat(": ", this.message);
       if (this.chattingGroup === "") {
-        const receivingPlayerId = this.session.isSpectator ? "host" : this.chattingPlayer;
-        this.$store.commit("session/updateChatSent", {message, sendingPlayerId, receivingPlayerId});
+        const receivingPlayerId = this.session.isSpectator
+          ? "host"
+          : this.chattingPlayer;
+        this.$store.commit("session/updateChatSent", {
+          message,
+          sendingPlayerId,
+          receivingPlayerId,
+        });
       } else {
-        const group = this.session.groupChats.filter(group => group.id === this.chattingGroup)[0];
-        const playerIds = group.players.map(player => player.id);
-        playerIds.forEach(id => {
-          this.$store.commit("session/updateChatSent", {message, sendingPlayerId, receivingPlayerId: id});
-        })
+        const group = this.session.groupChats.filter(
+          (group) => group.id === this.chattingGroup,
+        )[0];
+        const playerIds = group.players.map((player) => player.id);
+        playerIds.forEach((id) => {
+          this.$store.commit("session/updateChatSent", {
+            message,
+            sendingPlayerId,
+            receivingPlayerId: id,
+          });
+        });
       }
 
       if (!this.session.isSpectator) {
         const wraithMessage = `[亡魂][（说书人）${message}]`;
-        const players = this.players.filter(player => player.isWraith && player.isUsingWraith && player.isAllowRole && !!player.id);
-        players.forEach(player => {
-          if (!(player.id === this.chattingPlayer || player.chatGroup === this.chattingGroup)) this.$store.commit("session/updateChatSent", {message: wraithMessage, sendingPlayerId, receivingPlayerId: player.id});
+        const players = this.players.filter(
+          (player) =>
+            player.isWraith &&
+            player.isUsingWraith &&
+            player.isAllowRole &&
+            !!player.id,
+        );
+        players.forEach((player) => {
+          if (
+            !(
+              player.id === this.chattingPlayer ||
+              player.chatGroup === this.chattingGroup
+            )
+          )
+            this.$store.commit("session/updateChatSent", {
+              message: wraithMessage,
+              sendingPlayerId,
+              receivingPlayerId: player.id,
+            });
         });
         // this.$store.commit("session/setIsRole", {
         //   role: 'wraith',
@@ -581,40 +743,50 @@ export default {
         this.scrollToBottom();
       });
     },
-    scrollToBottom(){
+    scrollToBottom() {
       this.$nextTick(() => {
         this.$refs.chatContent.scrollTop = this.$refs.chatContent.scrollHeight;
       });
       this.checkToBottom();
     },
     checkToBottom() {
-      if (this.$refs.chatContent.scrollTop >= -20){
+      if (this.$refs.chatContent.scrollTop >= -20) {
         // 划至最底则删除红点
         if (!this.session.isSpectator) {
-          this.$store.commit("players/setPlayerMessage", {playerId: this.chattingPlayer, num: 0});
-        } else{
-          this.$store.commit("session/setStMessage", 0);
+          this.$store.commit("players/setPlayerMessage", {
+            playerId: this.chattingPlayer,
+            num: 0,
+          });
+        } else {
+          this.chat.clearStorytellerUnread();
         }
       }
     },
-    typing(){
+    typing() {
       this.interaction.setTyping(true);
-      if (this.$refs.chatContent.scrollTop >= -20){
+      if (this.$refs.chatContent.scrollTop >= -20) {
         if (!this.session.isSpectator) {
-          this.$store.commit("players/setPlayerMessage", {playerId: this.chattingPlayer, num: 0});
-        } else{
-          this.$store.commit("session/setStMessage", 0);
+          this.$store.commit("players/setPlayerMessage", {
+            playerId: this.chattingPlayer,
+            num: 0,
+          });
+        } else {
+          this.chat.clearStorytellerUnread();
         }
       }
     },
-    notTyping(){
+    notTyping() {
       this.interaction.setTyping(false);
     },
-    setUsingWraith(){
+    setUsingWraith() {
       const usingWraith = this.session.isRole.wraith.using;
-      this.$store.commit("session/setIsRole", {role: 'wraith', property: 'using', value: !usingWraith});
-    }
-  }
+      this.$store.commit("session/setIsRole", {
+        role: "wraith",
+        property: "using",
+        value: !usingWraith,
+      });
+    },
+  },
 };
 </script>
 
@@ -858,7 +1030,7 @@ export default {
   text-decoration: none;
 
   // Outer border style
-  border: 2px solid #B67D43; /* A dark, textured border for the outer frame */
+  border: 2px solid #b67d43; /* A dark, textured border for the outer frame */
   background-color: rgba(0, 0, 0, 1);
   padding: 10px 20px;
   color: inherit;
@@ -872,70 +1044,81 @@ export default {
     font-size: 1.2rem;
   }
 
-  box-shadow: 0 0 5px #B67D43; 
+  box-shadow: 0 0 5px #b67d43;
   animation: glow-cycle 605s linear; /* 10m duration */
   animation-delay: 1s;
 }
 // The keyframe animation for 10 minutes oscillation
 @keyframes glow-cycle {
-  0% { 
-    box-shadow: 0 0 5px #B67D43;
-    border-color: #B67D43;
-  }
-  
-  0.0826% { // Peak of the 1st pulse
-    box-shadow: 0 0 20px #DAB060;
-    border-color: #DAB060;
-  }
-  
-  0.165% { // End of the 1st pulse
-    box-shadow: 0 0 5px #B67D43;
-    border-color: #B67D43;
-  }
-  
-  0.247% { // Peak of the 2nd pulse
-    box-shadow: 0 0 20px #DAB060;
-    border-color: #DAB060;
-  }
-  
-  0.33% { // End of the 2nd pulse
-    box-shadow: 0 0 5px #B67D43;
-    border-color: #B67D43;
-  }
-  
-  0.413% { // Peak of the 3rd pulse
-    box-shadow: 0 0 20px #DAB060;
-    border-color: #DAB060;
-  }
-  
-  0.495% { // End of the 3rd pulse
-    box-shadow: 0 0 5px #B67D43;
-    border-color: #B67D43;
-  }
-  
-  0.578% { // Peak of the 4th pulse
-    box-shadow: 0 0 20px #DAB060;
-    border-color: #DAB060;
-  }
-  
-  0.66% { // End of the 4th pulse
-    box-shadow: 0 0 5px #B67D43;
-    border-color: #B67D43;
+  0% {
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
   }
 
-  0.743% { // Peak of the 5th pulse
-    box-shadow: 0 0 20px #DAB060;
-    border-color: #DAB060;
+  0.0826% {
+    // Peak of the 1st pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
   }
-  
-  0.826% { // End of the 5th pulse, which is 5 seconds in
-    box-shadow: 0 0 5px #B67D43;
-    border-color: #B67D43;
+
+  0.165% {
+    // End of the 1st pulse
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
   }
-  
-  100% { // The rest of the 10-minute duration is spent here
-    box-shadow: 0 0 5px #B67D43;
-    border-color: #B67D43;
+
+  0.247% {
+    // Peak of the 2nd pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.33% {
+    // End of the 2nd pulse
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  0.413% {
+    // Peak of the 3rd pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.495% {
+    // End of the 3rd pulse
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  0.578% {
+    // Peak of the 4th pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.66% {
+    // End of the 4th pulse
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  0.743% {
+    // Peak of the 5th pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.826% {
+    // End of the 5th pulse, which is 5 seconds in
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  100% {
+    // The rest of the 10-minute duration is spent here
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
   }
 }
 
@@ -964,7 +1147,6 @@ export default {
   text-align: center;
   font-size: 80%;
 }
-
 
 /**** Night reminders ****/
 .night-order {
@@ -1109,40 +1291,39 @@ export default {
   }
 }
 
-
 /* chat with ST */
 .chatMin {
-    position: absolute;
-    right: 10px;
-    bottom: 0px;
-    transform-origin: bottom right;
-    width: 15%;
-    height: 5%;
-    border-radius: 10px;
-    z-index: 60;
-    display: flex;
-    flex-direction: column;
+  position: absolute;
+  right: 10px;
+  bottom: 0px;
+  transform-origin: bottom right;
+  width: 15%;
+  height: 5%;
+  border-radius: 10px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
 }
 
 .chatMin .title {
-    padding: 10px;
-    background-color: #000;
-    user-select: none;
+  padding: 10px;
+  background-color: #000;
+  user-select: none;
 }
 
 .chatMin .title .open {
-    position: absolute;
-    right: 20px;
-    font-weight: bold;
-    cursor: pointer;
+  position: absolute;
+  right: 20px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
 .chatMin .content {
-    display: none;
+  display: none;
 }
 
 .chatMin .chatbox {
-    display: none;
+  display: none;
 }
 // New message bubble
 .chatMin .newMessage {
@@ -1158,18 +1339,18 @@ export default {
 }
 
 .chat {
-    position: absolute;
-    right: 10px;
-    bottom: 10px;
-    transform-origin: bottom right;
-    background-color: #0000007f;
-    // width: 30%;
-    // height: 40%;
-    border-radius: 10px;
-    border: 3px solid #8a7864;
-    z-index: 60;
-    display: flex;
-    flex-direction: column;
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  transform-origin: bottom right;
+  background-color: #0000007f;
+  // width: 30%;
+  // height: 40%;
+  border-radius: 10px;
+  border: 3px solid #8a7864;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
 }
 // New message bubble
 .chat .newMessage {
@@ -1184,11 +1365,10 @@ export default {
   font-size: 80%;
 }
 
-
 .chat .title {
-    padding: 10px;
-    background-color: #000;
-    user-select: none;
+  padding: 10px;
+  background-color: #000;
+  user-select: none;
 }
 
 .chat .title em {
@@ -1204,65 +1384,65 @@ export default {
 }
 
 .chat .title .close {
-    position: absolute;
-    right: 20px;
-    font-weight: bold;
-    cursor: pointer;
+  position: absolute;
+  right: 20px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
 .chat.alert .title {
-    background-color: #A00;
+  background-color: #a00;
 }
 
 .chat.alert .title::after {
-    font-size: 70%;
-    font-weight: bold;
-    position: absolute;
-    right: 40px;
-    bottom: 10px;
+  font-size: 70%;
+  font-weight: bold;
+  position: absolute;
+  right: 40px;
+  bottom: 10px;
 }
 
 .chat .content {
-    padding: 5px;
-    font-size: 80%;
-    background-color: #131313;
-    overflow-y: auto;
-    overflow-x: hidden;
-    height: 100%;
-    flex: 1;
-    display: flex;
-    flex-direction: column-reverse;
+  padding: 5px;
+  font-size: 80%;
+  background-color: #131313;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column-reverse;
 }
 
 .chat .chatbox {
-    padding: 5px;
-    display: flex;
-    height: fit-content;
-    background-color: #131313;
+  padding: 5px;
+  display: flex;
+  height: fit-content;
+  background-color: #131313;
 }
 
 .chat .chatbox .edit {
-    flex: 1;
-    overflow-x: hidden;
-    overflow-y: auto;
-    max-height: 60px;
-    font-size: 70%;
-    border: solid;
-    background-color: #000;
-    color: #fff;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 60px;
+  font-size: 70%;
+  border: solid;
+  background-color: #000;
+  color: #fff;
 }
 
 .chat .chatbox .edit:focus {
-    outline: none;
+  outline: none;
 }
 
 .chat .chatbox .send {
-    background-color: #4a7ec6;
-    color: white;
-    border: solid;
-    border-color: white;
-    border-radius: 0 10px 10px 0;
-    cursor: pointer;
+  background-color: #4a7ec6;
+  color: white;
+  border: solid;
+  border-color: white;
+  border-radius: 0 10px 10px 0;
+  cursor: pointer;
 }
 
 .turnedIcon45 {
@@ -1285,33 +1465,33 @@ export default {
 }
 
 #version {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    background-color: transparent;
-    color: white;
-    padding: 0px;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  background-color: transparent;
+  color: white;
+  padding: 0px;
 }
 
 #version a {
-    color: white;
-    text-decoration: none;
+  color: white;
+  text-decoration: none;
 }
 
 #copyright {
-    position: fixed;
-    bottom: 1px;
-    left: 4px;
-    background-color: transparent;
-    color: white;
-    padding: 0px;
-    font-size: 0.6rem;
-    opacity: 0.75;
+  position: fixed;
+  bottom: 1px;
+  left: 4px;
+  background-color: transparent;
+  color: white;
+  padding: 0px;
+  font-size: 0.6rem;
+  opacity: 0.75;
 }
 
 #copyright a {
-    color: white;
-    text-decoration: underline;
+  color: white;
+  text-decoration: underline;
 }
 
 #townsquare > .is-role {
@@ -1325,11 +1505,11 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  
-  background: rgba(0, 0, 0, 0.5); 
-  border-radius: 10px; 
-  border: 3px solid black; 
-  opacity: 1; 
+
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  border: 3px solid black;
+  opacity: 1;
   cursor: pointer;
 
   &:hover {
@@ -1368,7 +1548,7 @@ export default {
     color: #ffff00;
     font-weight: bold;
     font-size: 1.1rem;
-    
+
     /* 1800s = 30 minutes cycle */
     animation: roll-notice 1800s linear infinite;
   }
@@ -1378,7 +1558,7 @@ export default {
 @keyframes roll-notice {
   /* 0%: Start completely pushed outside the right boundary of the window */
   0% {
-    transform: translate3d(100vw, 0, 0); 
+    transform: translate3d(100vw, 0, 0);
   }
   /* 0.55% (~10 seconds): Slide left completely past the view box until it safely clears */
   0.85% {
@@ -1393,5 +1573,4 @@ export default {
     transform: translate3d(100vw, 0, 0);
   }
 }
-
 </style>

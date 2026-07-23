@@ -4,6 +4,7 @@ import { pinia } from "../pinia";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
+import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
@@ -2039,7 +2040,7 @@ class LiveSession {
         num,
       });
     } else {
-      this._store.commit("session/setStMessage", num);
+      useChatStore(pinia).addStorytellerUnread(num);
     }
 
     if (this._isSpectator) return;

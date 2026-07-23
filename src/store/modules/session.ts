@@ -67,7 +67,6 @@ const state = () => ({
   messageQueue: [],
   messageUniqueQueue: [],
   chatHistory: [],
-  newStMessage: [0],
   groupChats: [],
   bootlegger: "",
   timer: 480,
@@ -309,15 +308,6 @@ const mutations: Record<string, LegacyMutation> = {
       },
       1000 * 60 * 3,
     );
-  },
-  setStMessage(state, num) {
-    if (num > 0) {
-      const newNum = (state.newStMessage[0] += num);
-      state.newStMessage[0] = newNum;
-    } else {
-      const newNum = (state.newStMessage[0] = num);
-      state.newStMessage[0] = newNum;
-    }
   },
   addGroupChat(state, { chatId, players, playerIds, keep }) {
     if (state.groupChats.length >= 20) return;
