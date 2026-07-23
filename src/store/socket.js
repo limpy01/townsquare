@@ -10,6 +10,7 @@ import { useReviewStore } from "../stores/review";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
+import { useSessionSettingsStore } from "../stores/session-settings";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 
@@ -27,6 +28,7 @@ class LiveSession {
     this._review = useReviewStore(pinia);
     this._legacyOptions = useLegacyOptionsStore(pinia);
     this._voting = useVotingStore(pinia);
+    this._settings = useSessionSettingsStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -92,7 +94,7 @@ class LiveSession {
         // this._store.commit("players/clear", true);
 
         // clear customBootlegger
-        if (this._store.state.session.bootlegger) {
+        if (this._settings.bootlegger) {
           this._store.commit("session/setBootlegger", "");
         }
 
@@ -1763,7 +1765,7 @@ class LiveSession {
 
   _handleSetBootlegger(content) {
     if (!this._isSpectator) return;
-    this._store.state.session.bootlegger = content;
+    this._settings.setBootlegger(content);
   }
 
   setUseOldOrder(isUseOldOrder) {

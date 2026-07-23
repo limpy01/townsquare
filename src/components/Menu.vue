@@ -588,6 +588,7 @@ import { useTimerStore } from "../stores/timer";
 import { useReviewStore } from "../stores/review";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useVotingStore } from "../stores/voting";
+import { useSessionSettingsStore } from "../stores/session-settings";
 
 export default {
   computed: {
@@ -619,6 +620,9 @@ export default {
     },
     voting() {
       return useVotingStore();
+    },
+    settings() {
+      return useSessionSettingsStore();
     },
     formattedTime() {
       const minutes = Math.floor(this.timer.seconds / 60);
@@ -1088,7 +1092,7 @@ export default {
         this.$store.commit("players/clear", true);
 
         // clear customBootlegger
-        if (this.session.bootlegger) {
+        if (this.settings.bootlegger) {
           this.$store.commit("session/setBootlegger", "");
         }
 

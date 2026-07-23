@@ -10,6 +10,7 @@ import { useLegacyOptionsStore } from "../../stores/legacy-options";
 import { useReviewStore } from "../../stores/review";
 import { useTimerStore } from "../../stores/timer";
 import { useVotingStore } from "../../stores/voting";
+import { useSessionSettingsStore } from "../../stores/session-settings";
 
 const state = () => ({
   sessionId: "",
@@ -34,7 +35,6 @@ const state = () => ({
   messageUniqueQueue: [],
   chatHistory: [],
   groupChats: [],
-  bootlegger: "",
 });
 
 const getters: Record<string, LegacyGetter> = {};
@@ -79,7 +79,9 @@ const mutations: Record<string, LegacyMutation> = {
   setSecretVote(_state, isSecretVote) {
     useVotingStore(pinia).setSecretVote(isSecretVote);
   },
-  setBootlegger: set("bootlegger"),
+  setBootlegger(_state, bootlegger) {
+    useSessionSettingsStore(pinia).setBootlegger(bootlegger);
+  },
   setUseOldOrder(_state, useOldOrder) {
     useLegacyOptionsStore(pinia).setUseOldOrder(useOldOrder);
   },

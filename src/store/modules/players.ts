@@ -3,6 +3,8 @@ import type {
   LegacyGetter,
   LegacyMutation,
 } from "../legacy-vuex";
+import { pinia } from "../../pinia";
+import { useSessionSettingsStore } from "../../stores/session-settings";
 
 const NEWPLAYER = {
   name: "",
@@ -308,7 +310,7 @@ const mutations: Record<string, LegacyMutation> = {
       };
 
       // 加入自定义私货商人描述
-      const customBootlegger = this.state.session.bootlegger;
+      const customBootlegger = useSessionSettingsStore(pinia).bootlegger;
       if (Number(fabled.id === "bootlegger") & Number(!!customBootlegger)) {
         fabled.ability = customBootlegger;
       }
