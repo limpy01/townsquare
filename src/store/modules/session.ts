@@ -70,7 +70,6 @@ const state = () => ({
   newStMessage: [0],
   groupChats: [],
   bootlegger: "",
-  drawRoles: [],
   timer: 480,
   startTime: null,
   lastUpdateTime: null,
@@ -125,10 +124,6 @@ const mutations: Record<string, LegacyMutation> = {
   },
   setPlayerName(state, name) {
     state.playerName = name;
-  },
-  setDrawRoles(state, roles) {
-    if (!Array.isArray(roles)) return;
-    state.drawRoles = [...roles];
   },
   nomination(
     state,

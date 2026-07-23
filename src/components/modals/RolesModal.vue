@@ -5,7 +5,7 @@
     @close="toggleModal('roles')"
   >
     <h3>为当前{{ nonTravelers }}名玩家选择角色</h3>
-    <ul class="tokens" v-for="(teamRoles, team) in roleSelection" :key="team" >
+    <ul class="tokens" v-for="(teamRoles, team) in roleSelection" :key="team">
       <li class="count" :class="[team]">
         {{ teamRoles.reduce((a, { selected }) => a + selected, 0) }} /
         {{ game[nonTravelers - 5][team] }}
@@ -32,13 +32,13 @@
     <div class="warningSetup" v-if="hasSelectedSetupRoles">
       <font-awesome-icon icon="exclamation-triangle" />
       <span>
-        警告: 目前选择的角色会修改游戏的初始角色配置！随机分发器不会识别这些角色的功能。建议说书人手动调整要分发的角色。
+        警告:
+        目前选择的角色会修改游戏的初始角色配置！随机分发器不会识别这些角色的功能。建议说书人手动调整要分发的角色。
       </span>
-    </div><div class="warningReview" v-if="session.isReview">
+    </div>
+    <div class="warningReview" v-if="session.isReview">
       <font-awesome-icon icon="exclamation-triangle" />
-      <span>
-        警告: 正在使用复盘视角，如果即将进行游戏请先关闭复盘视角！
-      </span>
+      <span> 警告: 正在使用复盘视角，如果即将进行游戏请先关闭复盘视角！ </span>
     </div>
     <label class="multiple" :class="{ checked: allowMultiple }">
       <font-awesome-icon :icon="allowMultiple ? 'check-square' : 'square'" />
@@ -50,18 +50,23 @@
         class="button"
         @click="assignRoles(true)"
         :class="{
-          disabled: selectedRoles > nonTravelers || !selectedRoles
+          disabled: selectedRoles > nonTravelers || !selectedRoles,
         }"
       >
-        <font-awesome-icon icon="exclamation-triangle" v-if="session.isReview" style="color: yellow;"/>
-        <font-awesome-icon icon="people-arrows" v-else/>
+        <font-awesome-icon
+          icon="exclamation-triangle"
+          v-if="session.isReview"
+          style="color: yellow"
+        />
+        <font-awesome-icon icon="people-arrows" v-else />
         随机分配{{ selectedRoles }}个角色
       </div>
-      <div v-if="session.isReview"
+      <div
+        v-if="session.isReview"
         class="button"
         @click="assignRoles(false)"
         :class="{
-          disabled: selectedRoles > nonTravelers || !selectedRoles
+          disabled: selectedRoles > nonTravelers || !selectedRoles,
         }"
       >
         <font-awesome-icon icon="people-arrows" />
@@ -71,7 +76,7 @@
         class="button"
         @click="drawRoles()"
         :class="{
-          disabled: selectedRoles > nonTravelers || !selectedRoles
+          disabled: selectedRoles > nonTravelers || !selectedRoles,
         }"
       >
         抽取角色（线下）
@@ -89,51 +94,55 @@ import Modal from "./Modal";
 import gameJSON from "./../../game";
 import Token from "./../Token";
 import { mapGetters, mapMutations, mapState } from "vuex";
+import { useDrawStore } from "../../stores/draw";
 
-const randomElement = arr => arr[Math.floor(Math.random() * arr.length)];
+const randomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 export default {
   components: {
     Token,
-    Modal
+    Modal,
   },
-  data: function() {
+  data: function () {
     return {
       roleSelection: {},
       game: gameJSON,
       allowMultiple: false,
       windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight
+      windowHeight: window.innerHeight,
     };
   },
   computed: {
-    selectedRoles: function() {
+    selectedRoles: function () {
       return Object.values(this.roleSelection)
-        .map(roles => roles.reduce((a, { selected }) => a + selected, 0))
+        .map((roles) => roles.reduce((a, { selected }) => a + selected, 0))
         .reduce((a, b) => a + b, 0);
     },
-    hasSelectedSetupRoles: function() {
-      return Object.values(this.roleSelection).some(roles =>
-        roles.some(role => role.selected && role.setup)
+    hasSelectedSetupRoles: function () {
+      return Object.values(this.roleSelection).some((roles) =>
+        roles.some((role) => role.selected && role.setup),
       );
     },
     tokenWidth() {
-      const percentage = 0.06
+      const percentage = 0.06;
       const width = percentage * this.windowWidth;
       return width >= 80 ? "width: 6vw" : "width: 80px";
     },
     ...mapState(["roles", "modals", "session"]),
     ...mapState("players", ["players"]),
-    ...mapGetters({ nonTravelers: "players/nonTravelers" })
+    ...mapGetters({ nonTravelers: "players/nonTravelers" }),
+    draw() {
+      return useDrawStore();
+    },
   },
   methods: {
-    handleResize(){
+    handleResize() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
     },
     selectRandomRoles() {
       this.roleSelection = {};
-      this.roles.forEach(role => {
+      this.roles.forEach((role) => {
         if (!this.roleSelection[role.team]) {
           this.roleSelection[role.team] = [];
         }
@@ -142,19 +151,19 @@ export default {
       });
       const teamSelected = ["townsfolk", "outsider", "minion", "demon"];
       const teamDeselected = [];
-      Object.keys(this.roleSelection).forEach(team => {
+      Object.keys(this.roleSelection).forEach((team) => {
         if (!teamSelected.includes(team)) teamDeselected.push(team);
       });
-      teamDeselected.forEach(team => {
+      teamDeselected.forEach((team) => {
         delete this.roleSelection[team];
-      })
+      });
       const playerCount = Math.max(5, this.nonTravelers);
       const composition = this.game[playerCount - 5];
-      Object.keys(composition).forEach(team => {
+      Object.keys(composition).forEach((team) => {
         for (let x = 0; x < composition[team]; x++) {
           if (this.roleSelection[team]) {
             const available = this.roleSelection[team].filter(
-              role => !role.selected
+              (role) => !role.selected,
             );
             if (available.length) {
               randomElement(available).selected = 1;
@@ -170,23 +179,23 @@ export default {
           this.$store.commit("session/setIsReview", false);
         }
         const roles = Object.values(this.roleSelection)
-          .map(roles =>
+          .map((roles) =>
             roles
               // duplicate roles selected more than once and filter unselected
-              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], [])
+              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], []),
           )
           // flatten into a single array
           .reduce((a, b) => [...a, ...b], [])
-          .map(a => [Math.random(), a])
+          .map((a) => [Math.random(), a])
           .sort((a, b) => a[0] - b[0])
-          .map(a => a[1]);
-        this.players.forEach(player => {
+          .map((a) => a[1]);
+        this.players.forEach((player) => {
           if (player.role.team !== "traveler" && roles.length) {
             const value = roles.pop();
             this.$store.commit("players/update", {
               player,
               property: "role",
-              value
+              value,
             });
           }
         });
@@ -197,37 +206,37 @@ export default {
       if (this.selectedRoles <= this.nonTravelers && this.selectedRoles) {
         // generate list of selected roles and randomize it
         const roles = Object.values(this.roleSelection)
-          .map(roles =>
+          .map((roles) =>
             roles
               // duplicate roles selected more than once and filter unselected
-              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], [])
+              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], []),
           )
           // flatten into a single array
           .reduce((a, b) => [...a, ...b], [])
-          .map(a => [Math.random(), a])
+          .map((a) => [Math.random(), a])
           .sort((a, b) => a[0] - b[0])
-          .map(a => a[1]);
-        this.$store.commit("session/setDrawRoles", roles);
+          .map((a) => a[1]);
+        this.draw.setRoles(roles);
         this.$store.commit("toggleModal", "roles");
         this.$store.commit("toggleModal", "draw");
       }
     },
-    ...mapMutations(["toggleModal"])
+    ...mapMutations(["toggleModal"]),
   },
-  mounted: function() {
+  mounted: function () {
     if (!Object.keys(this.roleSelection).length) {
       this.selectRandomRoles();
     }
     window.addEventListener("resize", this.handleResize);
   },
-  beforeUnmount(){
+  beforeUnmount() {
     window.removeEventListener("resize", this.handleResize);
   },
   watch: {
     roles() {
       this.selectRandomRoles();
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -252,19 +261,29 @@ ul.tokens {
       }
     }
     &.townsfolk {
-      box-shadow: 0 0 10px $townsfolk, 0 0 10px #004cff;
+      box-shadow:
+        0 0 10px $townsfolk,
+        0 0 10px #004cff;
     }
     &.outsider {
-      box-shadow: 0 0 10px $outsider, 0 0 10px $outsider;
+      box-shadow:
+        0 0 10px $outsider,
+        0 0 10px $outsider;
     }
     &.minion {
-      box-shadow: 0 0 10px $minion, 0 0 10px $minion;
+      box-shadow:
+        0 0 10px $minion,
+        0 0 10px $minion;
     }
     &.demon {
-      box-shadow: 0 0 10px $demon, 0 0 10px $demon;
+      box-shadow:
+        0 0 10px $demon,
+        0 0 10px $demon;
     }
     &.traveler {
-      box-shadow: 0 0 10px $traveler, 0 0 10px $traveler;
+      box-shadow:
+        0 0 10px $traveler,
+        0 0 10px $traveler;
     }
     &:hover {
       transform: scale(1.2);
@@ -377,7 +396,7 @@ ul.tokens {
       display: block;
     }
   }
-  
+
   .warningReview {
     color: yellow;
     position: absolute;

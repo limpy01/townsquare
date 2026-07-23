@@ -1,11 +1,9 @@
 <template>
   <Modal v-if="modals.draw" @close="close" class="roles">
-    <h3>
-      请抽取角色
-    </h3>
+    <h3>请抽取角色</h3>
     <ul class="tokens">
       <li
-        v-for="role in session.drawRoles"
+        v-for="role in draw.roles"
         v-show="Object.keys(displayRole).length === 0"
         :key="role.id"
         @click="storeRole(role)"
@@ -20,9 +18,14 @@
     </ul>
     <div class="multiple">
       <span v-if="Object.keys(displayRole).length === 0">
-        <span v-if="drawnRoles.length !== nonTravelerLength">请为{{ drawingIndex+1 + nextConsecutiveTravelerNumber }}号抽取身份</span>
+        <span v-if="drawnRoles.length !== nonTravelerLength"
+          >请为{{
+            drawingIndex + 1 + nextConsecutiveTravelerNumber
+          }}号抽取身份</span
+        >
       </span>
-      <span v-else>请点击确认后交给
+      <span v-else
+        >请点击确认后交给
         <span v-if="drawnRoles.length === nonTravelerLength">说书人</span>
         <span v-else>下一名玩家</span>
       </span>
@@ -31,27 +34,24 @@
       class="button-group"
       v-if="otherTravelers.size && !session.isSpectator"
     >
-      <span 
+      <span
         class="button"
         v-if="Object.keys(displayRole).length === 0"
         @click="finishDraw()"
       >
-        <span v-if="drawnRoles.length === nonTravelerLength">分配已抽取角色至魔典</span>
+        <span v-if="drawnRoles.length === nonTravelerLength"
+          >分配已抽取角色至魔典</span
+        >
         <span v-else>随机分配剩余角色</span>
       </span>
-      <span 
-        class="button"
-        v-else
-        @click="nextRole()"
-      >
-        确定
-      </span>
+      <span class="button" v-else @click="nextRole()"> 确定 </span>
     </div>
   </Modal>
 </template>
 
 <script>
 import { mapMutations, mapState } from "vuex";
+import { useDrawStore } from "../../stores/draw";
 import Modal from "./Modal";
 import Token from "../Token";
 
@@ -60,17 +60,18 @@ export default {
   props: ["playerIndex"],
   computed: {
     tokenWidth() {
-      const percentage = 0.06
+      const percentage = 0.06;
       const width = percentage * this.windowWidth;
       return width >= 80 ? "width: 6vw" : "width: 80px";
     },
     nonTravelerLength() {
-      return this.players.filter(player => player.role.team !== "traveler").length;
+      return this.players.filter((player) => player.role.team !== "traveler")
+        .length;
     },
     nextConsecutiveTravelerNumber() {
       let count = 0;
       for (let i = this.drawingIndex; i < this.players.length; i++) {
-        if (this.players[i].role?.team === 'traveler') {
+        if (this.players[i].role?.team === "traveler") {
           count++;
         } else {
           break;
@@ -80,7 +81,10 @@ export default {
     },
     ...mapState(["modals", "session"]),
     ...mapState("players", ["players"]),
-    ...mapState(["otherTravelers"])
+    ...mapState(["otherTravelers"]),
+    draw() {
+      return useDrawStore();
+    },
   },
   data() {
     return {
@@ -88,42 +92,48 @@ export default {
       drawingIndex: 0,
       drawnRoles: [],
       windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight
+      windowHeight: window.innerHeight,
     };
   },
-  mounted(){
+  mounted() {
     window.addEventListener("resize", this.handleResize);
-    this.drawingIndex = this.players.findIndex(player => player.role.team !== 'traveler')
+    this.drawingIndex = this.players.findIndex(
+      (player) => player.role.team !== "traveler",
+    );
   },
-  beforeUnmount(){
+  beforeUnmount() {
     window.removeEventListener("resize", this.handleResize);
   },
   methods: {
-    handleResize(){
+    handleResize() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
     },
     storeRole(role) {
       if (Object.keys(this.displayRole).length > 0) this.displayRole = {};
-      const index = this.session.drawRoles.indexOf(role);
+      const index = this.draw.roles.indexOf(role);
       if (index < 0) return;
-      this.displayRole = this.session.drawRoles.splice(index, 1)[0];
+      this.displayRole = this.draw.roles.splice(index, 1)[0];
       this.drawnRoles.push(this.displayRole);
     },
     nextRole() {
       this.displayRole = {};
       this.drawingIndex = this.drawingIndex + 1;
-      while (this.drawingIndex < this.players.index && this.players[this.drawingIndex].role.team === 'traveler') this.drawingIndex = this.drawingIndex + 1;
+      while (
+        this.drawingIndex < this.players.index &&
+        this.players[this.drawingIndex].role.team === "traveler"
+      )
+        this.drawingIndex = this.drawingIndex + 1;
     },
     finishDraw() {
-      const drawnRoles = [...this.drawnRoles, ...this.session.drawRoles];
+      const drawnRoles = [...this.drawnRoles, ...this.draw.roles];
       let skip = 0;
-      for (let i=0; i<drawnRoles.length; i++) {
-        while (this.players[i+skip].role.team === "traveler") skip++;
+      for (let i = 0; i < drawnRoles.length; i++) {
+        while (this.players[i + skip].role.team === "traveler") skip++;
         this.$store.commit("players/update", {
-          player: this.players[i+skip],
+          player: this.players[i + skip],
           property: "role",
-          value: drawnRoles[i]
+          value: drawnRoles[i],
         });
       }
       this.close();
@@ -132,11 +142,11 @@ export default {
       this.displayRole = {};
       this.drawingIndex = 0;
       this.drawnRoles = [];
-      this.$store.commit("session/setDrawRoles", []);
+      this.draw.clearRoles();
       this.toggleModal("draw");
     },
-    ...mapMutations(["toggleModal"])
-  }
+    ...mapMutations(["toggleModal"]),
+  },
 };
 </script>
 
