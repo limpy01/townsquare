@@ -16,6 +16,7 @@ import { useProfileStore } from "../stores/profile";
 import { useMessageOutboxStore } from "../stores/message-outbox";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
+import { dispatchSessionOutboxMessage } from "./session-outbox-dispatcher";
 import { getCustomRolesStripped, rolesJSONbyId } from "./selectors";
 import { mutationBus } from "./mutation-bus";
 import {
@@ -228,36 +229,18 @@ export class LiveSession {
 
   _sendQueue() {
     if (this._outbox.queue.length <= 0) return;
-    for (let message of this._outbox.queue) {
-      switch (message.type) {
-        case "direct":
-          this._sendDirect(
-            message.playerId,
-            message.command,
-            message.params,
-            message.id,
-          );
-          break;
-        case "request":
-          this._request(
-            message.command,
-            message.playerId,
-            message.params,
-            message.id,
-          );
-          break;
-        case "uploadFile":
-          this._uploadFile(
-            message.command,
-            message.playerId,
-            message.params,
-            message.id,
-          );
-          break;
-        default:
-          this._send(message.command, message.params, message.id);
-      }
-    }
+    const transport = {
+      send: (command, params, feedback) =>
+        this._send(command, params, feedback),
+      sendDirect: (playerId, command, params, feedback) =>
+        this._sendDirect(playerId, command, params, feedback),
+      request: (command, playerId, params, feedback) =>
+        this._request(command, playerId, params, feedback),
+      uploadFile: (command, playerId, params, feedback) =>
+        this._uploadFile(command, playerId, params, feedback),
+    };
+    for (const message of this._outbox.queue)
+      dispatchSessionOutboxMessage(message, transport);
   }
 
   _startSendQueue() {
