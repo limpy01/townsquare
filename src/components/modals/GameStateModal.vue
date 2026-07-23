@@ -34,6 +34,7 @@ import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
 import { useSessionIdentityStore } from "../../stores/session-identity";
+import { getCustomRolesStripped, rolesJSONbyId } from "../../store/selectors";
 
 const modals = useModalStore();
 const playerState = usePlayersStore();
@@ -48,7 +49,9 @@ const gamestate = computed(() =>
     edition: edition.value.isOfficial
       ? { id: edition.value.id }
       : edition.value,
-    roles: edition.value.isOfficial ? "" : store.getters.customRolesStripped,
+    roles: edition.value.isOfficial
+      ? ""
+      : getCustomRolesStripped(scenario.roles.values()),
     fabled: playerState.fabled.map((fabled) =>
       fabled.isCustom ? fabled : { id: fabled.id },
     ),
@@ -205,7 +208,7 @@ async function loadState() {
           ...player,
           role:
             scenario.roles.get(player.role) ||
-            store.getters.rolesJSONbyId.get(player.role) ||
+            rolesJSONbyId.get(player.role) ||
             {},
         })),
       );

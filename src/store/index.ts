@@ -13,6 +13,7 @@ import editionJSON from "../editions.json";
 import rolesJSON from "../roles.json";
 import fabledJSON from "../fabled.json";
 import { apiBase } from "../config";
+import { customRoleDefaults, rolesJSONbyId } from "./selectors";
 
 type LegacyRootState = any;
 type LegacyRootMutation = (
@@ -20,7 +21,6 @@ type LegacyRootMutation = (
   state: LegacyRootState,
   payload?: any,
 ) => void;
-type LegacyRootGetter = (state: LegacyRootState) => any;
 type LegacyRootAction = (this: any, ...args: any[]) => any;
 
 // helper functions
@@ -75,26 +75,6 @@ const clean = (id: any) => id.toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
 const editionJSONbyId = new Map(
   editionJSON.map((edition) => [edition.id, edition]),
 );
-const rolesJSONbyId = new Map(rolesJSON.map((role) => [role.id, role]));
-
-// base definition for custom roles
-const customRole: Record<string, any> = {
-  id: "",
-  name: "",
-  image: "",
-  ability: "",
-  edition: "custom",
-  firstNight: 0,
-  firstNightReminder: "",
-  otherNight: 0,
-  otherNightReminder: "",
-  reminders: [],
-  remindersGlobal: [],
-  jinxes: [],
-  setup: false,
-  team: "townsfolk",
-  isCustom: true,
-};
 
 const scenarioStateKeys = [
   "edition",
@@ -137,42 +117,6 @@ const rootStoreOptions: any = {
     session,
   },
   state: createLegacyRootState(),
-  getters: {
-    /**
-     * Return all custom roles, with default values and non-essential data stripped.
-     * Role object keys will be replaced with a numerical index to conserve bandwidth.
-     * @param roles
-     * @returns {[]}
-     */
-    customRolesStripped: ({ roles }) => {
-      const customRoles: any[] = [];
-      const customKeys = Object.keys(customRole);
-      const strippedProps = [
-        "firstNightReminder",
-        "otherNightReminder",
-        "isCustom",
-      ];
-      roles.forEach((role: any) => {
-        if (!role.isCustom) {
-          customRoles.push({ id: role.id });
-        } else {
-          const strippedRole: Record<number, any> = {};
-          for (let prop in role) {
-            if (strippedProps.includes(prop)) {
-              continue;
-            }
-            const value = role[prop];
-            if (customKeys.includes(prop) && value !== customRole[prop]) {
-              strippedRole[customKeys.indexOf(prop)] = value;
-            }
-          }
-          customRoles.push(strippedRole);
-        }
-      });
-      return customRoles;
-    },
-    rolesJSONbyId: () => rolesJSONbyId,
-  } as Record<string, LegacyRootGetter>,
   mutations: {
     setZoom: set("zoom"),
     setBackground: set("background"),
@@ -216,7 +160,7 @@ const rootStoreOptions: any = {
         // replace numerical role object keys with matching key names
         .map((role: any) => {
           if (role[0]) {
-            const customKeys: any = Object.keys(customRole);
+            const customKeys: any = Object.keys(customRoleDefaults);
             const mappedRole: Record<string, any> = {};
             for (let prop in role) {
               if (customKeys[prop]) {
@@ -238,7 +182,7 @@ const rootStoreOptions: any = {
           (role: any) =>
             rolesJSONbyId.get(role.id) ||
             state.roles.get(role.id) ||
-            Object.assign({}, customRole, role),
+            Object.assign({}, customRoleDefaults, role),
         )
         // default empty icons and placeholders, clean up firstNight / otherNight
         .map((role: any) => {

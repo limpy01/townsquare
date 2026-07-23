@@ -17,6 +17,7 @@ import { useProfileStore } from "../stores/profile";
 import { useMessageOutboxStore } from "../stores/message-outbox";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
+import { getCustomRolesStripped, rolesJSONbyId } from "./selectors";
 
 class LiveSession {
   constructor(store) {
@@ -766,8 +767,7 @@ class LiveSession {
       // roles are special, because of travelers
       if (roleId && player.role.id !== roleId) {
         const role =
-          this._store.state.roles.get(roleId) ||
-          this._store.getters.rolesJSONbyId.get(roleId);
+          this._store.state.roles.get(roleId) || rolesJSONbyId.get(roleId);
         if (role) {
           this._store.commit("players/update", {
             player,
@@ -831,7 +831,7 @@ class LiveSession {
     const { edition } = this._store.state;
     let roles;
     if (!edition.isOfficial) {
-      roles = this._store.getters.customRolesStripped;
+      roles = getCustomRolesStripped(this._store.state.roles.values());
     }
     this._sendDirect(playerId, "edition", {
       edition: edition.isOfficial ? { id: edition.id } : edition,
@@ -1056,9 +1056,7 @@ class LiveSession {
       } else {
         // load role, first from session, the global, then fail gracefully
         const role =
-          this._store.state.roles.get(value) ||
-          this._store.getters.rolesJSONbyId.get(value) ||
-          {};
+          this._store.state.roles.get(value) || rolesJSONbyId.get(value) || {};
         this._store.commit("players/update", {
           player,
           property: "role",
@@ -1601,7 +1599,7 @@ class LiveSession {
       // load role, first from session, the global, then fail gracefully
       const role =
         this._store.state.roles.get(grimRole[0].value) ||
-        this._store.getters.rolesJSONbyId.get(grimRole[0].value) ||
+        rolesJSONbyId.get(grimRole[0].value) ||
         {};
       if (role.team === "traveler") return;
       const player = this._store.state.players.players[grimRole[0].index];

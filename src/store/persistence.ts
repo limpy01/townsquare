@@ -1,6 +1,7 @@
 import { readStoredArray, readStoredJson, readStoredRecord } from "./storage";
 import { pinia } from "../pinia";
 import { useChatStore } from "../stores/chat";
+import { rolesJSONbyId } from "./selectors";
 type LegacyPersistenceStore = {
   commit(type: string, payload?: any): void;
   state: any;
@@ -129,7 +130,7 @@ export default (store: LegacyPersistenceStore) => {
           ...player,
           role:
             store.state.roles.get(player.role) ||
-            store.getters.rolesJSONbyId.get(player.role) ||
+            rolesJSONbyId.get(player.role) ||
             {},
         })),
     );
