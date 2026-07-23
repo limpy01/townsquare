@@ -14,7 +14,7 @@ const createStorage = (initial: Record<string, string> = {}) => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("Vuex persistence compatibility plugin", () => {
+describe("persistence compatibility plugin", () => {
   it("restores the legacy session tuple and persists a changed session ID", () => {
     const localStorage = createStorage({
       session: JSON.stringify([true, "room1234"]),

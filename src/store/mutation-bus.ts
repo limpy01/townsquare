@@ -9,9 +9,8 @@ export type StoreMutationSubscriber<State = unknown> = (
 ) => void;
 
 /**
- * Compatibility event channel for persistence and transport side effects.
- * Vuex feeds this channel today; Pinia actions can feed the same channel while
- * the legacy facade is removed incrementally.
+ * Event channel for persistence and transport side effects emitted by Pinia
+ * command boundaries.
  */
 export function createMutationBus<State = unknown>() {
   const subscribers = new Set<StoreMutationSubscriber<State>>();

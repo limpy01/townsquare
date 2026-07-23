@@ -24,7 +24,7 @@ const emit = (type: string, payload?: unknown) =>
 /**
  * Temporary Options API boundary. It deliberately exposes the former command
  * vocabulary while executing Pinia actions directly, so component migration
- * does not keep Vuex alive as a runtime dependency.
+ * does not retain the previous state-management runtime.
  */
 export const legacyCommit = (type: string, payload?: any) => {
   const grimoire = useGrimoireStore(pinia);

@@ -1,5 +1,9 @@
 import type { LegacyFeedback } from "@townsquare/contracts/legacy-envelope";
-import type { LegacyStore } from "./legacy-vuex";
+
+type LegacyStore = {
+  commit(type: string, payload?: any): void;
+  state: any;
+};
 
 export interface SessionInboundTarget {
   readonly _isSpectator: boolean;

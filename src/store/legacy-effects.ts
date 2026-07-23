@@ -8,7 +8,7 @@ import { mutationBus } from "./mutation-bus";
 /**
  * State shape consumed by legacy persistence and WebSocket effects.
  * Keeping this projection separate lets Pinia callers use those effects without
- * entering the Vuex compatibility store.
+ * entering the command compatibility boundary.
  */
 export function getLegacyEffectState() {
   const scenario = useScenarioStore(pinia);
