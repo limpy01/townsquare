@@ -22,24 +22,25 @@
 | 2. 服务端 TypeScript 化   | 进行中 | 旧前端与新服务端的 HTTP/WS 集成矩阵通过         |
 | 3. Vue 3 + Vite 兼容启动  | 进行中 | Vite 下旧行为与视觉基线一致                     |
 | 4. 前端 TypeScript 基础层 | 待开始 | transport、持久化、协议和浏览器适配层严格类型化 |
-| 5. Vuex 至 Pinia          | 待开始 | 所有业务 store 独立、可测且存档兼容             |
-| 6. 组件 Composition API   | 待开始 | 所有 SFC 为 Vue TS，compat warning 为零         |
+| 5. Vuex 至 Pinia          | 进行中 | 所有业务 store 独立、可测且存档兼容             |
+| 6. 组件 Composition API   | 进行中 | 所有 SFC 为 Vue TS，compat warning 为零         |
 | 7. 样式与资源治理         | 待开始 | 全局样式归属明确，视觉与性能预算受控            |
 | 8. 清理、部署与收尾       | 待开始 | `npm run check` 全绿，部署与回滚演练完成        |
 
 ## 当前任务
 
-| ID      | 状态   | 范围                                       | 验收                                                                          | 兼容性                          |
-| ------- | ------ | ------------------------------------------ | ----------------------------------------------------------------------------- | ------------------------------- |
-| MIG-001 | 已完成 | 行为、HTTP、存档、WS command 清单          | 兼容性清单；服务端测试与构建                                                  | 只读基线，不改协议              |
-| MIG-002 | 已完成 | 服务端大粒度测试拆分                       | 7 个独立 HTTP、room、lobby、queue、版本信息测试                               | 固定 v1 消息语义                |
-| MIG-003 | 进行中 | Playwright E2E 与视觉基线                  | 首页、创建房间流程和 2 张截图通过；CI 执行 E2E                                | 固定时间、随机数和视口          |
-| MIG-004 | 进行中 | 剧本与游戏状态 characterization fixtures   | WS/自定义剧本 fixture 与 11 个单元测试                                        | 兼容历史 JSON 和存档            |
-| MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生     | lint 基线、服务端测试、构建                                                   | 不改变运行时行为                |
-| MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter | 服务端入口使用 decoder，头像 HTTP 输入使用 Zod schema；15 个 fixture 测试通过 | 网络继续传输旧三元组            |
-| MIG-007 | 待开始 | `packages/domain` 第一个纯逻辑模块         | 严格类型与高覆盖率                                                            | 不导入 Vue/Express              |
-| MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口   | 7 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                        | 旧前端可连接                    |
-| MIG-009 | 进行中 | Vue 3、Vite、Vuex 4 兼容启动               | typecheck、核心 E2E、视觉回归                                                 | Vite 环境变量和静态资源保持兼容 |
+| ID      | 状态   | 范围                                           | 验收                                                                          | 兼容性                             |
+| ------- | ------ | ---------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------- |
+| MIG-001 | 已完成 | 行为、HTTP、存档、WS command 清单              | 兼容性清单；服务端测试与构建                                                  | 只读基线，不改协议                 |
+| MIG-002 | 已完成 | 服务端大粒度测试拆分                           | 7 个独立 HTTP、room、lobby、queue、版本信息测试                               | 固定 v1 消息语义                   |
+| MIG-003 | 进行中 | Playwright E2E 与视觉基线                      | 首页、创建房间流程和 2 张截图通过；CI 执行 E2E                                | 固定时间、随机数和视口             |
+| MIG-004 | 进行中 | 剧本与游戏状态 characterization fixtures       | WS/自定义剧本 fixture 与 11 个单元测试                                        | 兼容历史 JSON 和存档               |
+| MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生         | lint 基线、服务端测试、构建                                                   | 不改变运行时行为                   |
+| MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter     | 服务端入口使用 decoder，头像 HTTP 输入使用 Zod schema；15 个 fixture 测试通过 | 网络继续传输旧三元组               |
+| MIG-007 | 待开始 | `packages/domain` 第一个纯逻辑模块             | 严格类型与高覆盖率                                                            | 不导入 Vue/Express                 |
+| MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口       | 7 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                        | 旧前端可连接                       |
+| MIG-009 | 进行中 | Vue 3、Vite、Vuex 4 兼容启动                   | typecheck、核心 E2E、视觉回归                                                 | Vite 环境变量和静态资源保持兼容    |
+| MIG-010 | 进行中 | Pinia 状态域的渐进式替换与组件 Composition API | lobby、模态框状态与组件单元测试通过；遗留 Vuex consumer 可平滑过渡            | 继续保持单窗口模态框与输入流程语义 |
 
 ## 已记录基线
 
@@ -55,6 +56,9 @@
 - `npm run check` 已成为本地整体验收门：格式与 lint 基线、TypeScript、15 个 contracts/domain 单元测试、8 个 HTTP/WS/CLI 集成测试、3 个浏览器流程和生产构建均会执行；CI 同步运行非浏览器质量门与浏览器流程，视觉截图仍固定在本地环境。
 - 前端类型化从独立、低风险的 lobby Vuex 模块开始：该模块已迁移为严格 TypeScript；其余 Vuex 模块和 transport 仍在后续 Pinia 批次中处理，`allowJs` 尚未移除。
 - `Gradients.vue` 与基础 `Modal.vue` 已迁移至 `<script setup lang="ts">`；后续组件会按无状态、单一状态依赖、复杂交互的风险顺序迁移。
+- `lobby` 已成为第一个完全由 Pinia 持有的状态域：Vuex module 已删除，大厅 WebSocket、页面可见性和 UI 读取均直接使用 Pinia，并有单元测试锁定状态和房间生命周期。
+- `Menu.vue` 和 `InputModal.vue` 的大厅房间读取已改为直接消费 Pinia；它们其余状态仍暂由 Vuex 提供，后续会以同样方式分域替换。
+- 模态框状态已迁移为 Pinia 的单一状态源，精确保留“切换时仅开启一个窗口、无参数时全部关闭”的旧语义；Vuex 临时只暴露同一响应式对象供未迁移的 Options API consumer 读取。`LegalModal.vue` 已使用 `<script setup lang="ts">` 和 Pinia，MIG-010 的单元测试覆盖互斥和全量关闭。
 
 ## 本批次约束
 

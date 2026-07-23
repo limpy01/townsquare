@@ -1,5 +1,5 @@
 <template>
-  <Modal v-if="modals.legal" class="legal" @close="toggleModal('legal')">
+  <Modal v-if="modals.legal" class="legal" @close="modals.toggle('legal')">
     <h3 id="modalTitle">法律与署名</h3>
     <p>
       Copyright (C) 2026 @limpy01
@@ -23,15 +23,11 @@
   </Modal>
 </template>
 
-<script>
-import { mapMutations, mapState } from "vuex";
-import Modal from "./Modal";
+<script setup lang="ts">
+import Modal from "./Modal.vue";
+import { useModalStore } from "../../stores/modals";
 
-export default {
-  components: { Modal },
-  computed: mapState(["modals"]),
-  methods: mapMutations(["toggleModal"]),
-};
+const modals = useModalStore();
 </script>
 
 <style scoped lang="scss">

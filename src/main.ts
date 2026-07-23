@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import App from "./App.vue";
+import { pinia } from "./pinia";
 import store from "./store";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
@@ -80,6 +81,7 @@ library.add(
 );
 
 createApp(App)
+  .use(pinia)
   .use(store)
   .component("font-awesome-icon", FontAwesomeIcon)
   .mount("#app");
