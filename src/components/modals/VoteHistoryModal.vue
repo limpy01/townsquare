@@ -2,7 +2,7 @@
   <Modal
     class="vote-history"
     v-if="modals.voteHistory && (voting.voteHistory || !session.isSpectator)"
-    @close="toggleModal('voteHistory')"
+    @close="modals.toggle('voteHistory')"
   >
     <font-awesome-icon
       @click="clearVoteHistory"
@@ -106,63 +106,46 @@
   </Modal>
 </template>
 
-<script>
-import Modal from "./Modal";
-import { mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import Modal from "./Modal.vue";
 import { useVotingStore } from "../../stores/voting";
+import { useModalStore } from "../../stores/modals";
+import { useSessionIdentityStore } from "../../stores/session-identity";
+import store from "../../store";
 
-export default {
-  components: {
-    Modal,
-  },
-  computed: {
-    ...mapState(["session", "modals"]),
-    voting() {
-      return useVotingStore();
-    },
-  },
-  methods: {
-    setVoteSelected(index) {
-      if (index >= 0) {
-        this.$store.commit("session/setVoteSelected", {
-          index,
-          value: !this.voting.voteSelected[index],
-        });
-      } else {
-        const selectedAll = this.voting.voteSelected.every(
-          (selected) => selected === true,
-        );
-        for (let i = 0; i < this.voting.voteSelected.length; i++) {
-          this.$store.commit("session/setVoteSelected", {
-            index: i,
-            value: !selectedAll,
-          });
-        }
-      }
-    },
-    clearVoteHistory() {
-      const someSelected = !this.voting.voteSelected.every(
-        (selected) => selected === false,
-      );
-      if (someSelected) {
-        const selected = [];
-        for (let i = 0; i < this.voting.voteSelected.length; i++) {
-          if (this.voting.voteSelected[i]) selected.push(i);
-        }
-        this.$store.commit("session/clearVoteHistory", selected);
-      } else {
-        this.$store.commit("session/clearVoteHistory", []);
-      }
-    },
-    setRecordVoteHistory() {
-      this.$store.commit(
-        "session/setVoteHistoryAllowed",
-        !this.voting.isVoteHistoryAllowed,
-      );
-    },
-    ...mapMutations(["toggleModal"]),
-  },
-};
+const modals = useModalStore();
+const session = useSessionIdentityStore();
+const voting = useVotingStore();
+
+function setVoteSelected(index: number) {
+  if (index >= 0) {
+    store.commit("session/setVoteSelected", {
+      index,
+      value: !voting.voteSelected[index],
+    });
+    return;
+  }
+  const selectedAll = voting.voteSelected.every(
+    (selected) => selected === true,
+  );
+  for (let voteIndex = 0; voteIndex < voting.voteSelected.length; voteIndex++) {
+    store.commit("session/setVoteSelected", {
+      index: voteIndex,
+      value: !selectedAll,
+    });
+  }
+}
+
+function clearVoteHistory() {
+  const selected = voting.voteSelected
+    .map((isSelected, index) => (isSelected ? index : -1))
+    .filter((index) => index >= 0);
+  store.commit("session/clearVoteHistory", selected);
+}
+
+function setRecordVoteHistory() {
+  store.commit("session/setVoteHistoryAllowed", !voting.isVoteHistoryAllowed);
+}
 </script>
 
 <style lang="scss" scoped>
