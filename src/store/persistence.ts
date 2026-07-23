@@ -400,9 +400,7 @@ export default (store: LegacyPersistenceStore) => {
         break;
       case "session/addVotes": {
         if (payload.save) {
-          const votes = localStorage.getItem("votes")
-            ? JSON.parse(localStorage.getItem("votes"))
-            : [];
+          const votes = readStoredArray(localStorage, "votes");
           payload.save = false;
           votes.push(payload);
           localStorage.setItem("votes", JSON.stringify(votes));
@@ -411,9 +409,7 @@ export default (store: LegacyPersistenceStore) => {
       }
       case "session/addVoteSelected": {
         if (payload.save) {
-          const votesSelected = localStorage.getItem("votesSelected")
-            ? JSON.parse(localStorage.getItem("votesSelected"))
-            : [];
+          const votesSelected = readStoredArray(localStorage, "votesSelected");
           payload.save = false;
           delete payload.players; // players added for conditioning in session
           votesSelected.push(payload);
@@ -428,10 +424,8 @@ export default (store: LegacyPersistenceStore) => {
           localStorage.removeItem("votes");
           localStorage.removeItem("votesSelected");
         } else {
-          const votes = JSON.parse(localStorage.getItem("votes"));
-          const votesSelected = JSON.parse(
-            localStorage.getItem("votesSelected"),
-          );
+          const votes = readStoredArray(localStorage, "votes");
+          const votesSelected = readStoredArray(localStorage, "votesSelected");
           const newVotes = votes.filter(
             (_: any, index: number) => !payload.includes(index),
           );
@@ -466,9 +460,9 @@ export default (store: LegacyPersistenceStore) => {
           if (!!payload.playerIds && !payload.players) return;
           const chatId = payload.chatId;
           const playerIds = payload.players.map((player: any) => player.id);
-          const groupChats =
+          const groupChats: any[] =
             localStorage.groupChats != undefined
-              ? JSON.parse(localStorage.getItem("groupChats"))
+              ? (readStoredArray(localStorage, "groupChats") as any[])
               : [];
           const chats = groupChats.map((group: any) => group.id);
           if (chats.includes(chatId)) {
@@ -491,7 +485,10 @@ export default (store: LegacyPersistenceStore) => {
         break;
       case "session/removeGroupChat":
         if (localStorage.groupChats != undefined) {
-          const groupChats = JSON.parse(localStorage.getItem("groupChats"));
+          const groupChats = readStoredArray(
+            localStorage,
+            "groupChats",
+          ) as any[];
           const newGroupChats = groupChats.filter(
             (group: any) => group.id != payload.chatId,
           );
@@ -501,7 +498,10 @@ export default (store: LegacyPersistenceStore) => {
       case "session/removeGroupChatMember":
         if (!!payload.playerIds && !payload.players) return;
         if (localStorage.groupChats != undefined) {
-          const groupChats = JSON.parse(localStorage.getItem("groupChats"));
+          const groupChats = readStoredArray(
+            localStorage,
+            "groupChats",
+          ) as any[];
           const chatId = payload.chatId;
           const playerId = payload.player.id;
           const index = groupChats.findIndex(
@@ -517,7 +517,10 @@ export default (store: LegacyPersistenceStore) => {
         break;
       case "session/toggleGroupKeep":
         if (localStorage.groupChats != undefined) {
-          const groupChats = JSON.parse(localStorage.getItem("groupChats"));
+          const groupChats = readStoredArray(
+            localStorage,
+            "groupChats",
+          ) as any[];
           const index = groupChats.findIndex(
             (group: any) => group.id === payload,
           );
@@ -550,8 +553,8 @@ export default (store: LegacyPersistenceStore) => {
           const property = payload.property;
           const value = payload.value;
           const stored = localStorage.getItem("isRole") ? true : false;
-          const isRole = stored
-            ? JSON.parse(localStorage.getItem("isRole"))
+          const isRole: Record<string, any> = stored
+            ? readStoredRecord(localStorage, "isRole")
             : {};
           if (!stored && !!value) {
             // delete when value set to initial, need to pay caution with e.g. []

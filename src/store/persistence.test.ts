@@ -4,12 +4,18 @@ import { mutationBus } from "./mutation-bus";
 
 const createStorage = (initial: Record<string, string> = {}) => {
   const entries = new Map(Object.entries(initial));
-
-  return {
+  const storage: Record<string, any> = {
     getItem: (key: string) => entries.get(key) ?? null,
     removeItem: (key: string) => entries.delete(key),
     setItem: (key: string, value: unknown) => entries.set(key, String(value)),
   };
+  for (const key of Object.keys(initial)) {
+    Object.defineProperty(storage, key, {
+      get: () => entries.get(key),
+      set: (value) => entries.set(key, String(value)),
+    });
+  }
+  return storage;
 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -39,6 +45,30 @@ describe("persistence compatibility plugin", () => {
 
     expect(localStorage.getItem("session")).toBe(
       JSON.stringify([false, "nextroom"]),
+    );
+  });
+
+  it("does not let malformed persisted group chats block a new group", () => {
+    const localStorage = createStorage({ groupChats: "{" });
+    vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
+    const unsubscribe = persistence({ commit: vi.fn(), state: {} });
+
+    expect(() =>
+      mutationBus.emit(
+        {
+          type: "session/addGroupChat",
+          payload: {
+            chatId: "group-a",
+            players: [{ id: "player-a" }],
+          },
+        },
+        {},
+      ),
+    ).not.toThrow();
+
+    unsubscribe?.();
+    expect(localStorage.getItem("groupChats")).toBe(
+      JSON.stringify([{ id: "group-a", playerIds: ["player-a"], keep: false }]),
     );
   });
 });
