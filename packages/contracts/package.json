@@ -7,6 +7,11 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./legacy-envelope": {
+      "types": "./dist/legacy-envelope.d.ts",
+      "require": "./dist/legacy-envelope.js",
+      "default": "./dist/legacy-envelope.js"
     }
   },
   "files": ["dist"],

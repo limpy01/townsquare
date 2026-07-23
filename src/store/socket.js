@@ -1,4 +1,5 @@
 import { wsBase } from "../config";
+import { decodeLegacyEnvelope } from "@townsquare/contracts/legacy-envelope";
 import { pinia } from "../pinia";
 import { useLobbyStore } from "../stores/lobby";
 
@@ -346,7 +347,7 @@ class LiveSession {
   _handleMessage({ data }) {
     let command, params, feedback;
     try {
-      [command, params, feedback] = JSON.parse(data);
+      ({ command, params, feedback } = decodeLegacyEnvelope(JSON.parse(data)));
     } catch (err) {
       console.log("unsupported socket message", data);
     }
@@ -2619,7 +2620,7 @@ class LiveLobby {
   _handleMessage({ data }) {
     let command, params;
     try {
-      [command, params] = JSON.parse(data);
+      ({ command, params } = decodeLegacyEnvelope(JSON.parse(data)));
     } catch (err) {
       console.log("unsupported socket message", data);
     }

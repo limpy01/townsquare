@@ -1,12 +1,6 @@
 import { z } from "zod";
 
-export const legacyFeedbackSchema = z.union([
-  z.string(),
-  z.number(),
-  z.literal(false),
-]);
-
-export type LegacyFeedback = z.infer<typeof legacyFeedbackSchema>;
+export * from "./legacy-envelope.js";
 
 export const playerIdSchema = z
   .string()
@@ -25,17 +19,6 @@ export type AvatarUpload = z.infer<typeof avatarUploadSchema>;
 
 export function parseAvatarUpload(input: unknown): AvatarUpload {
   return avatarUploadSchema.parse(input);
-}
-
-export type LegacyEnvelope =
-  | readonly [command: string]
-  | readonly [command: string, params: unknown]
-  | readonly [command: string, params: unknown, feedback: LegacyFeedback];
-
-export interface DecodedLegacyEnvelope {
-  command: string;
-  params?: unknown;
-  feedback?: LegacyFeedback;
 }
 
 export const scriptTeamSchema = z.enum([
@@ -105,46 +88,4 @@ export function parseCustomScript(input: unknown): ScriptRole[] {
       rawRole.team === "traveller" ? "traveler" : rawRole.team;
     return { ...rawRole, id, team };
   });
-}
-
-const legacyEnvelopeSchema = z
-  .array(z.unknown())
-  .min(1)
-  .max(3)
-  .superRefine((value, context) => {
-    if (typeof value[0] !== "string") {
-      context.addIssue({ code: "custom", message: "command must be a string" });
-    }
-    if (
-      value.length === 3 &&
-      !legacyFeedbackSchema.safeParse(value[2]).success
-    ) {
-      context.addIssue({
-        code: "custom",
-        message: "feedback must be string, number, or false",
-      });
-    }
-  });
-
-export function decodeLegacyEnvelope(input: unknown): DecodedLegacyEnvelope {
-  const envelope = legacyEnvelopeSchema.parse(input);
-  const command = envelope[0];
-
-  if (typeof command !== "string") {
-    throw new Error("Invalid legacy envelope command");
-  }
-  if (envelope.length === 1) return { command };
-  if (envelope.length === 2) return { command, params: envelope[1] };
-
-  const feedback = legacyFeedbackSchema.parse(envelope[2]);
-  return { command, params: envelope[1], feedback };
-}
-
-export function encodeLegacyEnvelope({
-  command,
-  ...rest
-}: DecodedLegacyEnvelope): LegacyEnvelope {
-  if (!("params" in rest) && !("feedback" in rest)) return [command];
-  if (!("feedback" in rest)) return [command, rest.params];
-  return [command, rest.params, rest.feedback];
 }
