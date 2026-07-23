@@ -89,112 +89,98 @@
   </Modal>
 </template>
 
-<script>
-import { mapMutations, mapState } from "vuex";
-import Modal from "./Modal";
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import Modal from "./Modal.vue";
 import { useChatStore } from "../../stores/chat";
+import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
+import store from "../../store";
 
-export default {
-  components: { Modal },
-  computed: {
-    chat() {
-      return useChatStore();
-    },
-    selectablePlayers() {
-      return this.players.filter((player) => !!player.id && !player.chatGroup);
-    },
-    ...mapState(["modals", "grimoire", "session"]),
-    ...mapState("players", ["players"]),
-  },
-  data() {
-    return {
-      adding: false,
-      addingGroup: null,
-      selectedPlayersStatus: [],
-      warningMessage: "",
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-    };
-  },
-  mounted() {
-    window.addEventListener("resize", this.handleResize);
-  },
-  beforeUnmount() {
-    window.removeEventListener("resize", this.handleResize);
-  },
-  methods: {
-    requestGroupChat(chatId = null) {
-      this.adding = true;
-      this.addingGroup = chatId;
-    },
-    cancelGroupChat() {
-      this.adding = false;
-      this.addingGroup = null;
-      this.selectedPlayersStatus = [];
-      this.warningMessage = "";
-    },
-    addGroupChat() {
-      let chatId = this.addingGroup;
-      const newGroupMembers = [];
-      this.selectablePlayers.forEach((player, index) => {
-        if (this.selectedPlayersStatus[index]) newGroupMembers.push(player);
-      });
-      // 创建新群聊时必须有至少两名玩家
-      if (!chatId && newGroupMembers.length < 2) {
-        this.warningMessage = "请选择至少两名玩家！";
-        return;
-      }
-      if (!chatId) {
-        chatId = Math.random().toString(36).substr(2);
-        while (this.chat.groups.some((group) => group.id === chatId)) {
-          chatId = Math.random().toString(36).substr(2);
-        }
-      }
+const chat = useChatStore();
+const modals = useModalStore();
+const playerState = usePlayersStore();
+const players = computed(() => playerState.players);
+const selectablePlayers = computed(() =>
+  players.value.filter((player) => !!player.id && !player.chatGroup),
+);
+const adding = ref(false);
+const addingGroup = ref<string | null>(null);
+const selectedPlayersStatus = ref<boolean[]>([]);
+const warningMessage = ref("");
+const windowWidth = ref(window.innerWidth);
 
-      this.$store.commit("session/addGroupChat", {
-        chatId,
-        players: newGroupMembers,
-      });
+function requestGroupChat(chatId: string | null = null) {
+  adding.value = true;
+  addingGroup.value = chatId;
+}
 
-      this.cancelGroupChat();
-    },
-    removeGroupChat(chatId) {
-      const index = this.chat.groups.findIndex((group) => group.id === chatId);
-      if (index === -1) return;
+function cancelGroupChat() {
+  adding.value = false;
+  addingGroup.value = null;
+  selectedPlayersStatus.value = [];
+  warningMessage.value = "";
+}
 
-      const group = this.chat.groups[index];
-      const playerIds = group.players.map((player) => player.id);
-      this.$store.commit("session/removeGroupChat", { chatId, playerIds });
-    },
-    removeGroupChatMember(chatId, player) {
-      const index = this.chat.groups.findIndex((group) => group.id === chatId);
-      if (index === -1) return;
+function addGroupChat() {
+  let chatId = addingGroup.value;
+  const newGroupMembers = selectablePlayers.value.filter(
+    (_player, index) => selectedPlayersStatus.value[index],
+  );
+  if (!chatId && newGroupMembers.length < 2) {
+    warningMessage.value = "请选择至少两名玩家！";
+    return;
+  }
+  if (!chatId) {
+    chatId = Math.random().toString(36).substr(2);
+    while (chat.groups.some((group) => group.id === chatId)) {
+      chatId = Math.random().toString(36).substr(2);
+    }
+  }
+  store.commit("session/addGroupChat", { chatId, players: newGroupMembers });
+  cancelGroupChat();
+}
 
-      const group = this.chat.groups[index];
-      if (
-        group.players.length <= 1 ||
-        (group.players.length == 2 && !group.keep)
-      ) {
-        const playerIds = group.players.map((player) => player.id);
-        this.$store.commit("session/removeGroupChat", { chatId, playerIds });
-      } else {
-        this.$store.commit("session/removeGroupChatMember", { chatId, player });
-      }
-    },
-    toggleGroupKeep(chatId) {
-      this.$store.commit("session/toggleGroupKeep", chatId);
-    },
-    close() {
-      this.cancelGroupChat();
-      this.$store.commit("toggleModal", "groupChat");
-    },
-    handleResize() {
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
-    },
-    ...mapMutations(["toggleModal"]),
-  },
-};
+function removeGroupChat(chatId: string) {
+  const group = chat.groups.find((item) => item.id === chatId);
+  if (!group) return;
+  store.commit("session/removeGroupChat", {
+    chatId,
+    playerIds: group.players.map((player) => player.id),
+  });
+}
+
+function removeGroupChatMember(chatId: string, player: any) {
+  const group = chat.groups.find((item) => item.id === chatId);
+  if (!group) return;
+  if (
+    group.players.length <= 1 ||
+    (group.players.length === 2 && !group.keep)
+  ) {
+    store.commit("session/removeGroupChat", {
+      chatId,
+      playerIds: group.players.map((groupPlayer) => groupPlayer.id),
+    });
+    return;
+  }
+  store.commit("session/removeGroupChatMember", { chatId, player });
+}
+
+function toggleGroupKeep(chatId: string) {
+  store.commit("session/toggleGroupKeep", chatId);
+}
+
+function close() {
+  cancelGroupChat();
+  modals.toggle("groupChat");
+}
+
+function handleResize() {
+  windowWidth.value = window.innerWidth;
+}
+
+onMounted(() => window.addEventListener("resize", handleResize));
+onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
 </script>
 
 <style scoped lang="scss">
