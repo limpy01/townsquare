@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-24（Pinia 运行时与 Vuex 移除批次完成）
+最后更新：2026-07-24（输入契约、Sass 模块化与 TypeScript 源码门禁批次完成）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -24,8 +24,8 @@
 | 4. 前端 TypeScript 基础层 | 进行中 | transport、持久化、协议和浏览器适配层严格类型化 |
 | 5. Vuex 至 Pinia          | 已完成 | 所有业务 store 独立、可测且存档兼容             |
 | 6. 组件 Composition API   | 进行中 | 所有 SFC 为 Vue TS，compat warning 为零         |
-| 7. 样式与资源治理         | 待开始 | 全局样式归属明确，视觉与性能预算受控            |
-| 8. 清理、部署与收尾       | 待开始 | `npm run check` 全绿，部署与回滚演练完成        |
+| 7. 样式与资源治理         | 进行中 | 全局样式归属明确，视觉与性能预算受控            |
+| 8. 清理、部署与收尾       | 进行中 | `npm run check` 全绿，部署与回滚演练完成        |
 
 ## 当前任务
 
@@ -42,19 +42,19 @@
 | MIG-009 | 已完成 | Vue 3、Vite 运行时启动                     | typecheck、核心 E2E、视觉回归                                                 | Vite 环境变量和静态资源保持兼容 |
 | MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除               | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                          | 保持单窗口模态框与输入流程语义  |
 
-## 已记录基线
+## 迁移历史与当前质量基线
 
 - Node `v25.3.0`、npm `11.9.0`；此 Node 主版本已结束支持，迁移基线改用 Node `24.18.0` LTS。
-- `npm run test:server` 通过；当前仅有一个大粒度 Node 集成测试。
-- `npm run build` 通过；入口产物约为 JS 1.99 MiB、CSS 250 KiB，存在资源体积警告。
+- `npm run test:server` 通过；当前包含 8 个 HTTP、room、lobby、queue 和版本信息集成测试。
+- `npm run build` 通过；入口产物约为 JS 1.78 MiB、CSS 250 KiB，仍存在资源体积警告。
 - ESLint：0 error、1,961 warning（34 个有告警文件）。在完全格式化前，CI 以此为不可增加的上限。
-- 现有前端为 Vue 2 + Vuex + Vue CLI；服务端为 CommonJS Express 4 + `ws` 7。
+- 当前前端为 Vue 3 + Vite + Pinia；服务端为 TypeScript、Express 5 与 `ws`。历史 Vuex/Vue CLI 记录仅用于说明迁移路径。
 - Playwright `1.61.1`：首页与创建房间流程可在 Chromium 中验证；`test:visual:update` 是唯一可写截图基线的命令，`test:visual` 仅比较。视觉截图暂在本地固定环境运行，待 Linux 字体镜像固定后加入 CI。
 - MIG-009 已将开发、构建与 E2E 启动链切换到 Vue 3、Vite 和 Vuex 4；`VITE_API_BASE`/`VITE_WS_BASE` 保持原有后端连接行为，Vue 3 移除的 filter、`$set` 与销毁钩子均已替换。未覆盖视觉基线；经定位，右上角折叠菜单在 Vue 3 下的变换栅格化最多相差 678 像素（小于目标视口的 0.1%），视觉测试以 800 像素的紧阈值继续防回归。
 - `MIG-LAW-001` 已补齐：服务端常规启动和 `--version` 均输出版权与 GPL 许可证告知；帮助菜单新增“法律与署名”入口，Playwright 覆盖其弹窗、版权和上游来源文本。
 - 服务端入口已移除 `@ts-nocheck`：为连接、房间、待投递消息、原始 WebSocket 数据、TLS 和监听地址建立了 TypeScript 类型，并继续使用 v1 旧数组 envelope decoder。HTTP/avatar 与完整的 lobby、room、离线消息队列 WebSocket 生命周期已分别拆入独立模块；入口现在只负责配置、HTTP 组装、TLS 与 upgrade 绑定。
-- `npm run check` 已成为本地整体验收门：格式与 lint 基线、TypeScript、15 个 contracts/domain 单元测试、8 个 HTTP/WS/CLI 集成测试、3 个浏览器流程和生产构建均会执行；CI 同步运行非浏览器质量门与浏览器流程，视觉截图仍固定在本地环境。
-- 前端类型化从独立、低风险的 lobby Vuex 模块开始：该模块已迁移为严格 TypeScript；其余 Vuex 模块和 transport 仍在后续 Pinia 批次中处理，`allowJs` 尚未移除。
+- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、75 个单元测试、8 个 HTTP/WS/CLI 集成测试、3 个浏览器流程和生产构建均会执行；CI 同步运行非浏览器质量门与浏览器流程，视觉截图仍固定在本地环境。
+- 历史批次从独立、低风险的 lobby Vuex 模块开始；其余状态域与 transport 随后已迁至 Pinia/TypeScript，`allowJs` 和 Vuex 均已移除。
 - `Gradients.vue` 与基础 `Modal.vue` 已迁移至 `<script setup lang="ts">`；后续组件会按无状态、单一状态依赖、复杂交互的风险顺序迁移。
 - `lobby` 已成为第一个完全由 Pinia 持有的状态域：Vuex module 已删除，大厅 WebSocket、页面可见性和 UI 读取均直接使用 Pinia，并有单元测试锁定状态和房间生命周期。
 - `Menu.vue` 和 `InputModal.vue` 的大厅房间读取已改为直接消费 Pinia；它们其余状态仍暂由 Vuex 提供，后续会以同样方式分域替换。
@@ -92,6 +92,10 @@
 - 已完成全部模态框与头像裁剪组件的 Composition API 迁移：输入、剧本、游戏状态、角色/角色分发、参考表、夜间顺序、提示标记、投票记录、群聊、抽取与头像裁剪均直接读取 Pinia；会影响存档或 v1 WebSocket 的写入继续通过兼容 mutation 出站层。剩余 Options API 组件为 Vote、Menu、Player 与 TownSquare。
 - Vuex facade、模块、类型声明与 npm 依赖已删除；应用改由 Pinia runtime 启动持久化、lobby 与 session WebSocket effect。旧 mutation 名称只在 Pinia 命令边界保留，以维持本地存档和 WebSocket v1 兼容。
 - 自定义剧本对象在 scenario store 进入状态前经共享 Zod schema 校验；损坏的 localStorage 集合不会阻断启动或后续群聊/投票持久化。浏览器侧契约子入口通过 Vite source alias 加载，避免 CommonJS workspace 导出在开发服务器中失效。
+- `Menu.vue` 与 `TownSquare.vue` 已移除 `$store` 注入，改由显式 Pinia 命令入口执行兼容命令；Vuex 依赖、facade 与安装已删除。临时 Options 适配器及其三个 `@ts-nocheck` 仍是后续拆分目标。
+- 组件 Sass 已迁移到模块语法，旧的颜色函数已替换为 `sass:color`，构建不再产生 Sass 弃用告警；2 张视觉基线保持通过。
+- CI 的 `check:runtime-sources` 会拒绝 `src`、`server/src` 与共享包运行时源码中新增 `.js` 文件；测试和 Node 构建脚本不在该门禁范围内。
+- 会话 WebSocket 与游戏状态导入均已在共享 contracts 边界校验：畸形会话消息会中止分发，游戏状态导入会拒绝错误的关键容器类型并兼容缺省历史字段。
 
 ## 本批次约束
 
@@ -99,4 +103,4 @@
 - 禁止：改动游戏规则、UI、网络消息格式、存档格式、角色资源或 Vue 业务组件。
 - 停止条件：任一基线命令失败，或发现改动影响页面/协议行为。
 
-下一批：扩展游戏状态与 WebSocket fixture，继续收紧 contracts/domain adapter，并整理样式与 CI 门禁。
+下一批：继续拆分临时 Options/命令适配层，补齐存档与 WebSocket fixture，并收紧 contracts/domain adapter。
