@@ -270,6 +270,12 @@ const selectedPlayer = ref(0);
 const swap = ref(-1);
 const move = ref(-1);
 const nominate = ref(-1);
+const isChatMin = ref(false);
+const minimising = ref(false);
+const chattingPlayer = ref("");
+const chattingGroup = ref("");
+const isShowGroup = ref(false);
+const message = ref("");
 const context: any = reactive({ commands: gameCommands, $nextTick: nextTick });
 Object.defineProperties(context, {
   grimoire: { get: () => grimoire },
@@ -304,12 +310,6 @@ const options: any = {
       bluffSize: 3,
       isBluffsOpen: true,
       isFabledOpen: true,
-      isChatMin: false,
-      minimising: false,
-      chattingPlayer: "",
-      chattingGroup: "",
-      isShowGroup: false,
-      message: "",
     };
   },
   methods: {
@@ -321,173 +321,6 @@ const options: any = {
       } else {
         this.commands.commit("players/setFabled", { index });
       }
-    },
-    openChat(playerIndex, maximise = true) {
-      if (maximise) this.maximiseChat();
-
-      // display player name or ST in the chat title
-      if (this.session.isSpectator) {
-        const groupChats = this.chat.groups;
-        const name = groupChats.length === 0 ? this.fabled[0].name : "群聊"; //if fabled is messed up this may cause issues
-        this.$refs.chatWith.innerText = name;
-        if (maximise) this.chat.clearStorytellerUnread();
-      } else {
-        this.chattingPlayer = this.players[playerIndex].id;
-        this.chattingGroup = this.players[playerIndex].chatGroup;
-        const name =
-          this.chattingGroup === ""
-            ? this.players[playerIndex].name
-            : this.chat.groups.filter(
-                (group) => group.id === this.chattingGroup,
-              )[0].name;
-        this.$refs.chatWith.innerText = name;
-        if (maximise)
-          this.commands.commit("players/setPlayerMessage", {
-            playerId: this.chattingPlayer,
-            num: 0,
-          });
-      }
-
-      this.$nextTick(() => {
-        this.scrollToBottom();
-      });
-    },
-    toggleChat() {
-      if (this.isChatMin) {
-        this.maximiseChat();
-      } else {
-        this.minimiseChat();
-      }
-    },
-    maximiseChat() {
-      if (this.minimising) {
-        this.minimising = false;
-        return;
-      }
-      if (this.interaction.isChatOpen && !this.isChatMin) return;
-      this.interaction.setChatOpen(true);
-      this.isChatMin = false;
-
-      this.$nextTick(() => {
-        this.$refs.message.focus();
-      });
-    },
-    minimiseChat() {
-      this.isChatMin = true;
-      this.minimising = true;
-    },
-    sendChat() {
-      if (this.message === "") return;
-      if (this.session.isSpectator && this.session.claimedSeat < 0) return;
-      if (!this.session.isSpectator) {
-        let seated = false;
-        this.players.forEach((player) => {
-          if (player.id === this.chattingPlayer) seated = true;
-        });
-        if (!seated) return;
-      }
-      const sender = this.profile.playerName;
-      const sendingPlayerId = this.session.playerId;
-      const message = sender.concat(": ", this.message);
-      if (this.chattingGroup === "") {
-        const receivingPlayerId = this.session.isSpectator
-          ? "host"
-          : this.chattingPlayer;
-        this.commands.commit("session/updateChatSent", {
-          message,
-          sendingPlayerId,
-          receivingPlayerId,
-        });
-      } else {
-        const group = this.chat.groups.filter(
-          (group) => group.id === this.chattingGroup,
-        )[0];
-        const playerIds = group.players.map((player) => player.id);
-        playerIds.forEach((id) => {
-          this.commands.commit("session/updateChatSent", {
-            message,
-            sendingPlayerId,
-            receivingPlayerId: id,
-          });
-        });
-      }
-
-      if (!this.session.isSpectator) {
-        const wraithMessage = `[亡魂][（说书人）${message}]`;
-        const players = this.players.filter(
-          (player) =>
-            player.isWraith &&
-            player.isUsingWraith &&
-            player.isAllowRole &&
-            !!player.id,
-        );
-        players.forEach((player) => {
-          if (
-            !(
-              player.id === this.chattingPlayer ||
-              player.chatGroup === this.chattingGroup
-            )
-          )
-            this.commands.commit("session/updateChatSent", {
-              message: wraithMessage,
-              sendingPlayerId,
-              receivingPlayerId: player.id,
-            });
-        });
-        // this.commands.commit("session/setIsRole", {
-        //   role: 'wraith',
-        //   property: 'st',
-        //   value: this.roleActivity.wraith.player + 1
-        // });
-        // 每10次互动会让暴露概率增加1%，最高10%
-        // const prob = Math.min(0.05 + Math.floor(Math.min(this.roleActivity.wraith.st, this.roleActivity.wraith.player) / 10) * 0.01, this.roleActivity.wraith.probMax);
-        // this.commands.commit("session/setIsRole", {
-        //   role: 'wraith',
-        //   property: 'prob',
-        //   value: prob
-        // });
-      }
-
-      this.message = "";
-
-      this.$nextTick(() => {
-        this.scrollToBottom();
-      });
-    },
-    scrollToBottom() {
-      this.$nextTick(() => {
-        this.$refs.chatContent.scrollTop = this.$refs.chatContent.scrollHeight;
-      });
-      this.checkToBottom();
-    },
-    checkToBottom() {
-      if (this.$refs.chatContent.scrollTop >= -20) {
-        // 划至最底则删除红点
-        if (!this.session.isSpectator) {
-          this.commands.commit("players/setPlayerMessage", {
-            playerId: this.chattingPlayer,
-            num: 0,
-          });
-        } else {
-          this.chat.clearStorytellerUnread();
-        }
-      }
-    },
-    typing() {
-      this.interaction.setTyping(true);
-      if (this.$refs.chatContent.scrollTop >= -20) {
-        if (!this.session.isSpectator) {
-          this.commands.commit("players/setPlayerMessage", {
-            playerId: this.chattingPlayer,
-            num: 0,
-          });
-        } else {
-          this.chat.clearStorytellerUnread();
-        }
-      }
-    },
-    notTyping() {
-      this.interaction.setTyping(false);
     },
   },
 };
@@ -509,12 +342,6 @@ const nightOrder = computed(() =>
 const bluffSize = toRef(context, "bluffSize");
 const isBluffsOpen = toRef(context, "isBluffsOpen");
 const isFabledOpen = toRef(context, "isFabledOpen");
-const isChatMin = toRef(context, "isChatMin");
-const minimising = toRef(context, "minimising");
-const chattingPlayer = toRef(context, "chattingPlayer");
-const chattingGroup = toRef(context, "chattingGroup");
-const isShowGroup = toRef(context, "isShowGroup");
-const message = toRef(context, "message");
 const orientation = computed(() => {
   const ratio = windowWidth.value / windowHeight.value;
   return windowWidth.value > windowHeight.value
@@ -717,22 +544,118 @@ const setStoryTeller = (playerIndex: number) => {
   for (const [property, value] of updates)
     commitGameCommand("players/update", { player, property, value });
 };
+const clearChatUnread = () => {
+  if (session.isSpectator) chat.clearStorytellerUnread();
+  else
+    commitGameCommand("players/setPlayerMessage", {
+      playerId: chattingPlayer.value,
+      num: 0,
+    });
+};
+const checkToBottom = () => {
+  if (chatContent.value && chatContent.value.scrollTop >= -20)
+    clearChatUnread();
+};
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (chatContent.value)
+      chatContent.value.scrollTop = chatContent.value.scrollHeight;
+  });
+  checkToBottom();
+};
+const maximiseChat = () => {
+  if (minimising.value) {
+    minimising.value = false;
+    return;
+  }
+  if (interaction.isChatOpen && !isChatMin.value) return;
+  interaction.setChatOpen(true);
+  isChatMin.value = false;
+  nextTick(() => messageInput.value?.focus());
+};
+const minimiseChat = () => {
+  isChatMin.value = true;
+  minimising.value = true;
+};
+const toggleChat = () => {
+  if (isChatMin.value) maximiseChat();
+  else minimiseChat();
+};
+const openChat = (playerIndex: number, maximise = true) => {
+  if (maximise) maximiseChat();
+  if (session.isSpectator) {
+    const name =
+      chat.groups.length === 0 ? playersState.fabled[0].name : "群聊";
+    if (chatWith.value) chatWith.value.innerText = name;
+    if (maximise) chat.clearStorytellerUnread();
+  } else {
+    const player = playersState.players[playerIndex];
+    chattingPlayer.value = player.id;
+    chattingGroup.value = player.chatGroup;
+    const group = chat.groups.find((item) => item.id === chattingGroup.value);
+    if (chatWith.value)
+      chatWith.value.innerText =
+        chattingGroup.value === "" ? player.name : group?.name ?? "";
+    if (maximise) clearChatUnread();
+  }
+  nextTick(scrollToBottom);
+};
+const sendChat = () => {
+  if (message.value === "") return;
+  if (session.isSpectator && session.claimedSeat < 0) return;
+  if (
+    !session.isSpectator &&
+    !playersState.players.some((player) => player.id === chattingPlayer.value)
+  )
+    return;
+
+  const sentMessage = profile.playerName.concat(": ", message.value);
+  const sendingPlayerId = session.playerId;
+  const recipients =
+    chattingGroup.value === ""
+      ? [session.isSpectator ? "host" : chattingPlayer.value]
+      : (
+          chat.groups.find((group) => group.id === chattingGroup.value)
+            ?.players ?? []
+        ).map((player) => player.id);
+  for (const receivingPlayerId of recipients)
+    commitGameCommand("session/updateChatSent", {
+      message: sentMessage,
+      sendingPlayerId,
+      receivingPlayerId,
+    });
+
+  if (!session.isSpectator) {
+    const wraithMessage = `[亡魂][（说书人）${sentMessage}]`;
+    for (const player of playersState.players)
+      if (
+        player.isWraith &&
+        player.isUsingWraith &&
+        player.isAllowRole &&
+        player.id &&
+        player.id !== chattingPlayer.value &&
+        player.chatGroup !== chattingGroup.value
+      )
+        commitGameCommand("session/updateChatSent", {
+          message: wraithMessage,
+          sendingPlayerId,
+          receivingPlayerId: player.id,
+        });
+  }
+
+  message.value = "";
+  nextTick(scrollToBottom);
+};
+const typing = () => {
+  interaction.setTyping(true);
+  checkToBottom();
+};
+const notTyping = () => interaction.setTyping(false);
 
 const methodNames = Object.keys(options.methods);
 for (const name of methodNames)
   context[name] = options.methods[name].bind(context);
-const {
-  removeFabled,
-  openChat,
-  toggleChat,
-  maximiseChat,
-  minimiseChat,
-  sendChat,
-  scrollToBottom,
-  checkToBottom,
-  typing,
-  notTyping,
-} = context;
+const { removeFabled } = context;
 type PlayerTrigger =
   | ["openReminderModal"]
   | ["openRoleModal"]
