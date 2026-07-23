@@ -9,6 +9,7 @@ import editionJSON from "../editions.json";
 import rolesJSON from "../roles.json";
 import fabledJSON from "../fabled.json";
 import jinxesJSON from "../hatred.json";
+import { apiBase } from "../config";
 
 Vue.use(Vuex);
 
@@ -361,7 +362,7 @@ export default new Vuex.Store({
     async fetchInit() {
       try {
         // const response = await fetch('http://localhost:3000/api/init');
-        const response = await fetch('https://api.botcgrimoire.top/dynamic/init');
+        const response = await fetch(`${apiBase}/dynamic/init`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

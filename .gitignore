@@ -4,3 +4,5 @@ dist
 *.pem
 /server/certs
 /server/dynamic
+.DS_Store
+/server/data
