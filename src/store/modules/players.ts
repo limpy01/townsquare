@@ -1,11 +1,8 @@
-type LegacyStore = {
-  commit(type: string, payload?: any): void;
-  state: any;
-};
-
-type LegacyGetter = (state: any) => any;
-type LegacyAction = (context: any, payload?: any) => any;
-type LegacyMutation = (this: LegacyStore, state: any, payload?: any) => void;
+import type {
+  LegacyAction,
+  LegacyGetter,
+  LegacyMutation,
+} from "../legacy-vuex";
 
 const NEWPLAYER = {
   name: "",
