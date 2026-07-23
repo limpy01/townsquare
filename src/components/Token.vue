@@ -9,7 +9,7 @@
         backgroundImage: `url(${
           role.image && grimoire.isImageOptIn
             ? role.image
-            : require('../assets/icons/' + (role.imageAlt || role.id.replace(/old1$/, '')) + '.png')
+            : roleIcon
         })`
       }"
     ></span>
@@ -34,7 +34,7 @@
         x="66.6%"
         text-anchor="middle"
         class="label mozilla"
-        :font-size="role.name | nameToFontSize"
+        :font-size="nameToFontSize(role.name)"
       >
         <textPath xlink:href="#curve">
           {{ role.name }}
@@ -50,6 +50,12 @@
 
 <script>
 import { mapState } from "vuex";
+
+const iconImages = import.meta.glob("../assets/icons/*.png", {
+  eager: true,
+  import: "default"
+});
+const tokenImage = new URL("../assets/token.png", import.meta.url).href;
 
 export default {
   name: "Token",
@@ -75,17 +81,21 @@ export default {
       );
     },
     tokenBackground() {
-      return (!!this.id && !!this.image) ? {} : {backgroundImage: `url(${require('../assets/token.png')})`}
+      return (!!this.id && !!this.image) ? {} : {backgroundImage: `url(${tokenImage})`}
+    },
+    roleIcon() {
+      const id = this.role.imageAlt || this.role.id.replace(/old1$/, "");
+      return iconImages[`../assets/icons/${id}.png`];
     },
     ...mapState(["grimoire"])
   },
   data() {
     return {};
   },
-  filters: {
-    nameToFontSize: name => (name && name.length > 10 ? "90%" : "110%")
-  },
   methods: {
+    nameToFontSize(name) {
+      return name && name.length > 10 ? "90%" : "110%";
+    },
     setRole() {
       this.$emit("set-role");
     }

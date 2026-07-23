@@ -78,7 +78,8 @@ export default {
       if (isOpen) {
         if (this.session.inputModal === "input") {
           this.$nextTick(() => {
-            this.$refs["input-1"][0].select();
+            const input = this.$refs["input-1"];
+            (Array.isArray(input) ? input[0] : input)?.select();
           })
         } else if (this.session.inputModal === "confirm") {
           this.$nextTick(() => {
@@ -95,7 +96,7 @@ export default {
   mounted(){
     window.addEventListener("resize", this.handleResize);
   },
-  beforeDestroy(){
+  beforeUnmount(){
     window.removeEventListener("resize", this.handleResize);
   },
   methods: {

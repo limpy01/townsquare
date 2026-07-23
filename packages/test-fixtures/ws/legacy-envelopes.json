@@ -1,0 +1,6 @@
+[
+  ["ping"],
+  ["request", { "checkAllowJoin": ["player-a"] }],
+  ["direct", { "player-a": ["gs", { "players": [] }] }, 101],
+  ["gs", { "players": [] }, false]
+]

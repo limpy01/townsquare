@@ -95,7 +95,7 @@ export default {
     window.addEventListener("resize", this.handleResize);
     this.drawingIndex = this.players.findIndex(player => player.role.team !== 'traveler')
   },
-  beforeDestroy(){
+  beforeUnmount(){
     window.removeEventListener("resize", this.handleResize);
   },
   methods: {

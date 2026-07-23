@@ -135,10 +135,10 @@ export default {
       this.roleSelection = {};
       this.roles.forEach(role => {
         if (!this.roleSelection[role.team]) {
-          this.$set(this.roleSelection, role.team, []);
+          this.roleSelection[role.team] = [];
         }
         this.roleSelection[role.team].push(role);
-        this.$set(role, "selected", 0);
+        role.selected = 0;
       });
       const teamSelected = ["townsfolk", "outsider", "minion", "demon"];
       const teamDeselected = [];
@@ -220,7 +220,7 @@ export default {
     }
     window.addEventListener("resize", this.handleResize);
   },
-  beforeDestroy(){
+  beforeUnmount(){
     window.removeEventListener("resize", this.handleResize);
   },
   watch: {

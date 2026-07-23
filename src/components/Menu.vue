@@ -328,6 +328,9 @@
             <li @click="toggleModal('version')">
               更新日志
             </li>
+            <li @click="toggleModal('legal')">
+              法律与署名
+            </li>
             <li @click="toggleModal('gameState')">
               游戏状态JSON
               <em><font-awesome-icon icon="file-code"/></em>

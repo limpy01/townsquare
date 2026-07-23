@@ -1,6 +1,6 @@
 <template>
   <div class="intro">
-    <img src="static/apple-icon.png" alt="" class="logo" />
+    <img src="/static/apple-icon.png" alt="" class="logo" />
     <div>
       欢迎来到城镇广场。
       请点击右上角处
@@ -58,7 +58,7 @@ export default {
 };
 </script>
 
-<style scoped lang="scss">
+<style lang="scss">
 // Intro
 .intro {
   text-align: center;

@@ -6,7 +6,6 @@
  * @param vote true or false
  */
 
-import Vue from "vue";
 
 const handleVote = (state, [index, vote]) => {
   if (!state.nomination) return;
@@ -226,7 +225,7 @@ const mutations = {
     state.voteSelected.push(selected);
   },
   setVoteSelected(state, {index, value}) {
-    Vue.set(state.voteSelected, index, value);
+    state.voteSelected[index] = value;
   },
   clearVoteHistory(state, voteIndex = null) {
     if (voteIndex == null || voteIndex.length === 0) {
@@ -253,7 +252,7 @@ const mutations = {
   createChatHistory(state, playerId){
     if (playerId === "") return;
     if (chatIndex(state, playerId) >= 0) return; // do nothing if it already exists
-    Vue.set(state.chatHistory, state.chatHistory.length, {id: playerId, chat: []});
+    state.chatHistory[state.chatHistory.length] = {id: playerId, chat: []};
   },
   updateChatSent(state, chatContent){
     if (state.isSpectator && chatContent.sendingPlayerId != state.playerId) return;
@@ -263,7 +262,7 @@ const mutations = {
     if (state.isSpectator && playerId != state.stId) return;
     const playerIndex = chatIndex(state, playerId);
     const oldMessages = state.chatHistory[playerIndex]["chat"];
-    Vue.set(state.chatHistory, playerIndex, {id: playerId, chat: [...oldMessages, message]})
+    state.chatHistory[playerIndex] = {id: playerId, chat: [...oldMessages, message]};
   },
   addMessageQueue(state, {type, playerId, command, params, id}) {
     state.messageQueue.push({type, playerId, command, params, id});
@@ -281,10 +280,10 @@ const mutations = {
   setStMessage(state, num) {
     if (num > 0){
       const newNum = state.newStMessage[0] += num;
-      Vue.set(state.newStMessage, 0, newNum);
+      state.newStMessage[0] = newNum;
     } else{
       const newNum = state.newStMessage[0] = num;
-      Vue.set(state.newStMessage, 0, newNum);
+      state.newStMessage[0] = newNum;
     }
   },
   addGroupChat(state, {chatId, players, playerIds, keep}) {

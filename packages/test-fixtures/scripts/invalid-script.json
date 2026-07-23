@@ -1,0 +1,9 @@
+[
+  {
+    "id": "invalid role!",
+    "name": "缺少能力",
+    "team": "townsfolk"
+  },
+  42,
+  null
+]

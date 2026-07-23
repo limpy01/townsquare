@@ -1,15 +1,15 @@
 <template>
   <transition name="modal-fade">
-    <div class="modal-backdrop" @click="closeCheck">
+    <div v-show="props.visible" class="modal-backdrop" @click="closeCheck">
       <div
         class="modal"
-        :class="{ maximized: isMaximized, [name]: true }"
+        :class="{ maximized: isMaximized, [props.name]: true }"
         role="dialog"
         aria-labelledby="modalTitle"
         aria-describedby="modalDescription"
         @click.stop=""
       >
-        <div class="top-right-buttons" v-if="name != 'input'">
+        <div class="top-right-buttons" v-if="props.name != 'input'">
           <font-awesome-icon
             @click="isMaximized = !isMaximized"
             class="top-right-button"
@@ -29,51 +29,50 @@
   </transition>
 </template>
 
-<script>
-export default {
-  props: {
-    name: {
-      type: String,
-      default: ""
-    },
-    type: {
-      type: String,
-      default: ""
-    }
+<script setup lang="ts">
+import { ref } from "vue";
+
+const props = withDefaults(
+  defineProps<{
+    name?: string;
+    type?: string;
+    visible?: boolean;
+  }>(),
+  {
+    name: "",
+    type: "",
+    visible: true,
   },
-  data: function() {
-    return {
-      isMaximized: false
-    };
-  },
-  methods: {
-    close() {
-      this.$emit("close");
-    },
-    closeCheck() {
-      // 输入时点击背景不关闭
-      if (this.name === "input" && this.type === "input") return;
-      this.close();
-    }
-  }
-};
+);
+
+const emit = defineEmits<{ close: [] }>();
+const isMaximized = ref(false);
+
+function close() {
+  emit("close");
+}
+
+function closeCheck() {
+  // 输入时点击背景不关闭
+  if (props.name === "input" && props.type === "input") return;
+  close();
+}
 </script>
 
 <style lang="scss">
-
 /* width */
 ::-webkit-scrollbar {
   width: 5px;
 }
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: rgb(54, 54, 54); 
+  background: rgb(54, 54, 54);
   border-radius: 10px;
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(97, 97, 97); 
+  background: rgb(97, 97, 97);
 }
 
 .modal-backdrop {
@@ -149,8 +148,6 @@ export default {
     position: initial;
   }
 }
-
-
 
 .maximized {
   background: rgba(0, 0, 0, 0.95);

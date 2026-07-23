@@ -6,3 +6,7 @@ dist
 /server/dynamic
 .DS_Store
 /server/data
+blob-report
+playwright-report
+test-results
+packages/*/dist

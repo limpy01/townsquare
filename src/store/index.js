@@ -1,4 +1,3 @@
-import Vue from "vue";
 import Vuex from "vuex";
 import persistence from "./persistence";
 import socket from "./socket";
@@ -10,8 +9,6 @@ import rolesJSON from "../roles.json";
 import fabledJSON from "../fabled.json";
 import jinxesJSON from "../hatred.json";
 import { apiBase } from "../config";
-
-Vue.use(Vuex);
 
 // helper functions
 const getRolesByEdition = (edition = editionJSON[0]) => {
@@ -138,7 +135,8 @@ export default new Vuex.Store({
       draw: false,
       voteHistory: false,
       input: false,
-      groupChat: false
+      groupChat: false,
+      legal: false
     },
     edition: editionJSONbyId.get("tb"),
     selectedEditions: {

@@ -1,11 +1,12 @@
-import Vue from "vue";
-import App from "./App";
+import { createApp } from "vue";
+import App from "./App.vue";
 import store from "./store";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { fab } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { wraith } from './assets/svg/wraith';
+import { wraith } from "./assets/svg/wraith";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 const faIcons = [
   "AddressCard",
@@ -64,18 +65,21 @@ const faIcons = [
   "VolumeMute",
   "VoteYea",
   "WindowMaximize",
-  "WindowMinimize"
-];
-const fabIcons = ["Github", "Discord"];
-library.add(
-  ...faIcons.map(i => fas["fa" + i]),
-  ...fabIcons.map(i => fab["fa" + i]),
-  wraith
-);
-Vue.component("font-awesome-icon", FontAwesomeIcon);
-Vue.config.productionTip = false;
+  "WindowMinimize",
+] as const;
+const fabIcons = ["Github", "Discord"] as const;
 
-new Vue({
-  render: h => h(App),
-  store
-}).$mount("#app");
+library.add(
+  ...(faIcons
+    .map((icon) => fas[`fa${icon}`])
+    .filter(Boolean) as IconDefinition[]),
+  ...(fabIcons
+    .map((icon) => fab[`fa${icon}`])
+    .filter(Boolean) as IconDefinition[]),
+  wraith as IconDefinition,
+);
+
+createApp(App)
+  .use(store)
+  .component("font-awesome-icon", FontAwesomeIcon)
+  .mount("#app");

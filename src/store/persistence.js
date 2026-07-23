@@ -1,4 +1,4 @@
-module.exports = store => {
+export default (store) => {
   if (window.location.pathname != "/") return;
 
   const updatePagetitle = isPublic =>

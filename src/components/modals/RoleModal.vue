@@ -138,7 +138,7 @@ export default {
   mounted(){
     window.addEventListener("resize", this.handleResize);
   },
-  beforeDestroy(){
+  beforeUnmount(){
     window.removeEventListener("resize", this.handleResize);
   },
   methods: {

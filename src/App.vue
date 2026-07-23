@@ -1,6 +1,6 @@
 <template>
   <div
-    id="app"
+    id="townsquare-app"
     @keyup="keyup"
     @keydown="keydown"
     tabindex="-1"
@@ -24,8 +24,8 @@
     <div class="backdrop"></div>
     <transition name="blur">
       <Intro v-if="!players.length" @trigger="handleTrigger($event)"></Intro>
-      <TownInfo v-if="players.length && !session.nomination"></TownInfo>
-      <Vote v-if="session.nomination"></Vote>
+      <TownInfo v-else-if="!session.nomination"></TownInfo>
+      <Vote v-else></Vote>
     </transition>
     <TownSquare></TownSquare>
     <Menu ref="menu" @trigger="handleTrigger($event)"></Menu>
@@ -41,6 +41,7 @@
     <InputModal ref="input"/>
     <GroupChatModal/>
     <VersionModal/>
+    <LegalModal/>
     <Gradients />
     <!-- <span id="version">v{{ version }}</span> -->
   </div>
@@ -67,6 +68,7 @@ import GameStateModal from "@/components/modals/GameStateModal";
 import InputModal from "@/components/modals/InputModal.vue";
 import GroupChatModal from "./components/modals/GroupChatModal.vue";
 import VersionModal from "./components/modals/VersionModal.vue";
+import LegalModal from "./components/modals/LegalModal.vue";
 
 export default {
   components: {
@@ -87,6 +89,7 @@ export default {
     InputModal,
     GroupChatModal,
     VersionModal,
+    LegalModal,
     Gradients
   },
   computed: {
@@ -155,7 +158,7 @@ export default {
 
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     document.removeEventListener("visibilitychange", this.handleVisibilityChange);
   },
   methods: {
@@ -330,7 +333,7 @@ ul {
   padding: 0;
 }
 
-#app {
+#townsquare-app {
   height: 100%;
   background-position: center center;
   background-size: cover;
@@ -346,6 +349,10 @@ ul {
     transition: none !important;
     animation: none !important;
   }
+}
+
+#app {
+  height: 100%;
 }
 
 #version {
@@ -459,7 +466,7 @@ video#background {
 }
 
 /* Night phase backdrop */
-#app > .backdrop {
+#townsquare-app > .backdrop {
   position: absolute;
   left: 0;
   right: 0;
@@ -497,11 +504,11 @@ video#background {
   }
 }
 
-#app.night > .backdrop {
+#townsquare-app.night > .backdrop {
   opacity: 0.5;
 }
 
-#app:focus {
+#townsquare-app:focus {
   outline: none;
 }
 </style>
