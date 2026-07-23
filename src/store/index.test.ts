@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { pinia } from "../pinia";
 import { useModalStore } from "../stores/modals";
+import { useScenarioStore } from "../stores/scenario";
 
 vi.mock("./persistence", () => ({ default: () => undefined }));
 vi.mock("./socket", () => ({ default: () => undefined }));
@@ -18,5 +19,11 @@ describe("root Vuex compatibility store", () => {
 
   it("projects the Pinia modal state for legacy consumers", () => {
     expect(store.state.modals).toBe(useModalStore(pinia).$state);
+  });
+
+  it("forwards scenario mutations to the Pinia state", () => {
+    store.commit("setStates", ["drunk"]);
+
+    expect(useScenarioStore(pinia).states).toEqual(["drunk"]);
   });
 });

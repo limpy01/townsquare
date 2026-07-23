@@ -6,12 +6,12 @@ import { useModalStore } from "../stores/modals";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useAppMetaStore } from "../stores/app-meta";
+import { useScenarioStore } from "../stores/scenario";
 import players from "./modules/players";
 import session from "./modules/session";
 import editionJSON from "../editions.json";
 import rolesJSON from "../roles.json";
 import fabledJSON from "../fabled.json";
-import jinxesJSON from "../hatred.json";
 import { apiBase } from "../config";
 
 type LegacyRootState = any;
@@ -76,25 +76,6 @@ const editionJSONbyId = new Map(
   editionJSON.map((edition) => [edition.id, edition]),
 );
 const rolesJSONbyId = new Map(rolesJSON.map((role) => [role.id, role]));
-const fabled = new Map(fabledJSON.map((role) => [role.id, role]));
-
-// jinxes
-let jinxes = {};
-try {
-  // Note: can't fetch live list due to lack of CORS headers
-  // fetch("https://bloodontheclocktower.com/script/data/hatred.json")
-  //   .then(res => res.json())
-  //   .then(jinxesJSON => {
-  jinxes = new Map(
-    jinxesJSON.map(({ id, hatred }) => [
-      clean(id),
-      new Map(hatred.map(({ id, reason }) => [clean(id), reason])),
-    ]),
-  );
-  // });
-} catch (e) {
-  console.error("couldn't load jinxes", e);
-}
 
 // base definition for custom roles
 const customRole: Record<string, any> = {
@@ -115,41 +96,47 @@ const customRole: Record<string, any> = {
   isCustom: true,
 };
 
-const rootStoreOptions: any = {
-  modules: {
-    players,
-    session,
-  },
-  state: {
+const scenarioStateKeys = [
+  "edition",
+  "selectedEditions",
+  "roles",
+  "otherTravelers",
+  "fabled",
+  "jinxes",
+  "states",
+  "teamsNames",
+  "firstNight",
+  "otherNight",
+] as const;
+
+const createLegacyRootState = () => {
+  const state: Record<string, unknown> = {
     // Compatibility projection for Options API and WebSocket consumers.
     // Pinia owns this reactive object; remove this alias with Vuex.
     grimoire: useGrimoireStore(pinia).$state,
     // Compatibility projection for Options API components that still use mapState.
     // Pinia owns this reactive object; remove this alias once those consumers move.
     modals: useModalStore(pinia).$state,
-    edition: editionJSONbyId.get("tb"),
-    selectedEditions: {
-      tb: true,
-      bmr: true,
-      snv: true,
-      exp: true,
-      hdcs: true,
-      syyl: true,
-    },
-    roles: getRolesByEdition(),
-    otherTravelers: getTravelersNotInEdition(),
-    fabled,
-    jinxes,
-    states: [],
-    teamsNames: {
-      townsfolk: "镇民",
-      outsider: "外来者",
-      minion: "爪牙",
-      demon: "恶魔",
-    },
-    firstNight: [],
-    otherNight: [],
+  };
+  const scenario = useScenarioStore(pinia);
+  for (const key of scenarioStateKeys) {
+    Object.defineProperty(state, key, {
+      enumerable: true,
+      get: () => scenario[key],
+      set: (value) => {
+        scenario[key] = value as never;
+      },
+    });
+  }
+  return state;
+};
+
+const rootStoreOptions: any = {
+  modules: {
+    players,
+    session,
   },
+  state: createLegacyRootState(),
   getters: {
     /**
      * Return all custom roles, with default values and non-essential data stripped.
