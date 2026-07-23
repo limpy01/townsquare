@@ -22,6 +22,26 @@ type SetFabledPayload = {
   emptyFabled?: boolean;
 };
 
+const createPlayer = (name = "") => ({
+  name,
+  id: "",
+  image: "",
+  role: {},
+  isAllowRole: true,
+  isWraith: false,
+  isUsingWraith: false,
+  reminders: [],
+  stReminders: [],
+  isVoteless: false,
+  isSecretVoteless: false,
+  isDead: false,
+  votes: 1,
+  pronouns: "",
+  newMessages: 0,
+  chatGroup: "",
+  isTalking: false,
+});
+
 export const usePlayersStore = defineStore("players", {
   state: (): PlayersState => ({
     players: [],
@@ -32,6 +52,14 @@ export const usePlayersStore = defineStore("players", {
     image: "",
   }),
   actions: {
+    add(name = "") {
+      const player = createPlayer(name);
+      this.players.push(player);
+      return player;
+    },
+    setPlayers(players: any[] = []) {
+      this.players = players;
+    },
     update({
       player,
       property,

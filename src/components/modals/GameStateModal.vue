@@ -29,7 +29,7 @@
 import { computed, ref } from "vue";
 import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
-import store from "../../store";
+import { emitLegacyMutation } from "../../store/legacy-effects";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
@@ -42,6 +42,35 @@ const scenario = useScenarioStore();
 const session = useSessionIdentityStore();
 const input = ref("");
 const edition = computed(() => scenario.edition ?? ({} as any));
+
+function setCustomRoles(roles: any[]) {
+  scenario.setCustomRoles(roles);
+  emitLegacyMutation("setCustomRoles", roles);
+}
+
+function setEdition(value: any) {
+  const fabled = scenario.setEdition(value);
+  emitLegacyMutation("setEdition", value);
+  if (fabled) emitLegacyMutation("players/setFabled", { fabled });
+}
+
+function updatePlayer(player: any, property: string, value: any) {
+  const payload = { player, property, value };
+  playerState.update(payload);
+  emitLegacyMutation("players/update", payload);
+}
+
+function setBluff(index: number, role: any) {
+  const payload = { index, role };
+  playerState.setBluff(payload);
+  emitLegacyMutation("players/setBluff", payload);
+}
+
+function setFabled(fabled: any[]) {
+  const payload = { fabled };
+  playerState.setFabled(payload);
+  emitLegacyMutation("players/setFabled", payload);
+}
 
 const gamestate = computed(() =>
   JSON.stringify({
@@ -89,10 +118,10 @@ async function loadGrimoire() {
     const data: any = JSON.parse(input.value || gamestate.value);
     const { bluffs, edition, roles, fabled, players } = data;
     if (roles && !session.isSpectator) {
-      store.commit("setCustomRoles", roles);
+      setCustomRoles(roles);
     }
     if (edition && !session.isSpectator) {
-      store.commit("setEdition", edition);
+      setEdition(edition);
       const states = [];
       if (edition.state && edition.state.length > 0) {
         edition.state.forEach((state: any) => {
@@ -109,33 +138,32 @@ async function loadGrimoire() {
         minion: edition.minionsName ? edition.minionsName : "爪牙",
         demon: edition.demonsName ? edition.demonsName : "恶魔",
       };
-      store.commit("setTeamsNames", names);
+      scenario.setTeamsNames(names);
+      emitLegacyMutation("setTeamsNames", names);
     }
     if (bluffs.length) {
       bluffs.forEach((role: any, index: number) => {
-        store.commit("players/setBluff", {
-          index,
-          role: scenario.roles.get(role) || {},
-        });
+        setBluff(index, scenario.roles.get(role) || {});
       });
     }
     if (fabled && !session.isSpectator) {
       const fabledNoSt = fabled.filter((role: any) => role.id != "storyteller");
-      store.commit("players/setFabled", {
-        fabled: fabledNoSt.map(
+      setFabled(
+        fabledNoSt.map(
           (f: any) =>
             (scenario.fabled as Map<any, any>).get(f) ||
             (scenario.fabled as Map<any, any>).get(f.id) ||
             f,
         ),
-      });
+      );
     }
     if (players && players.length > 0) {
       const mappedPlayers = playerState.players;
       for (let index = 0; index < players.length; index++) {
         if (index >= mappedPlayers.length) {
           if (!session.isSpectator) {
-            store.commit("players/add", "");
+            const added = playerState.add("");
+            emitLegacyMutation("players/add", { name: added.name });
           } else {
             break;
           }
@@ -147,16 +175,8 @@ async function loadGrimoire() {
           (role.team != "traveler" && mappedPlayer.role.team != "traveler") ||
           !session.isSpectator
         ) {
-          store.commit("players/update", {
-            player: mappedPlayer,
-            property: "role",
-            value: role,
-          });
-          store.commit("players/update", {
-            player: mappedPlayer,
-            property: "reminders",
-            value: player.reminders,
-          });
+          updatePlayer(mappedPlayer, "role", role);
+          updatePlayer(mappedPlayer, "reminders", player.reminders);
         }
       }
     }
@@ -180,38 +200,34 @@ async function loadState() {
   try {
     const data: any = JSON.parse(input.value || gamestate.value);
     const { bluffs, edition, roles, fabled, players } = data;
-    if (roles) store.commit("setCustomRoles", roles);
-    if (edition) store.commit("setEdition", edition);
+    if (roles) setCustomRoles(roles);
+    if (edition) setEdition(edition);
     if (bluffs.length) {
       bluffs.forEach((role: any, index: number) => {
-        store.commit("players/setBluff", {
-          index,
-          role: scenario.roles.get(role) || {},
-        });
+        setBluff(index, scenario.roles.get(role) || {});
       });
     }
     if (fabled) {
       const fabledNoSt = fabled.filter((role: any) => role.id != "storyteller");
-      store.commit("players/setFabled", {
-        fabled: fabledNoSt.map(
+      setFabled(
+        fabledNoSt.map(
           (f: any) =>
             (scenario.fabled as Map<any, any>).get(f) ||
             (scenario.fabled as Map<any, any>).get(f.id) ||
             f,
         ),
-      });
+      );
     }
     if (players) {
-      store.commit(
-        "players/set",
-        players.map((player: any) => ({
-          ...player,
-          role:
-            scenario.roles.get(player.role) ||
-            rolesJSONbyId.get(player.role) ||
-            {},
-        })),
-      );
+      const mapped = players.map((player: any) => ({
+        ...player,
+        role:
+          scenario.roles.get(player.role) ||
+          rolesJSONbyId.get(player.role) ||
+          {},
+      }));
+      playerState.setPlayers(mapped);
+      emitLegacyMutation("players/set", mapped);
     }
   } catch (error) {
     await showLoadError(error);

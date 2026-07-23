@@ -57,4 +57,12 @@ describe("players store", () => {
       role: { id: "imp" },
     });
   });
+
+  it("adds and replaces player seats", () => {
+    const players = usePlayersStore();
+    players.add("Alice");
+    players.setPlayers([{ name: "Bob", role: {} }]);
+
+    expect(players.players).toEqual([{ name: "Bob", role: {} }]);
+  });
 });
