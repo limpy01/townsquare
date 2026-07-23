@@ -1,7 +1,7 @@
 <template>
   <Modal
     v-if="modals.reminder && availableReminders.length && players[playerIndex]"
-    @close="toggleModal('reminder')"
+    @close="modals.toggle('reminder')"
   >
     <h3>选择一个提醒标记</h3>
     <ul class="reminders">
@@ -18,10 +18,13 @@
             backgroundImage: `url(${
               reminder.image && grimoire.isImageOptIn
                 ? reminder.image
-                : require('../../assets/icons/' +
-                    (reminder.imageAlt || reminder.role.replace(/old1$/, '')) +
-                    '.png')
-            })`
+                : require(
+                    '../../assets/icons/' +
+                      (reminder.imageAlt ||
+                        reminder.role.replace(/old1$/, '')) +
+                      '.png',
+                  )
+            })`,
           }"
         ></span>
         <span class="text">{{ reminder.name }}</span>
@@ -30,111 +33,119 @@
   </Modal>
 </template>
 
-<script>
-import Modal from "./Modal";
-import { mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import { computed } from "vue";
+import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
+import store from "../../store";
+import { useGrimoireStore } from "../../stores/grimoire";
+import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
+import { useScenarioStore } from "../../stores/scenario";
+import { useSessionIdentityStore } from "../../stores/session-identity";
 
 /**
  * Helper function that maps a reminder name with a role-based object that provides necessary visual data.
  * @param role The role for which the reminder should be generated
  * @return {function(*): {image: string|string[]|string|*, role: *, name: *, imageAlt: string|*}}
  */
-const mapReminder = ({ id, image, imageAlt }) => name => ({
-  role: id,
-  image,
-  imageAlt,
-  name
+const mapReminder =
+  ({ id, image, imageAlt }: any) =>
+  (name: string) => ({
+    role: id,
+    image,
+    imageAlt,
+    name,
+  });
+
+const { playerIndex } = defineProps<{ playerIndex: number }>();
+const modals = useModalStore();
+const grimoire = useGrimoireStore();
+const playerState = usePlayersStore();
+const scenario = useScenarioStore();
+const session = useSessionIdentityStore();
+const players = computed(() => playerState.players);
+const availableReminders = computed(() => {
+  let reminders: any[] = [];
+  const { players, bluffs } = playerState;
+  (scenario.roles as Map<string, any>).forEach((role) => {
+    // add reminders from player roles
+    if (players.some((p) => p.role.id === role.id)) {
+      if (role.reminders && role.reminders.length)
+        reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
+    }
+    // add reminders from bluff/other roles
+    else if (bluffs.some((bluff) => bluff.id === role.id)) {
+      if (role.reminders && role.reminders.length)
+        reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
+    }
+    // add global reminders
+    if (role.remindersGlobal && role.remindersGlobal.length) {
+      reminders = [
+        ...reminders,
+        ...role.remindersGlobal.map(mapReminder(role)),
+      ];
+    }
+  });
+  // add fabled reminders
+  playerState.fabled.forEach((role) => {
+    if (role.reminders && role.reminders.length)
+      reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
+  });
+
+  // add out of script traveler reminders
+  (scenario.otherTravelers as Map<string, any>).forEach((role) => {
+    if (players.some((p) => p.role.id === role.id)) {
+      if (role.reminders && role.reminders.length)
+        reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
+    }
+  });
+
+  reminders.push({ role: "good", name: "善良" });
+  reminders.push({ role: "evil", name: "邪恶" });
+  reminders.push({ role: "custom", name: "自定义" });
+  return reminders;
 });
 
-export default {
-  components: { Modal },
-  props: ["playerIndex"],
-  computed: {
-    availableReminders() {
-      let reminders = [];
-      const { players, bluffs } = this.$store.state.players;
-      this.$store.state.roles.forEach(role => {
-        // add reminders from player roles
-        if (players.some(p => p.role.id === role.id)) {
-          if (role.reminders && role.reminders.length) reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
-        }
-        // add reminders from bluff/other roles
-        else if (bluffs.some(bluff => bluff.id === role.id)) {
-          if (role.reminders && role.reminders.length) reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
-        }
-        // add global reminders
-        if (role.remindersGlobal && role.remindersGlobal.length) {
-          reminders = [
-            ...reminders,
-            ...role.remindersGlobal.map(mapReminder(role))
-          ];
-        }
-      });
-      // add fabled reminders
-      this.$store.state.players.fabled.forEach(role => {
-        if (role.reminders && role.reminders.length) reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
-      });
+async function addReminder(reminder: any) {
+  const player = players.value[playerIndex];
+  let value;
 
-      // add out of script traveler reminders
-      this.$store.state.otherTravelers.forEach(role => {
-        if (players.some(p => p.role.id === role.id)) {
-          if (role.reminders && role.reminders.length) reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
-        }
-      });
+  if (reminder.role === "custom") {
+    const input = await showInputModal({
+      inputType: "reminder",
+      inputModal: "input",
+      inputData: {
+        name: ["输入自定义提醒"],
+        length: 1,
+        placeholder: [""],
+      },
+    }).catch(() => {
+      return null;
+    });
+    if (input === null || !Array.isArray(input)) return;
 
-      reminders.push({ role: "good", name: "善良" });
-      reminders.push({ role: "evil", name: "邪恶" });
-      reminders.push({ role: "custom", name: "自定义" });
-      return reminders;
-    },
-    ...mapState(["modals", "grimoire", "session"]),
-    ...mapState("players", ["players"])
-  },
-  methods: {
-    showInputModal,
-    async addReminder(reminder) {
-      const player = this.$store.state.players.players[this.playerIndex];
-      let value;
-
-      if (reminder.role === "custom") {
-        const input = await this.showInputModal({
-          inputType: "reminder",
-          inputModal: "input",
-          inputData: {
-            name: ["输入自定义提醒"],
-            length: 1,
-            placeholder: [""]
-          }
-        }).catch(() => {
-          return null;
-        });
-        if (input === null) return;
-
-        const name = input[0];
-        if (!name) return;
-        value = [...player.reminders, { role: "custom", name }];
-      } else {
-        value = [...player.reminders, reminder];
-        this.$store.commit("toggleModal", "reminder");
-      }
-      this.$store.commit("players/update", {
-        player,
-        property: "reminders",
-        value
-      });
-      const stReminders = value.filter(reminder => reminder.role !== "custom");
-      if (!this.session.isSpectator && reminder.role != "custom") {
-        this.$store.commit("players/update", {
-          player,
-          property: "stReminders",
-          value: stReminders
-        });
-      }
-    },
-    ...mapMutations(["toggleModal"])
+    const name = input[0];
+    if (!name) return;
+    value = [...player.reminders, { role: "custom", name }];
+  } else {
+    value = [...player.reminders, reminder];
+    modals.toggle("reminder");
   }
-};
+  store.commit("players/update", {
+    player,
+    property: "reminders",
+    value,
+  });
+  const stReminders = value.filter((reminder) => reminder.role !== "custom");
+  if (!session.isSpectator && reminder.role != "custom") {
+    store.commit("players/update", {
+      player,
+      property: "stReminders",
+      value: stReminders,
+    });
+  }
+}
 </script>
 
 <style scoped lang="scss">
