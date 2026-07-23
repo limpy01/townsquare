@@ -68,8 +68,8 @@
     </li>
     <li>
       <span> 房间号： </span>
-      <span v-if="$store.state.session.sessionId">
-        {{ this.$store.state.session.sessionId }}
+      <span v-if="identity.sessionId">
+        {{ identity.sessionId }}
       </span>
       <span v-else> 未加入房间 </span>
     </li>
@@ -77,35 +77,45 @@
   </ul>
 </template>
 
-<script>
-import gameJSON from "./../game";
-import { mapState } from "vuex";
+<script setup lang="ts">
+import { computed } from "vue";
+import gameJSON from "../game.json";
 import { useReviewStore } from "../stores/review";
+import { useGrimoireStore } from "../stores/grimoire";
+import { usePlayersStore } from "../stores/players";
+import { useScenarioStore } from "../stores/scenario";
+import { useSessionIdentityStore } from "../stores/session-identity";
 
-export default {
-  computed: {
-    teams: function () {
-      const { players } = this.$store.state.players;
-      const nonTravelers = this.$store.getters["players/nonTravelers"];
-      const alive = players.filter((player) => player.isDead !== true).length;
-      return {
-        ...gameJSON[nonTravelers - 5],
-        traveler: players.length - nonTravelers,
-        alive,
-        votes:
-          alive +
-          players.filter(
-            (player) => player.isDead === true && player.isVoteless !== true,
-          ).length,
-      };
-    },
-    ...mapState(["edition", "grimoire"]),
-    ...mapState("players", ["players"]),
-    review() {
-      return useReviewStore();
-    },
-  },
-};
+const playerState = usePlayersStore();
+const scenario = useScenarioStore();
+const grimoire = useGrimoireStore();
+const identity = useSessionIdentityStore();
+const review = useReviewStore();
+const players = computed(() => playerState.players);
+const edition = computed(() => scenario.edition as any);
+const teams = computed(() => {
+  const nonTravelers = Math.min(
+    players.value.filter((player) => player.role.team !== "traveler").length,
+    15,
+  );
+  const alive = players.value.filter((player) => player.isDead !== true).length;
+  const gameTeamCounts = gameJSON[nonTravelers - 5] ?? {
+    townsfolk: 0,
+    outsider: 0,
+    minion: 0,
+    demon: 0,
+  };
+  return {
+    ...gameTeamCounts,
+    traveler: players.value.length - nonTravelers,
+    alive,
+    votes:
+      alive +
+      players.value.filter(
+        (player) => player.isDead === true && player.isVoteless !== true,
+      ).length,
+  };
+});
 </script>
 
 <style lang="scss" scoped>
