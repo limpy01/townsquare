@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { parseCustomScript } from "@townsquare/contracts/custom-script";
 import editionJSON from "../editions.json";
 import rolesJSON from "../roles.json";
 import fabledJSON from "../fabled.json";
@@ -111,14 +112,25 @@ export const useScenarioStore = defineStore("scenario", {
       this.otherNight = otherNight;
       usePlayersStore(pinia).otherNightOrder = otherNight;
     },
-    setCustomRoles(rawRoles: any[]) {
+    setCustomRoles(rawRoles: unknown) {
+      if (!Array.isArray(rawRoles)) return false;
+      let validRoles: any[];
+      try {
+        // Historical compact array entries are normalized below. Object-shaped
+        // input is untrusted custom-script data and must cross the shared schema.
+        validRoles = rawRoles.some(Array.isArray)
+          ? rawRoles
+          : parseCustomScript(rawRoles);
+      } catch {
+        return false;
+      }
       const legacyOptions = useLegacyOptionsStore(pinia);
       const oldRoles = (
         Object.keys(legacyOptions.useOldRole) as Array<
           keyof typeof legacyOptions.useOldRole
         >
       ).filter((key) => legacyOptions.useOldRole[key] === true);
-      const roles = rawRoles.map((role) =>
+      const roles = validRoles.map((role) =>
         oldRoles.includes(role.id) ? { ...role, id: role.id + "old1" } : role,
       );
       const processedRoles = roles
@@ -188,6 +200,7 @@ export const useScenarioStore = defineStore("scenario", {
           )
           .map((role) => [role.id, role]),
       );
+      return true;
     },
     setEdition(edition: any) {
       let fabled: any[] | undefined;

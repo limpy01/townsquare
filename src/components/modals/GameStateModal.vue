@@ -44,8 +44,9 @@ const input = ref("");
 const edition = computed(() => scenario.edition ?? ({} as any));
 
 function setCustomRoles(roles: any[]) {
-  scenario.setCustomRoles(roles);
+  if (!scenario.setCustomRoles(roles)) return false;
   emitLegacyMutation("setCustomRoles", roles);
+  return true;
 }
 
 function setEdition(value: any) {

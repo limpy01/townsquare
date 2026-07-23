@@ -73,7 +73,7 @@ export const legacyCommit = (type: string, payload?: any) => {
       useModalStore(pinia).toggle(payload);
       break;
     case "setCustomRoles":
-      useScenarioStore(pinia).setCustomRoles(payload);
+      if (!useScenarioStore(pinia).setCustomRoles(payload)) return false;
       break;
     case "setStates":
       useScenarioStore(pinia).setStates(payload);

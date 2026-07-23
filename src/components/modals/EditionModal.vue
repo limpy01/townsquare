@@ -166,7 +166,7 @@ function installScript(raw: unknown) {
         ability,
       }),
     );
-  scenario.setCustomRoles(roles);
+  if (!scenario.setCustomRoles(roles)) return;
   emitLegacyMutation("setCustomRoles", roles);
   applyEdition(Object.assign({}, meta, { id: "custom" }));
   const fabledMap = scenario.fabled as Map<any, any>;

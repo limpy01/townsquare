@@ -47,4 +47,14 @@ describe("scenario store", () => {
       team: "townsfolk",
     });
   });
+
+  it("rejects malformed custom input without replacing the active script", () => {
+    const scenario = useScenarioStore();
+    const originalRoles = scenario.roles;
+
+    expect(
+      scenario.setCustomRoles([{ id: "invalid", name: "Missing team" }]),
+    ).toBe(false);
+    expect(scenario.roles).toBe(originalRoles);
+  });
 });

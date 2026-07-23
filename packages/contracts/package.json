@@ -12,9 +12,16 @@
       "types": "./dist/legacy-envelope.d.ts",
       "require": "./dist/legacy-envelope.js",
       "default": "./dist/legacy-envelope.js"
+    },
+    "./custom-script": {
+      "types": "./dist/custom-script.d.ts",
+      "require": "./dist/custom-script.js",
+      "default": "./dist/custom-script.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
