@@ -47,238 +47,207 @@
   </div>
 </template>
 
-<script>
-import { mapState } from "vuex";
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useLobbyStore } from "./stores/lobby";
 import { useInteractionStore } from "./stores/interaction";
 import { useAudioStore } from "./stores/audio";
 import { useVotingStore } from "./stores/voting";
 import { useProfileStore } from "./stores/profile";
+import { usePlayersStore } from "./stores/players";
+import { useGrimoireStore } from "./stores/grimoire";
+import { useSessionIdentityStore } from "./stores/session-identity";
+import { useModalStore } from "./stores/modals";
+import { useInputStore } from "./stores/input";
 import { showInputModal } from "./services/input-modal";
-import { version } from "../package.json";
-import TownSquare from "./components/TownSquare";
-import TownInfo from "./components/TownInfo";
-import Menu from "./components/Menu";
-import ImageCropper from "./components/ImageCropper";
-import RolesModal from "./components/modals/RolesModal";
-import DrawModal from "./components/modals/DrawModal";
-import EditionModal from "./components/modals/EditionModal";
-import Intro from "./components/Intro";
-import ReferenceModal from "./components/modals/ReferenceModal";
-import Vote from "./components/Vote";
-import Gradients from "./components/Gradients";
-import NightOrderModal from "./components/modals/NightOrderModal";
-import FabledModal from "@/components/modals/FabledModal";
-import VoteHistoryModal from "@/components/modals/VoteHistoryModal";
-import GameStateModal from "@/components/modals/GameStateModal";
-import InputModal from "@/components/modals/InputModal.vue";
+import store from "./store";
+import TownSquare from "./components/TownSquare.vue";
+import TownInfo from "./components/TownInfo.vue";
+import Menu from "./components/Menu.vue";
+import ImageCropper from "./components/ImageCropper.vue";
+import RolesModal from "./components/modals/RolesModal.vue";
+import DrawModal from "./components/modals/DrawModal.vue";
+import EditionModal from "./components/modals/EditionModal.vue";
+import Intro from "./components/Intro.vue";
+import ReferenceModal from "./components/modals/ReferenceModal.vue";
+import Vote from "./components/Vote.vue";
+import Gradients from "./components/Gradients.vue";
+import NightOrderModal from "./components/modals/NightOrderModal.vue";
+import FabledModal from "./components/modals/FabledModal.vue";
+import VoteHistoryModal from "./components/modals/VoteHistoryModal.vue";
+import GameStateModal from "./components/modals/GameStateModal.vue";
+import InputModal from "./components/modals/InputModal.vue";
 import GroupChatModal from "./components/modals/GroupChatModal.vue";
 import VersionModal from "./components/modals/VersionModal.vue";
 import LegalModal from "./components/modals/LegalModal.vue";
 
-export default {
-  components: {
-    GameStateModal,
-    VoteHistoryModal,
-    FabledModal,
-    NightOrderModal,
-    Vote,
-    ReferenceModal,
-    Intro,
-    TownInfo,
-    TownSquare,
-    Menu,
-    ImageCropper,
-    EditionModal,
-    RolesModal,
-    DrawModal,
-    InputModal,
-    GroupChatModal,
-    VersionModal,
-    LegalModal,
-    Gradients,
-  },
-  computed: {
-    ...mapState(["grimoire", "session", "lobby", "modals"]),
-    ...mapState("players", ["players"]),
-    voting() {
-      return useVotingStore();
-    },
-    profile() {
-      return useProfileStore();
-    },
-    interaction() {
-      return useInteractionStore();
-    },
-    audio() {
-      return useAudioStore();
-    },
-  },
-  data() {
-    return {
-      version,
-    };
-  },
-  async mounted() {
-    const pathname = window.location.pathname;
-    const sessionId = window.location.hash.substr(1);
+const grimoire = useGrimoireStore();
+const session = useSessionIdentityStore();
+const lobby = useLobbyStore();
+const modals = useModalStore();
+const playersState = usePlayersStore();
+const players = computed(() => playersState.players);
+const voting = useVotingStore();
+const profile = useProfileStore();
+const interaction = useInteractionStore();
+const audio = useAudioStore();
+const menu = ref<any>(null);
+const imageCropper = ref<any>(null);
 
-    if (pathname === "/") {
-      this.$store.dispatch("fetchInit");
+async function initialize() {
+  const pathname = window.location.pathname;
+  const sessionId = window.location.hash.substr(1);
 
-      if (sessionId && this.session.sessionId === "") {
-        // Set initial session state
-        this.$store.commit("session/setSpectator", true);
-        this.$store.commit("toggleGrimoire", false);
+  if (pathname === "/") {
+    store.dispatch("fetchInit");
 
-        let finalName = this.profile.playerName; // Get existing name if any
+    if (sessionId && session.sessionId === "") {
+      // Set initial session state
+      store.commit("session/setSpectator", true);
+      store.commit("toggleGrimoire", false);
 
-        if (!finalName) {
-          const input = await this.showInputModal({
-            inputType: "changeName",
-            inputModal: "input",
-            inputData: {
-              name: ["输入玩家昵称"],
-              length: 1,
-              placeholder: [""],
-            },
-          }).catch(() => {
-            return null;
-          });
-          if (input === null) return;
+      let finalName = profile.playerName;
 
-          finalName = input[0];
-        }
-
-        // Now handle the result
-        if (finalName) {
-          this.$store.commit("session/setPlayerName", finalName);
-          this.$store.commit("session/setSessionId", sessionId);
-        } else {
-          // User cancelled input, so don't join the session
-          this.$store.commit("session/setSessionId", "");
-        }
-      } else if (
-        pathname === "/" &&
-        sessionId &&
-        sessionId != this.session.sessionId
-      ) {
-        await this.showInputModal({
-          inputType: "alert",
-          inputModal: "text",
+      if (!finalName) {
+        const input = await showInputModal({
+          inputType: "changeName",
+          inputModal: "input",
           inputData: {
-            name: [
-              `已经在房间${this.session.sessionId}中，如需换房间请退出重进！`,
-            ],
+            name: ["输入玩家昵称"],
+            length: 1,
+            placeholder: [""],
           },
         }).catch(() => {
           return null;
         });
-        return;
-      }
-      // Clear hash after processing
-      window.location.hash = "";
-    }
+        if (input === null) return;
 
-    document.addEventListener("visibilitychange", this.handleVisibilityChange);
-  },
-  beforeUnmount() {
-    document.removeEventListener(
-      "visibilitychange",
-      this.handleVisibilityChange,
-    );
-  },
-  methods: {
-    showInputModal,
-    handleVisibilityChange() {
-      useLobbyStore().setAllowReconnect(document.visibilityState === "visible");
-    },
-    keyup({ key, ctrlKey, metaKey }) {
-      if (ctrlKey || metaKey) return;
-      if (this.interaction.isTyping && key != "Escape") return;
-      switch (key.toLocaleLowerCase()) {
-        case "m":
-          this.$store.commit("toggleMenu");
-          break;
-        case "g":
-          this.$store.commit("toggleGrimoire");
-          break;
-        // case "a":
-        //   this.$refs.menu.addPlayer();
-        //   break;
-        case "h":
-          this.$refs.menu.hostSession();
-          break;
-        case "j":
-          this.$refs.menu.joinSession();
-          break;
-        case "r":
-          this.$store.commit("toggleModal", "reference");
-          break;
-        case "n":
-          this.$store.commit("toggleModal", "nightOrder");
-          break;
-        case "e":
-          if (this.session.isSpectator) return;
-          this.$store.commit("toggleModal", "edition");
-          break;
-        case "c":
-          if (this.session.isSpectator) return;
-          this.$store.commit("toggleModal", "roles");
-          break;
-        case "f":
-          if (this.session.isSpectator) return;
-          this.$store.commit("toggleModal", "fabled");
-          break;
-        case "v":
-          if (this.voting.voteHistory.length || !this.session.isSpectator) {
-            this.$store.commit("toggleModal", "voteHistory");
-          }
-          break;
-        case "d":
-          if (this.session.isSpectator) return;
-          this.$store.commit("toggleModal", "groupChat");
-          break;
-        case "s":
-          if (this.session.isSpectator) return;
-          this.$refs.menu.toggleNight();
-          break;
-        case "t":
-          if (this.session.isSpectator) return;
-          this.$refs.menu.setTimer();
-          break;
-        case "escape":
-          if (this.modals && this.modals.input) {
-            this.$refs.input.close();
-          } else {
-            this.$store.commit("toggleModal");
-          }
-          break;
-        case "f2":
-          this.$refs.menu.stopListening("keyboard");
-          break;
+        finalName = Array.isArray(input) ? input[0] ?? "" : "";
       }
-    },
-    keydown({ key, ctrlKey, metaKey }) {
-      if (ctrlKey || metaKey) return;
-      switch (key.toLocaleLowerCase()) {
-        case "f2":
-          if (this.session.claimedSeat < 0) return;
-          if (this.audio.listeningFrame) return;
-          this.$refs.menu.startListening("keyboard");
-          break;
+
+      // Now handle the result
+      if (finalName) {
+        store.commit("session/setPlayerName", finalName);
+        store.commit("session/setSessionId", sessionId);
+      } else {
+        // User cancelled input, so don't join the session
+        store.commit("session/setSessionId", "");
       }
-    },
-    handleTrigger([method]) {
-      if (typeof this.$refs.menu[method] === "function") {
-        this.$refs.menu[method]();
+    } else if (
+      pathname === "/" &&
+      sessionId &&
+      sessionId != session.sessionId
+    ) {
+      await showInputModal({
+        inputType: "alert",
+        inputModal: "text",
+        inputData: {
+          name: [`已经在房间${session.sessionId}中，如需换房间请退出重进！`],
+        },
+      }).catch(() => {
+        return null;
+      });
+      return;
+    }
+    // Clear hash after processing
+    window.location.hash = "";
+  }
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+}
+
+function handleVisibilityChange() {
+  lobby.setAllowReconnect(document.visibilityState === "visible");
+}
+
+function keyup({ key, ctrlKey, metaKey }: KeyboardEvent) {
+  if (ctrlKey || metaKey) return;
+  if (interaction.isTyping && key != "Escape") return;
+  switch (key.toLocaleLowerCase()) {
+    case "m":
+      store.commit("toggleMenu");
+      break;
+    case "g":
+      store.commit("toggleGrimoire");
+      break;
+    // case "a":
+    //   this.$refs.menu.addPlayer();
+    //   break;
+    case "h":
+      menu.value?.hostSession();
+      break;
+    case "j":
+      menu.value?.joinSession();
+      break;
+    case "r":
+      store.commit("toggleModal", "reference");
+      break;
+    case "n":
+      store.commit("toggleModal", "nightOrder");
+      break;
+    case "e":
+      if (session.isSpectator) return;
+      store.commit("toggleModal", "edition");
+      break;
+    case "c":
+      if (session.isSpectator) return;
+      store.commit("toggleModal", "roles");
+      break;
+    case "f":
+      if (session.isSpectator) return;
+      store.commit("toggleModal", "fabled");
+      break;
+    case "v":
+      if (voting.voteHistory.length || !session.isSpectator) {
+        store.commit("toggleModal", "voteHistory");
       }
-      if (typeof this.$refs.imageCropper[method] === "function") {
-        this.$refs.imageCropper[method]();
+      break;
+    case "d":
+      if (session.isSpectator) return;
+      store.commit("toggleModal", "groupChat");
+      break;
+    case "s":
+      if (session.isSpectator) return;
+      menu.value?.toggleNight();
+      break;
+    case "t":
+      if (session.isSpectator) return;
+      menu.value?.setTimer();
+      break;
+    case "escape":
+      if (modals.input) {
+        useInputStore().close();
+      } else {
+        store.commit("toggleModal");
       }
-    },
-  },
-};
+      break;
+    case "f2":
+      menu.value?.stopListening("keyboard");
+      break;
+  }
+}
+
+function keydown({ key, ctrlKey, metaKey }: KeyboardEvent) {
+  if (ctrlKey || metaKey) return;
+  switch (key.toLocaleLowerCase()) {
+    case "f2":
+      if (session.claimedSeat < 0 || audio.listeningFrame) return;
+      menu.value?.startListening("keyboard");
+      break;
+  }
+}
+
+function handleTrigger([method]: string[]) {
+  if (!method) return;
+  if (typeof menu.value?.[method] === "function") menu.value[method]();
+  if (typeof imageCropper.value?.[method] === "function")
+    imageCropper.value[method]();
+}
+
+onMounted(initialize);
+onBeforeUnmount(() =>
+  document.removeEventListener("visibilitychange", handleVisibilityChange),
+);
 </script>
 
 <style lang="scss">

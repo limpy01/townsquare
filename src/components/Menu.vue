@@ -1610,7 +1610,14 @@ watch(
   { immediate: true },
 );
 
-defineExpose({ hostSession, joinSession, startListening });
+defineExpose({
+  hostSession,
+  joinSession,
+  startListening,
+  stopListening,
+  toggleNight,
+  setTimer,
+});
 </script>
 
 <style scoped lang="scss">
