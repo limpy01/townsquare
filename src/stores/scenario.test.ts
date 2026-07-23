@@ -12,4 +12,39 @@ describe("scenario store", () => {
     expect(scenario.roles.get("washerwoman")?.id).toBe("washerwoman");
     expect(scenario.fabled.get("bootlegger")?.id).toBe("bootlegger");
   });
+
+  it("updates scenario metadata and night-order state", () => {
+    const scenario = useScenarioStore();
+
+    scenario.setSelectedEditions({ tb: true });
+    scenario.setStates(["drunk"]);
+    scenario.setTeamsNames({ townsfolk: "Town" });
+    scenario.setFirstNight(["washerwoman"]);
+    scenario.setOtherNight(["imp"]);
+
+    expect(scenario.selectedEditions).toEqual({ tb: true });
+    expect(scenario.states).toEqual(["drunk"]);
+    expect(scenario.teamsNames).toEqual({ townsfolk: "Town" });
+    expect(scenario.firstNight).toEqual(["washerwoman"]);
+    expect(scenario.otherNight).toEqual(["imp"]);
+  });
+
+  it("normalizes custom roles into the active script", () => {
+    const scenario = useScenarioStore();
+
+    scenario.setCustomRoles([
+      {
+        id: "Custom Role",
+        name: "Custom Role",
+        ability: "Does a thing.",
+        team: "townsfolk",
+      },
+    ]);
+
+    expect(scenario.roles.get("customrole")).toMatchObject({
+      id: "customrole",
+      name: "Custom Role",
+      team: "townsfolk",
+    });
+  });
 });

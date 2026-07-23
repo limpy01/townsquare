@@ -148,6 +148,8 @@ const rootStoreOptions: any = {
      * @param roles Array of role IDs or full role definitions
      */
     setCustomRoles(state, roles) {
+      useScenarioStore(pinia).setCustomRoles(roles);
+      return;
       const { useOldRole } = useLegacyOptionsStore(pinia);
       const oldRoles = (
         Object.keys(useOldRole) as Array<keyof typeof useOldRole>
@@ -239,24 +241,41 @@ const rootStoreOptions: any = {
       );
     },
     setSelectedEditions(state, selectedEditions) {
+      const scenario = useScenarioStore(pinia);
+      scenario.setSelectedEditions(selectedEditions);
+      if (scenario.edition.id === "all")
+        this.commit("setEdition", scenario.edition);
+      return;
       state.selectedEditions = { ...selectedEditions };
       if (state.edition.id === "all") this.commit("setEdition", state.edition);
     },
     setStates(state, states) {
+      useScenarioStore(pinia).setStates(states);
+      return;
       state.states = states;
     },
     setTeamsNames(state, names) {
+      useScenarioStore(pinia).setTeamsNames(names);
+      return;
       state.teamsNames = names;
     },
     setFirstNight(state, firstNight) {
+      useScenarioStore(pinia).setFirstNight(firstNight);
+      return;
       state.firstNight = firstNight;
       this.commit("players/setFirstNight", firstNight);
     },
     setOtherNight(state, otherNight) {
+      useScenarioStore(pinia).setOtherNight(otherNight);
+      return;
       state.otherNight = otherNight;
       this.commit("players/setOtherNight", otherNight);
     },
     setEdition(state, edition) {
+      const fabled = useScenarioStore(pinia).setEdition(edition);
+      if (fabled && !state.session.isSpectator)
+        this.commit("players/setFabled", { fabled });
+      return;
       if (editionJSONbyId.has(edition.id)) {
         state.edition = editionJSONbyId.get(edition.id);
         state.roles = getRolesByEdition(state.edition);
