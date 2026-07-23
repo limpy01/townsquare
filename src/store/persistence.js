@@ -1,7 +1,12 @@
+import { readStoredArray, readStoredJson, readStoredRecord } from "./storage";
+
+const isRecord = (value) =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 export default (store) => {
   if (window.location.pathname != "/") return;
 
-  const updatePagetitle = isPublic =>
+  const updatePagetitle = (isPublic) =>
     // (document.title = `Blood on the Clocktower ${
     //   isPublic ? "Town Square" : "Grimoire"
     // }`);
@@ -36,47 +41,62 @@ export default (store) => {
     updatePagetitle(false);
   }
   if (localStorage.getItem("useOldOrder")) {
-    store.commit("session/setUseOldOrder", JSON.parse(localStorage.getItem("useOldOrder")));
+    store.commit(
+      "session/setUseOldOrder",
+      readStoredRecord(localStorage, "useOldOrder"),
+    );
   }
   if (localStorage.getItem("useOldRole")) {
-    store.commit("session/setUseOldRole", JSON.parse(localStorage.getItem("useOldRole")));
+    store.commit(
+      "session/setUseOldRole",
+      readStoredRecord(localStorage, "useOldRole"),
+    );
   }
   if (localStorage.getItem("isReview")) {
-    store.commit("session/setIsReview", JSON.parse(localStorage.getItem("isReview")));
+    store.commit(
+      "session/setIsReview",
+      readStoredJson(localStorage, "isReview", false),
+    );
   }
   if (localStorage.getItem("selectedEditions")) {
-    store.commit("setSelectedEditions", JSON.parse(localStorage.getItem("selectedEditions")));
+    store.commit(
+      "setSelectedEditions",
+      readStoredRecord(localStorage, "selectedEditions"),
+    );
   }
   if (localStorage.roles !== undefined) {
-    store.commit("setCustomRoles", JSON.parse(localStorage.roles));
+    store.commit("setCustomRoles", readStoredArray(localStorage, "roles"));
     store.commit("setEdition", { id: "custom" });
   }
   if (localStorage.getItem("states")) {
-    store.commit("setStates", JSON.parse(localStorage.states));
+    store.commit("setStates", readStoredArray(localStorage, "states"));
   }
   if (localStorage.getItem("teamsNames")) {
-    store.commit("setTeamsNames", JSON.parse(localStorage.teamsNames))
+    store.commit("setTeamsNames", readStoredRecord(localStorage, "teamsNames"));
   }
   if (localStorage.getItem("firstNight")) {
-    store.commit("setFirstNight", JSON.parse(localStorage.firstNight))
+    store.commit("setFirstNight", readStoredArray(localStorage, "firstNight"));
   }
   if (localStorage.getItem("otherNight")) {
-    store.commit("setOtherNight", JSON.parse(localStorage.otherNight))
+    store.commit("setOtherNight", readStoredArray(localStorage, "otherNight"));
   }
   if (localStorage.edition !== undefined) {
     // this will initialize state.roles for official editions
-    store.commit("setEdition", JSON.parse(localStorage.edition));
+    store.commit("setEdition", readStoredRecord(localStorage, "edition"));
   }
   if (localStorage.bluffs !== undefined) {
-    JSON.parse(localStorage.bluffs).forEach((role, index) => {
+    readStoredArray(localStorage, "bluffs").forEach((role, index) => {
       store.commit("players/setBluff", {
         index,
-        role: store.state.roles.get(role) || {}
+        role: store.state.roles.get(role) || {},
       });
     });
   }
   if (localStorage.getItem("playerProfileImage")) {
-    localStorage.setItem("playerAvatar", localStorage.getItem("playerProfileImage"));
+    localStorage.setItem(
+      "playerAvatar",
+      localStorage.getItem("playerProfileImage"),
+    );
     localStorage.removeItem("playerProfileImage");
   }
   if (localStorage.fabled !== undefined) {
@@ -84,20 +104,22 @@ export default (store) => {
       // fabled: JSON.parse(localStorage.fabled).map(
       //   fabled => store.state.fabled.get(fabled.id) || fabled
       // )
-      fabled: JSON.parse(localStorage.fabled),
-      emptyFabled: true
+      fabled: readStoredArray(localStorage, "fabled"),
+      emptyFabled: true,
     });
   }
   if (localStorage.players) {
     store.commit(
       "players/set",
-      JSON.parse(localStorage.players).map(player => ({
-        ...player,
-        role:
-          store.state.roles.get(player.role) ||
-          store.getters.rolesJSONbyId.get(player.role) ||
-          {}
-      }))
+      readStoredArray(localStorage, "players")
+        .filter(isRecord)
+        .map((player) => ({
+          ...player,
+          role:
+            store.state.roles.get(player.role) ||
+            store.getters.rolesJSONbyId.get(player.role) ||
+            {},
+        })),
     );
   }
   /**** Session related data *****/
@@ -114,67 +136,95 @@ export default (store) => {
     store.commit("session/setStId", localStorage.getItem("stId"));
   }
   if (localStorage.getItem("claimedSeat")) {
-    store.commit("session/claimSeat", Number(localStorage.getItem("claimedSeat")));
+    store.commit(
+      "session/claimSeat",
+      Number(localStorage.getItem("claimedSeat")),
+    );
   }
   if (localStorage.getItem("session")) {
-    const [spectator, sessionId] = JSON.parse(localStorage.getItem("session"));
-    store.commit("session/setSpectator", spectator);
-    store.commit("session/setSessionId", sessionId);
+    const [spectator, sessionId] = readStoredArray(localStorage, "session");
+    if (typeof spectator === "boolean") {
+      store.commit("session/setSpectator", spectator);
+    }
+    if (typeof sessionId === "string") {
+      store.commit("session/setSessionId", sessionId);
+    }
   }
   if (localStorage.getItem("playerVotes")) {
-    store.commit("session/setPlayerVotes", JSON.parse(localStorage.getItem("playerVotes")));
+    store.commit(
+      "session/setPlayerVotes",
+      readStoredJson(localStorage, "playerVotes", 1),
+    );
   }
   if (localStorage.getItem("votes")) {
-    const votes = JSON.parse(localStorage.getItem("votes"));
-    votes.forEach(voteHistory => {
+    const votes = readStoredArray(localStorage, "votes");
+    votes.filter(isRecord).forEach((voteHistory) => {
       store.commit("session/addVotes", voteHistory);
-    })
+    });
   }
   if (localStorage.getItem("votesSelected")) {
-    const votesSelected = JSON.parse(localStorage.getItem("votesSelected"));
-    votesSelected.forEach(voteSelected => {
+    const votesSelected = readStoredArray(localStorage, "votesSelected");
+    votesSelected.forEach((voteSelected) => {
       store.commit("session/addVoteSelected", voteSelected);
-    })
+    });
   }
   if (localStorage.getItem("customBootlegger")) {
-    const customBootlegger = JSON.parse(localStorage.getItem("customBootlegger"));
+    const customBootlegger = readStoredJson(
+      localStorage,
+      "customBootlegger",
+      "",
+    );
     store.commit("session/setBootlegger", customBootlegger);
   }
   if (localStorage.getItem("chatHistory")) {
-    const chatHistory = JSON.parse(localStorage.getItem("chatHistory"));
-    chatHistory.forEach(player => {
+    const chatHistory = readStoredArray(localStorage, "chatHistory");
+    chatHistory.filter(isRecord).forEach((player) => {
+      if (typeof player.id !== "string" || !Array.isArray(player.chat)) return;
       store.commit("session/createChatHistory", player.id);
-      player.chat.forEach(message => {
-        store.commit("session/updateChatReceived", {message, playerId: player.id});
-      })
-    })
+      player.chat.forEach((message) => {
+        store.commit("session/updateChatReceived", {
+          message,
+          playerId: player.id,
+        });
+      });
+    });
   }
   if (localStorage.getItem("groupChats")) {
-    const groupChats = JSON.parse(localStorage.getItem("groupChats"));
-    groupChats.forEach(group => {
+    const groupChats = readStoredArray(localStorage, "groupChats");
+    groupChats.filter(isRecord).forEach((group) => {
+      if (typeof group.id !== "string" || !Array.isArray(group.playerIds))
+        return;
       store.commit("session/addGroupChat", {
         chatId: group.id,
         playerIds: group.playerIds,
-        keep: group.keep
+        keep: group.keep,
       });
     });
   }
   if (localStorage.getItem("playerAvatar")) {
-    store.commit("session/updatePlayerAvatar", localStorage.getItem("playerAvatar"));
+    store.commit(
+      "session/updatePlayerAvatar",
+      localStorage.getItem("playerAvatar"),
+    );
   }
   if (localStorage.getItem("secretVote")) {
-    store.commit("session/setSecretVote", JSON.parse(localStorage.getItem("secretVote")));
+    store.commit(
+      "session/setSecretVote",
+      readStoredJson(localStorage, "secretVote", false),
+    );
   }
   if (localStorage.getItem("isRole")) {
-    const isRole = JSON.parse(localStorage.getItem("isRole"));
+    const isRole = readStoredRecord(localStorage, "isRole");
     const role = Object.keys(isRole)[0];
-    for(const property in isRole[role]) {
-      store.commit("session/setIsRole", {
-        role,
-        property,
-        value: isRole[role][property],
-        st: true
-      });
+    if (role && isRecord(isRole[role])) {
+      for (const property in isRole[role]) {
+        store.commit("session/setIsRole", {
+          role,
+          property,
+          value: isRole[role][property],
+          st: true,
+        });
+      }
     }
   }
   // listen to mutations
@@ -265,14 +315,11 @@ export default (store) => {
       case "players/updateBluff":
         localStorage.setItem(
           "bluffs",
-          JSON.stringify(state.players.bluffs.map(({ id }) => id))
+          JSON.stringify(state.players.bluffs.map(({ id }) => id)),
         );
         break;
       case "players/setFabled":
-        localStorage.setItem(
-          "fabled",
-          JSON.stringify(state.players.fabled)
-        );
+        localStorage.setItem("fabled", JSON.stringify(state.players.fabled));
         break;
       case "players/add":
       case "players/update":
@@ -285,12 +332,12 @@ export default (store) => {
           localStorage.setItem(
             "players",
             JSON.stringify(
-              state.players.players.map(player => ({
+              state.players.players.map((player) => ({
                 ...player,
                 // simplify the stored data
-                role: player.role.id || {}
-              }))
-            )
+                role: player.role.id || {},
+              })),
+            ),
           );
         } else {
           localStorage.removeItem("players");
@@ -300,7 +347,7 @@ export default (store) => {
         if (payload) {
           localStorage.setItem(
             "session",
-            JSON.stringify([state.session.isSpectator, payload])
+            JSON.stringify([state.session.isSpectator, payload]),
           );
         } else {
           localStorage.removeItem("session");
@@ -342,7 +389,9 @@ export default (store) => {
         break;
       case "session/addVotes": {
         if (payload.save) {
-          const votes = localStorage.getItem("votes") ? JSON.parse(localStorage.getItem("votes")) : [];
+          const votes = localStorage.getItem("votes")
+            ? JSON.parse(localStorage.getItem("votes"))
+            : [];
           payload.save = false;
           votes.push(payload);
           localStorage.setItem("votes", JSON.stringify(votes));
@@ -351,7 +400,9 @@ export default (store) => {
       }
       case "session/addVoteSelected": {
         if (payload.save) {
-          const votesSelected = localStorage.getItem("votesSelected") ? JSON.parse(localStorage.getItem("votesSelected")) : [];
+          const votesSelected = localStorage.getItem("votesSelected")
+            ? JSON.parse(localStorage.getItem("votesSelected"))
+            : [];
           payload.save = false;
           delete payload.players; // players added for conditioning in session
           votesSelected.push(payload);
@@ -367,11 +418,18 @@ export default (store) => {
           localStorage.removeItem("votesSelected");
         } else {
           const votes = JSON.parse(localStorage.getItem("votes"));
-          const votesSelected = JSON.parse(localStorage.getItem("votesSelected"))
+          const votesSelected = JSON.parse(
+            localStorage.getItem("votesSelected"),
+          );
           const newVotes = votes.filter((_, index) => !payload.includes(index));
-          const newVotesSelected = votesSelected.filter((_, index) => !payload.includes(index));
+          const newVotesSelected = votesSelected.filter(
+            (_, index) => !payload.includes(index),
+          );
           localStorage.setItem("votes", JSON.stringify(newVotes));
-          localStorage.setItem("votesSelected", JSON.stringify(newVotesSelected));
+          localStorage.setItem(
+            "votesSelected",
+            JSON.stringify(newVotesSelected),
+          );
         }
         break;
       }
@@ -382,7 +440,10 @@ export default (store) => {
       case "session/updateChatSent":
       case "session/updateChatReceived":
         if (state.session.chatHistory) {
-          localStorage.setItem("chatHistory", JSON.stringify(state.session.chatHistory));
+          localStorage.setItem(
+            "chatHistory",
+            JSON.stringify(state.session.chatHistory),
+          );
         } else {
           localStorage.removeItem("chatHistory");
         }
@@ -391,12 +452,15 @@ export default (store) => {
         {
           if (!!payload.playerIds && !payload.players) return;
           const chatId = payload.chatId;
-          const playerIds = payload.players.map(player => player.id);
-          const groupChats = localStorage.groupChats != undefined ? JSON.parse(localStorage.getItem("groupChats")) : [];
-          const chats = groupChats.map(group => group.id);
+          const playerIds = payload.players.map((player) => player.id);
+          const groupChats =
+            localStorage.groupChats != undefined
+              ? JSON.parse(localStorage.getItem("groupChats"))
+              : [];
+          const chats = groupChats.map((group) => group.id);
           if (chats.includes(chatId)) {
-            const group = groupChats.filter(group => group.id === chatId)[0];
-            playerIds.forEach(id => {
+            const group = groupChats.filter((group) => group.id === chatId)[0];
+            playerIds.forEach((id) => {
               if (group.playerIds.includes(id)) return;
               group.playerIds.push(id);
             });
@@ -404,7 +468,7 @@ export default (store) => {
             groupChats.push({
               id: chatId,
               playerIds,
-              keep: false
+              keep: false,
             });
           }
           localStorage.setItem("groupChats", JSON.stringify(groupChats));
@@ -413,7 +477,9 @@ export default (store) => {
       case "session/removeGroupChat":
         if (localStorage.groupChats != undefined) {
           const groupChats = JSON.parse(localStorage.getItem("groupChats"));
-          const newGroupChats = groupChats.filter(group => group.id != payload.chatId);
+          const newGroupChats = groupChats.filter(
+            (group) => group.id != payload.chatId,
+          );
           localStorage.setItem("groupChats", JSON.stringify(newGroupChats));
         }
         break;
@@ -423,19 +489,21 @@ export default (store) => {
           const groupChats = JSON.parse(localStorage.getItem("groupChats"));
           const chatId = payload.chatId;
           const playerId = payload.player.id;
-          const index = groupChats.findIndex(group => group.id === chatId);
+          const index = groupChats.findIndex((group) => group.id === chatId);
           if (index === -1) return;
-          
-          groupChats[index].playerIds = groupChats[index].playerIds.filter(player => player != playerId);
+
+          groupChats[index].playerIds = groupChats[index].playerIds.filter(
+            (player) => player != playerId,
+          );
           localStorage.setItem("groupChats", JSON.stringify(groupChats));
         }
         break;
       case "session/toggleGroupKeep":
         if (localStorage.groupChats != undefined) {
           const groupChats = JSON.parse(localStorage.getItem("groupChats"));
-          const index = groupChats.findIndex(group => group.id === payload);
+          const index = groupChats.findIndex((group) => group.id === payload);
           if (index === -1) return;
-          
+
           groupChats[index].keep = !groupChats[index].keep;
           localStorage.setItem("groupChats", JSON.stringify(groupChats));
         }
@@ -447,10 +515,12 @@ export default (store) => {
         localStorage.setItem("secretVote", JSON.stringify(payload));
         break;
       case "session/setUseOldOrder":
-        if (payload) localStorage.setItem("useOldOrder", JSON.stringify(payload));
+        if (payload)
+          localStorage.setItem("useOldOrder", JSON.stringify(payload));
         break;
       case "session/setUseOldRole":
-        if (payload) localStorage.setItem("useOldRole", JSON.stringify(payload));
+        if (payload)
+          localStorage.setItem("useOldRole", JSON.stringify(payload));
         break;
       case "session/setIsReview":
         localStorage.setItem("isReview", JSON.stringify(payload));
@@ -461,9 +531,12 @@ export default (store) => {
           const property = payload.property;
           const value = payload.value;
           const stored = localStorage.getItem("isRole") ? true : false;
-          const isRole = stored ? JSON.parse(localStorage.getItem("isRole")) : {};
-          if (!stored && !!value) { // delete when value set to initial, need to pay caution with e.g. []
-            isRole[role] = {[property]: value};
+          const isRole = stored
+            ? JSON.parse(localStorage.getItem("isRole"))
+            : {};
+          if (!stored && !!value) {
+            // delete when value set to initial, need to pay caution with e.g. []
+            isRole[role] = { [property]: value };
           } else if (isRole[role]) {
             if (!value) {
               // delete when value set to initial, need to pay caution with e.g. []
