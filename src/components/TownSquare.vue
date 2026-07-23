@@ -295,78 +295,6 @@ Object.defineProperties(context, {
 });
 
 const options: any = {
-  computed: {
-    orientation: function () {
-      const ratio = this.windowWidth / this.windowHeight;
-      const unit =
-        this.windowWidth > this.windowHeight
-          ? "height: 100%;"
-          : "height: " + ratio * 100 + "%;";
-      return unit;
-    },
-    floatingZoom: function () {
-      const ratio = this.windowWidth / this.windowHeight;
-      const size = ratio > 1 ? 14 : 8;
-      return "height: " + size + "vh; width: " + size + "vh;";
-    },
-    chatStyle: function () {
-      if (this.isChatMin) return;
-      const ratio = this.windowWidth / this.windowHeight;
-      const width = ratio < 1 ? "300px" : "25%";
-      const height =
-        ratio < 1
-          ? this.isInGroup && this.isShowGroup
-            ? "450px"
-            : "400px"
-          : this.isInGroup && this.isShowGroup
-          ? "calc(40% + 10vh)"
-          : "40%";
-      return `width: ${width}; height: ${height};`;
-    },
-    groupStyle: function () {
-      const ratio = this.windowWidth / this.windowHeight;
-      const height = ratio < 1 ? "50px" : "10vh";
-      return `height: ${height};`;
-    },
-    isInGroup: function () {
-      if (this.session.isSpectator)
-        return this.chat.groups.length > 0 ? true : false;
-      return this.chattingGroup != "";
-    },
-    inGroupPlayers: function () {
-      const group = this.session.isSpectator
-        ? this.chat.groups
-        : this.chat.groups.filter((group) => group.id === this.chattingGroup);
-      if (group.length === 0) return [];
-
-      const players = [];
-      group[0].players.forEach((player) => {
-        const index = this.players.findIndex(
-          (player2) => player2.id === player.id,
-        );
-        if (index === -1) return;
-        players.push({
-          id: player.id,
-          name: player.name,
-          index,
-        });
-      });
-      return players;
-    },
-    isRole: function () {
-      const activeRoles = [];
-      for (const roleId in this.roleActivity.$state) {
-        const roleObject = this.roleActivity[roleId];
-        if (roleObject.active === true) {
-          activeRoles.push(roleId);
-        }
-      }
-      if (activeRoles.length > 1) {
-        return activeRoles.slice(0, 1);
-      }
-      return activeRoles;
-    },
-  },
   data() {
     return {
       selectedPlayer: 0,
@@ -813,12 +741,6 @@ const options: any = {
   },
 };
 
-for (const [name, getter] of Object.entries(options.computed)) {
-  Object.defineProperty(context, name, {
-    enumerable: true,
-    get: () => getter.call(context),
-  });
-}
 Object.assign(context, options.data.call(context));
 
 const players = computed(() => playersState.players);
@@ -833,13 +755,6 @@ const nightOrder = computed(() =>
     playersState.otherNightOrder,
   ),
 );
-const orientation = computed(() => context.orientation);
-const floatingZoom = computed(() => context.floatingZoom);
-const chatStyle = computed(() => context.chatStyle);
-const groupStyle = computed(() => context.groupStyle);
-const isInGroup = computed(() => context.isInGroup);
-const inGroupPlayers = computed(() => context.inGroupPlayers);
-const isRole = computed(() => context.isRole);
 const selectedPlayer = toRef(context, "selectedPlayer");
 const bluffSize = toRef(context, "bluffSize");
 const swap = toRef(context, "swap");
@@ -853,6 +768,57 @@ const chattingPlayer = toRef(context, "chattingPlayer");
 const chattingGroup = toRef(context, "chattingGroup");
 const isShowGroup = toRef(context, "isShowGroup");
 const message = toRef(context, "message");
+const orientation = computed(() => {
+  const ratio = windowWidth.value / windowHeight.value;
+  return windowWidth.value > windowHeight.value
+    ? "height: 100%;"
+    : "height: " + ratio * 100 + "%;";
+});
+const floatingZoom = computed(() => {
+  const ratio = windowWidth.value / windowHeight.value;
+  const size = ratio > 1 ? 14 : 8;
+  return "height: " + size + "vh; width: " + size + "vh;";
+});
+const isInGroup = computed(() =>
+  session.isSpectator ? chat.groups.length > 0 : chattingGroup.value !== "",
+);
+const chatStyle = computed(() => {
+  if (isChatMin.value) return;
+  const ratio = windowWidth.value / windowHeight.value;
+  const width = ratio < 1 ? "300px" : "25%";
+  const height =
+    ratio < 1
+      ? isInGroup.value && isShowGroup.value
+        ? "450px"
+        : "400px"
+      : isInGroup.value && isShowGroup.value
+      ? "calc(40% + 10vh)"
+      : "40%";
+  return `width: ${width}; height: ${height};`;
+});
+const groupStyle = computed(() => {
+  const height = windowWidth.value / windowHeight.value < 1 ? "50px" : "10vh";
+  return `height: ${height};`;
+});
+const inGroupPlayers = computed(() => {
+  const groups = session.isSpectator
+    ? chat.groups
+    : chat.groups.filter((group) => group.id === chattingGroup.value);
+  if (groups.length === 0) return [];
+
+  return groups[0].players.flatMap((player) => {
+    const index = playersState.players.findIndex(
+      (candidate) => candidate.id === player.id,
+    );
+    return index === -1 ? [] : [{ id: player.id, name: player.name, index }];
+  });
+});
+const isRole = computed(() => {
+  const activeRoles = Object.keys(roleActivity.$state).filter(
+    (roleId) => roleActivity[roleId].active === true,
+  );
+  return activeRoles.length > 1 ? activeRoles.slice(0, 1) : activeRoles;
+});
 
 const methodNames = Object.keys(options.methods);
 for (const name of methodNames)
