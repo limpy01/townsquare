@@ -1345,9 +1345,9 @@ export default {
 
         if (
           totalVolume > this.grimoire.audioThreshold &&
-          !this.session.isTalking
+          !this.audio.isTalking
         ) {
-          if (!this.session.isTalking) {
+          if (!this.audio.isTalking) {
             this.$store.commit("session/setTalking", {
               seatNum: this.session.claimedSeat,
               isTalking: true,
@@ -1355,9 +1355,9 @@ export default {
           }
         } else if (
           totalVolume <= this.grimoire.audioThreshold &&
-          this.session.isTalking
+          this.audio.isTalking
         ) {
-          if (this.session.isTalking) {
+          if (this.audio.isTalking) {
             this.$store.commit("session/setTalking", {
               seatNum: this.session.claimedSeat,
               isTalking: false,

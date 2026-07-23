@@ -3,6 +3,8 @@ import type {
   LegacyGetter,
   LegacyMutation,
 } from "../legacy-vuex";
+import { pinia } from "../../pinia";
+import { useAudioStore } from "../../stores/audio";
 
 /**
  * Handle a vote request.
@@ -73,7 +75,6 @@ const state = () => ({
   startTime: null,
   lastUpdateTime: null,
   interval: null,
-  isTalking: false,
 });
 
 const getters: Record<string, LegacyGetter> = {};
@@ -463,7 +464,7 @@ const mutations: Record<string, LegacyMutation> = {
       this.state.players.players[seatNum].id != state.playerId
     )
       return;
-    state.isTalking = isTalking;
+    useAudioStore(pinia).setTalking(isTalking);
     this.commit("players/setIsTalking", { seatNum, isTalking });
   },
 };

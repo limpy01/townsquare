@@ -5,6 +5,7 @@ import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
+import { useAudioStore } from "../stores/audio";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
@@ -308,7 +309,7 @@ class LiveSession {
       if (
         this._store.state.session.claimedSeat >= 0 &&
         !this._store.state.session.isListening &&
-        !this._store.state.session.isTalking
+        !useAudioStore(pinia).isTalking
       ) {
         this._store.commit("session/setTalking", {
           seatNum: this._store.state.session.claimedSeat,

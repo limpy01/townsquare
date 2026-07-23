@@ -14,4 +14,14 @@ describe("audio store", () => {
     audio.setListeningFrame(null);
     expect(audio.listeningFrame).toBeNull();
   });
+
+  it("tracks local speech independently of the animation frame", () => {
+    const audio = useAudioStore();
+
+    audio.setTalking(true);
+    expect(audio.isTalking).toBe(true);
+
+    audio.setTalking(false);
+    expect(audio.isTalking).toBe(false);
+  });
 });
