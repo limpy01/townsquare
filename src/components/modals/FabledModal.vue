@@ -21,6 +21,7 @@ import Token from "../Token.vue";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
+import store from "../../store";
 
 const modals = useModalStore();
 const players = usePlayersStore();
@@ -38,8 +39,8 @@ const tokenWidth = computed(() =>
 );
 
 function setFabled(role: any) {
-  players.setFabled({ fabled: role });
-  modals.toggle("fabled");
+  store.commit("players/setFabled", { fabled: role });
+  store.commit("toggleModal", "fabled");
 }
 
 function handleResize() {
