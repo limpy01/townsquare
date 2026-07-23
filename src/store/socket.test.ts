@@ -12,6 +12,7 @@ describe("session socket message decoder", () => {
   it("rejects malformed JSON and protocol envelopes", () => {
     expect(decodeSessionMessage("not json")).toBeNull();
     expect(decodeSessionMessage('[42, "payload"]')).toBeNull();
+    expect(decodeSessionMessage('["setRooms", []]')).toBeNull();
     expect(decodeSessionMessage({ command: "ping" })).toBeNull();
   });
 

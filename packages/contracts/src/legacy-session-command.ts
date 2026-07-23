@@ -1,0 +1,65 @@
+import { z } from "zod";
+
+/** Commands accepted by the browser's v1 session WebSocket dispatcher. */
+export const legacySessionCommandSchema = z.enum([
+  "addGroupChat",
+  "alertPopup",
+  "allowHost",
+  "allowJoin",
+  "avatarReceived",
+  "bluff",
+  "bootlegger",
+  "bye",
+  "chat",
+  "claim",
+  "clearVoteHistory",
+  "edition",
+  "fabled",
+  "feedback",
+  "firstNight",
+  "getGamestate",
+  "getStId",
+  "grimoire",
+  "gs",
+  "isNight",
+  "isReview",
+  "isRole",
+  "isVoteHistoryAllowed",
+  "isVoteInProgress",
+  "leaveSeat",
+  "lock",
+  "marked",
+  "move",
+  "nomination",
+  "otherNight",
+  "ping",
+  "player",
+  "pong",
+  "pronouns",
+  "remove",
+  "removeGroupChat",
+  "removeGroupChatMember",
+  "secretVote",
+  "setTalking",
+  "setTimer",
+  "stId",
+  "startTimer",
+  "states",
+  "stopTimer",
+  "swap",
+  "syncPlayersStatus",
+  "teamsNames",
+  "useOldOrder",
+  "useOldRole",
+  "usingRole",
+  "vote",
+  "votingSpeed",
+]);
+
+export type LegacySessionCommand = z.infer<typeof legacySessionCommandSchema>;
+
+export function isLegacySessionCommand(
+  command: string,
+): command is LegacySessionCommand {
+  return legacySessionCommandSchema.safeParse(command).success;
+}

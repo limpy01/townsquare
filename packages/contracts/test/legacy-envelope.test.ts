@@ -6,6 +6,8 @@ import {
   encodeLegacyEnvelope,
   isLegacyClientCommand,
   legacyClientCommandSchema,
+  isLegacySessionCommand,
+  legacySessionCommandSchema,
   parseAvatarUpload,
   parseCustomScript,
   parseDynamicInitResponse,
@@ -55,6 +57,22 @@ describe("legacy client command boundary", () => {
       legacyClientCommandSchema.safeParse("runArbitraryCode").success,
     ).toBe(false);
     expect(isLegacyClientCommand("runArbitraryCode")).toBe(false);
+  });
+});
+
+describe("legacy session command boundary", () => {
+  it("accepts commands handled by the browser session dispatcher", () => {
+    expect(legacySessionCommandSchema.parse("syncPlayersStatus")).toBe(
+      "syncPlayersStatus",
+    );
+    expect(isLegacySessionCommand("avatarReceived")).toBe(true);
+  });
+
+  it("rejects commands with no browser session handler", () => {
+    expect(legacySessionCommandSchema.safeParse("setRooms").success).toBe(
+      false,
+    );
+    expect(isLegacySessionCommand("setRooms")).toBe(false);
   });
 });
 

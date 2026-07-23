@@ -18,6 +18,11 @@
       "require": "./dist/legacy-client-command.js",
       "default": "./dist/legacy-client-command.js"
     },
+    "./legacy-session-command": {
+      "types": "./dist/legacy-session-command.d.ts",
+      "require": "./dist/legacy-session-command.js",
+      "default": "./dist/legacy-session-command.js"
+    },
     "./custom-script": {
       "types": "./dist/custom-script.d.ts",
       "require": "./dist/custom-script.js",

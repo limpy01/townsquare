@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { wsBase } from "../config";
 import { decodeLegacyEnvelope } from "@townsquare/contracts/legacy-envelope";
+import { isLegacySessionCommand } from "@townsquare/contracts/legacy-session-command";
 import { pinia } from "../pinia";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
@@ -24,7 +25,8 @@ export const decodeSessionMessage = (data: unknown) => {
   if (typeof data !== "string") return null;
 
   try {
-    return decodeLegacyEnvelope(JSON.parse(data));
+    const envelope = decodeLegacyEnvelope(JSON.parse(data));
+    return isLegacySessionCommand(envelope.command) ? envelope : null;
   } catch {
     return null;
   }

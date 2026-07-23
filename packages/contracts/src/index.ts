@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export * from "./legacy-envelope.js";
 export * from "./legacy-client-command.js";
+export * from "./legacy-session-command.js";
 export * from "./custom-script.js";
 export * from "./dynamic-init.js";
 export * from "./game-state.js";
