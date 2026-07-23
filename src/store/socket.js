@@ -13,6 +13,7 @@ import { useVotingStore } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
 import { useRoleActivityStore } from "../stores/role-activity";
 import { useProfileStore } from "../stores/profile";
+import { useMessageOutboxStore } from "../stores/message-outbox";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 
@@ -33,6 +34,7 @@ class LiveSession {
     this._settings = useSessionSettingsStore(pinia);
     this._roles = useRoleActivityStore(pinia);
     this._profile = useProfileStore(pinia);
+    this._outbox = useMessageOutboxStore(pinia);
     this._pingInterval = 3 * 1000; // 30 seconds between pings
     this._pingTimer = null;
     this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
@@ -132,7 +134,7 @@ class LiveSession {
         });
 
         // clear messages
-        while (this._store.state.session.messageQueue.length > 0) {
+        while (this._outbox.queue.length > 0) {
           this._store.commit("session/deleteMessageQueue", 0);
         }
 
@@ -218,8 +220,8 @@ class LiveSession {
   }
 
   _sendQueue() {
-    if (this._store.state.session.messageQueue.length <= 0) return;
-    for (let message of this._store.state.session.messageQueue) {
+    if (this._outbox.queue.length <= 0) return;
+    for (let message of this._outbox.queue) {
       switch (message.type) {
         case "direct":
           this._sendDirect(
@@ -264,15 +266,19 @@ class LiveSession {
     this._sendTimer = null;
   }
 
+  getPendingMessageCount() {
+    return this._outbox.queue.length;
+  }
+
   /**
    *
    * @param id id for identifying and deleting the query
    */
   _deleteFromQueue(id) {
-    if (this._store.state.session.messageQueue.length <= 0) return;
-    for (let i = 0; i < this._store.state.session.messageQueue.length; i++) {
-      if (this._store.state.session.messageQueue[i].id === id) {
-        this._checkQueue(this._store.state.session.messageQueue[i]);
+    if (this._outbox.queue.length <= 0) return;
+    for (let i = 0; i < this._outbox.queue.length; i++) {
+      if (this._outbox.queue[i].id === id) {
+        this._checkQueue(this._outbox.queue[i]);
         // this._store.state.session.messageQueue.splice(i,1);
         this._store.commit("session/deleteMessageQueue", i);
         break;
@@ -2029,8 +2035,7 @@ class LiveSession {
         "direct",
         feedback,
       ]);
-      if (this._store.state.session.messageUniqueQueue[feedback]) return;
-      this._store.commit("session/checkUniqueMessage", feedback);
+      if (!this._outbox.checkUnique(feedback)) return;
     }
     if (
       this._isSpectator &&
@@ -2140,8 +2145,7 @@ class LiveSession {
         "direct",
         feedback,
       ]);
-      if (this._store.state.session.messageUniqueQueue[feedback]) return;
-      this._store.commit("session/checkUniqueMessage", feedback);
+      if (!this._outbox.checkUnique(feedback)) return;
     }
     if (!this._isSpectator) return;
 
@@ -2200,8 +2204,7 @@ class LiveSession {
         "direct",
         feedback,
       ]);
-      if (this._store.state.session.messageUniqueQueue[feedback]) return;
-      this._store.commit("session/checkUniqueMessage", feedback);
+      if (!this._outbox.checkUnique(feedback)) return;
     }
     if (!this._isSpectator) return;
 
@@ -2228,8 +2231,7 @@ class LiveSession {
         "direct",
         feedback,
       ]);
-      if (this._store.state.session.messageUniqueQueue[feedback]) return;
-      this._store.commit("session/checkUniqueMessage", feedback);
+      if (!this._outbox.checkUnique(feedback)) return;
     }
     if (!this._isSpectator) return;
 

@@ -32,6 +32,7 @@ export interface SessionOutboundTarget {
   sendRemoveGroupChatMember(payload: unknown): void;
   _startSendQueue(): void;
   _stopSendQueue(): void;
+  getPendingMessageCount(): number;
   setTimer(payload: unknown): void;
   startTimer(payload: unknown): void;
   stopTimer(payload: unknown): void;
@@ -52,7 +53,6 @@ export interface SessionMutation {
 export interface SessionOutboundState {
   session: {
     sessionId: unknown;
-    messageQueue: unknown[];
   };
 }
 
@@ -161,7 +161,7 @@ export function dispatchSessionMutation(
       target._startSendQueue();
       break;
     case "session/deleteMessageQueue":
-      if (state.session.messageQueue.length <= 0) target._stopSendQueue();
+      if (target.getPendingMessageCount() <= 0) target._stopSendQueue();
       break;
     case "session/setTimer":
       target.setTimer(payload);

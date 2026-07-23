@@ -590,6 +590,7 @@ import { useLegacyOptionsStore } from "../stores/legacy-options";
 import { useVotingStore } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
 import { useProfileStore } from "../stores/profile";
+import { useMessageOutboxStore } from "../stores/message-outbox";
 
 export default {
   computed: {
@@ -627,6 +628,9 @@ export default {
     },
     profile() {
       return useProfileStore();
+    },
+    outbox() {
+      return useMessageOutboxStore();
     },
     formattedTime() {
       const minutes = Math.floor(this.timer.seconds / 60);
@@ -1124,7 +1128,7 @@ export default {
         });
 
         // clear messages
-        while (this.session.messageQueue.length > 0) {
+        while (this.outbox.queue.length > 0) {
           this.$store.commit("session/deleteMessageQueue", 0);
         }
 

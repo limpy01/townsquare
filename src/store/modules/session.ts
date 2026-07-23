@@ -13,6 +13,7 @@ import { useVotingStore } from "../../stores/voting";
 import { useSessionSettingsStore } from "../../stores/session-settings";
 import { useRoleActivityStore } from "../../stores/role-activity";
 import { useProfileStore } from "../../stores/profile";
+import { useMessageOutboxStore } from "../../stores/message-outbox";
 
 const state = () => ({
   sessionId: "",
@@ -21,8 +22,6 @@ const state = () => ({
   isSpectator: false,
   playerId: "",
   claimedSeat: -1,
-  messageQueue: [],
-  messageUniqueQueue: [],
   chatHistory: [],
   groupChats: [],
 });
@@ -179,22 +178,14 @@ const mutations: Record<string, LegacyMutation> = {
       chat: [...oldMessages, message],
     };
   },
-  addMessageQueue(state, { type, playerId, command, params, id }) {
-    state.messageQueue.push({ type, playerId, command, params, id });
+  addMessageQueue(_state, { type, playerId, command, params, id }) {
+    useMessageOutboxStore(pinia).add({ type, playerId, command, params, id });
   },
-  deleteMessageQueue(state, index) {
-    if (state.messageQueue.length === 0) return;
-    state.messageQueue.splice(index, 1);
+  deleteMessageQueue(_state, index) {
+    useMessageOutboxStore(pinia).remove(index);
   },
-  checkUniqueMessage(state, feedback) {
-    if (state.messageUniqueQueue[feedback])
-      clearTimeout(state.messageUniqueQueue[feedback]);
-    state.messageUniqueQueue[feedback] = setTimeout(
-      () => {
-        delete state.messageUniqueQueue[feedback];
-      },
-      1000 * 60 * 3,
-    );
+  checkUniqueMessage(_state, feedback) {
+    useMessageOutboxStore(pinia).checkUnique(feedback);
   },
   addGroupChat(state, { chatId, players, playerIds, keep }) {
     if (state.groupChats.length >= 20) return;

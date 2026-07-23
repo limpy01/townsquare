@@ -13,6 +13,7 @@ function createTarget() {
     sendPlayer: vi.fn(),
     sendPlayerPronouns: vi.fn(),
     _stopSendQueue: vi.fn(),
+    getPendingMessageCount: vi.fn(() => 0),
     setIsReview: vi.fn(),
   } as unknown as SessionOutboundTarget;
 }
@@ -23,7 +24,6 @@ function createState(
   return {
     session: {
       sessionId: undefined,
-      messageQueue: [],
       ...session,
     },
   };
@@ -71,10 +71,13 @@ describe("dispatchSessionMutation", () => {
   it("only stops the send queue after its final item is removed", () => {
     const target = createTarget();
 
+    (target.getPendingMessageCount as unknown as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce(1)
+      .mockReturnValueOnce(0);
     dispatchSessionMutation(
       target,
       { type: "session/deleteMessageQueue" },
-      createState({ messageQueue: ["pending"] }),
+      createState(),
     );
     dispatchSessionMutation(
       target,
