@@ -44,7 +44,7 @@
     >
       <button
         v-if="!session.isSpectator && (!timing || timer.seconds <= 0)"
-        @click="startTimer"
+        @click="() => startTimer()"
         class="timerButton"
       >
         开始
@@ -207,7 +207,7 @@
             <li v-if="!session.isSpectator" @click="useOldRoleAsk">
               使用原角色能力
             </li>
-            <li v-if="!!session.sessionId & session.isSpectator">
+            <li v-if="!!session.sessionId && session.isSpectator">
               <div class="wrap">
                 <div @click="startEditingThreshold">
                   <span>麦克风阈值</span>
@@ -307,7 +307,7 @@
           <!-- Users -->
           <li class="headline">玩家</li>
           <div class="options">
-            <li @click="addPlayer" v-if="players.length < 20">
+            <li @click="() => addPlayer()" v-if="players.length < 20">
               添加座位<!--<em>[A]</em>-->
             </li>
             <li @click="randomizeSeatings" v-if="players.length > 2">
@@ -502,9 +502,7 @@
         <button @click="distributeBluffs('demon')">恶魔</button>
         <button @click="distributeBluffs('lunatic')">疯子</button>
         <button @click="distributeBluffs('snitch')">爪牙（告密者）</button>
-        <button @click="distributeBluffs((role = null), (seat = true))">
-          输入座位号
-        </button>
+        <button @click="distributeBluffs(null, true)">输入座位号</button>
         <button @click="distributeBluffs()">取消</button>
       </div>
     </div>
@@ -515,9 +513,7 @@
       <div>
         <button @click="distributeGrimoire('widow')">寡妇</button>
         <button @click="distributeGrimoire('spy')">间谍</button>
-        <button @click="distributeGrimoire((role = null), (seat = true))">
-          输入座位号
-        </button>
+        <button @click="distributeGrimoire(null, true)">输入座位号</button>
         <button @click="distributeGrimoire()">取消</button>
       </div>
     </div>
@@ -577,7 +573,6 @@
 </template>
 
 <script setup lang="ts">
-// @ts-nocheck
 import { computed, nextTick, ref, watch } from "vue";
 import { useLobbyStore } from "../stores/lobby";
 import { showInputModal } from "../services/input-modal";
@@ -716,7 +711,7 @@ const runAudioDetection = () => {
     for (let index = 0; index < activeAnalyser.frequencyBinCount; index++) {
       const frequency = index * binSize;
       if (frequency >= humanVoiceRange.min && frequency <= humanVoiceRange.max)
-        totalVolume += dataArray[index];
+        totalVolume += dataArray[index] ?? 0;
     }
 
     if (totalVolume > grimoire.audioThreshold && !audio.isTalking)
@@ -808,7 +803,7 @@ const customiseBootlegger = async () => {
     inputData: { name: ["输入私货商人内容"], length: 1, placeholder: [""] },
   }).catch(() => null);
   if (!Array.isArray(input)) return;
-  commitGameCommand("session/setBootlegger", input[0].trim());
+  commitGameCommand("session/setBootlegger", (input[0] ?? "").trim());
 };
 const toggleNight = () => {
   commitGameCommand("toggleNight");
@@ -817,7 +812,14 @@ const toggleNight = () => {
 const selectEditionsAsk = () => {
   selectingEditions.value = !selectingEditions.value;
   if (selectingEditions.value)
-    pendingEditions.value = { ...scenario.selectedEditions };
+    pendingEditions.value = {
+      tb: scenario.selectedEditions.tb ?? false,
+      bmr: scenario.selectedEditions.bmr ?? false,
+      snv: scenario.selectedEditions.snv ?? false,
+      exp: scenario.selectedEditions.exp ?? false,
+      hdcs: scenario.selectedEditions.hdcs ?? false,
+      syyl: scenario.selectedEditions.syyl ?? false,
+    };
 };
 const selectEditions = (update = false) => {
   nextTick(() => document.getElementById("app")?.focus());
@@ -902,16 +904,16 @@ const hostSession = async () => {
     await showNetworkWarning();
     return;
   }
-  let sessionPlaceholder = Math.round(Math.random() * 10000);
+  let sessionPlaceholder = String(Math.round(Math.random() * 10000));
   while (lobby.rooms.includes(sessionPlaceholder))
-    sessionPlaceholder = Math.round(Math.random() * 10000);
+    sessionPlaceholder = String(Math.round(Math.random() * 10000));
   const input = await showInputModal({
     inputType: "hostSession",
     inputModal: "input",
     inputData: {
       name: ["请输入房间号", "请输入玩家人数"],
       length: 2,
-      placeholder: [String(sessionPlaceholder), "12"],
+      placeholder: [sessionPlaceholder, "12"],
     },
   }).catch(() => null);
   if (!Array.isArray(input)) return;
@@ -975,7 +977,7 @@ const joinSession = async () => {
     inputData: { name: ["输入房间号/链接"], length: 1, placeholder: [""] },
   }).catch(() => null);
   if (!Array.isArray(input)) return;
-  const sessionId = Number(input[0].split("#").pop()).toString();
+  const sessionId = Number((input[0] ?? "").split("#").pop()).toString();
   if (!sessionId) return;
   commitGameCommand("session/clearVoteHistory", []);
   commitGameCommand("session/setSpectator", true);
