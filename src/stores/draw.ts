@@ -2,10 +2,10 @@ import { defineStore } from "pinia";
 
 export const useDrawStore = defineStore("draw", {
   state: () => ({
-    roles: [] as unknown[],
+    roles: [] as any[],
   }),
   actions: {
-    setRoles(roles: unknown[]) {
+    setRoles(roles: any[]) {
       this.roles = [...roles];
     },
     clearRoles() {

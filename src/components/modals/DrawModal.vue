@@ -49,105 +49,98 @@
   </Modal>
 </template>
 
-<script>
-import { mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useDrawStore } from "../../stores/draw";
-import Modal from "./Modal";
-import Token from "../Token";
+import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
+import { useScenarioStore } from "../../stores/scenario";
+import { useSessionIdentityStore } from "../../stores/session-identity";
+import store from "../../store";
+import Modal from "./Modal.vue";
+import Token from "../Token.vue";
 
-export default {
-  components: { Token, Modal },
-  props: ["playerIndex"],
-  computed: {
-    tokenWidth() {
-      const percentage = 0.06;
-      const width = percentage * this.windowWidth;
-      return width >= 80 ? "width: 6vw" : "width: 80px";
-    },
-    nonTravelerLength() {
-      return this.players.filter((player) => player.role.team !== "traveler")
-        .length;
-    },
-    nextConsecutiveTravelerNumber() {
-      let count = 0;
-      for (let i = this.drawingIndex; i < this.players.length; i++) {
-        if (this.players[i].role?.team === "traveler") {
-          count++;
-        } else {
-          break;
-        }
-      }
-      return count;
-    },
-    ...mapState(["modals", "session"]),
-    ...mapState("players", ["players"]),
-    ...mapState(["otherTravelers"]),
-    draw() {
-      return useDrawStore();
-    },
-  },
-  data() {
-    return {
-      displayRole: {},
-      drawingIndex: 0,
-      drawnRoles: [],
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-    };
-  },
-  mounted() {
-    window.addEventListener("resize", this.handleResize);
-    this.drawingIndex = this.players.findIndex(
-      (player) => player.role.team !== "traveler",
-    );
-  },
-  beforeUnmount() {
-    window.removeEventListener("resize", this.handleResize);
-  },
-  methods: {
-    handleResize() {
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
-    },
-    storeRole(role) {
-      if (Object.keys(this.displayRole).length > 0) this.displayRole = {};
-      const index = this.draw.roles.indexOf(role);
-      if (index < 0) return;
-      this.displayRole = this.draw.roles.splice(index, 1)[0];
-      this.drawnRoles.push(this.displayRole);
-    },
-    nextRole() {
-      this.displayRole = {};
-      this.drawingIndex = this.drawingIndex + 1;
-      while (
-        this.drawingIndex < this.players.index &&
-        this.players[this.drawingIndex].role.team === "traveler"
-      )
-        this.drawingIndex = this.drawingIndex + 1;
-    },
-    finishDraw() {
-      const drawnRoles = [...this.drawnRoles, ...this.draw.roles];
-      let skip = 0;
-      for (let i = 0; i < drawnRoles.length; i++) {
-        while (this.players[i + skip].role.team === "traveler") skip++;
-        this.$store.commit("players/update", {
-          player: this.players[i + skip],
-          property: "role",
-          value: drawnRoles[i],
-        });
-      }
-      this.close();
-    },
-    close() {
-      this.displayRole = {};
-      this.drawingIndex = 0;
-      this.drawnRoles = [];
-      this.draw.clearRoles();
-      this.toggleModal("draw");
-    },
-    ...mapMutations(["toggleModal"]),
-  },
-};
+defineProps<{ playerIndex?: number }>();
+
+const modals = useModalStore();
+const playerState = usePlayersStore();
+const scenario = useScenarioStore();
+const session = useSessionIdentityStore();
+const draw = useDrawStore();
+const players = computed(() => playerState.players);
+const otherTravelers = computed(() => scenario.otherTravelers);
+const displayRole = ref<Record<string, any>>({});
+const drawingIndex = ref(0);
+const drawnRoles = ref<any[]>([]);
+const windowWidth = ref(window.innerWidth);
+const tokenWidth = computed(() =>
+  windowWidth.value * 0.06 >= 80 ? "width: 6vw" : "width: 80px",
+);
+const nonTravelerLength = computed(
+  () =>
+    players.value.filter((player) => player.role.team !== "traveler").length,
+);
+const nextConsecutiveTravelerNumber = computed(() => {
+  let count = 0;
+  for (let index = drawingIndex.value; index < players.value.length; index++) {
+    if (players.value[index].role?.team === "traveler") count++;
+    else break;
+  }
+  return count;
+});
+
+function handleResize() {
+  windowWidth.value = window.innerWidth;
+}
+
+function storeRole(role: any) {
+  if (Object.keys(displayRole.value).length) displayRole.value = {};
+  const index = draw.roles.indexOf(role);
+  if (index < 0) return;
+  displayRole.value = draw.roles.splice(index, 1)[0];
+  drawnRoles.value.push(displayRole.value);
+}
+
+function nextRole() {
+  displayRole.value = {};
+  drawingIndex.value++;
+  while (
+    drawingIndex.value < (players.value as any).index &&
+    players.value[drawingIndex.value].role.team === "traveler"
+  ) {
+    drawingIndex.value++;
+  }
+}
+
+function finishDraw() {
+  const selectedRoles = [...drawnRoles.value, ...draw.roles];
+  let skip = 0;
+  for (let index = 0; index < selectedRoles.length; index++) {
+    while (players.value[index + skip].role.team === "traveler") skip++;
+    store.commit("players/update", {
+      player: players.value[index + skip],
+      property: "role",
+      value: selectedRoles[index],
+    });
+  }
+  close();
+}
+
+function close() {
+  displayRole.value = {};
+  drawingIndex.value = 0;
+  drawnRoles.value = [];
+  draw.clearRoles();
+  modals.toggle("draw");
+}
+
+onMounted(() => {
+  window.addEventListener("resize", handleResize);
+  drawingIndex.value = players.value.findIndex(
+    (player) => player.role.team !== "traveler",
+  );
+});
+onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
 </script>
 
 <style scoped lang="scss">
