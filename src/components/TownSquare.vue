@@ -243,7 +243,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { gameCommands } from "../store/legacy-commands";
+import { commitGameCommand, gameCommands } from "../store/legacy-commands";
 import Player from "./Player.vue";
 import Token from "./Token.vue";
 import ReminderModal from "./modals/ReminderModal.vue";
@@ -313,15 +313,6 @@ const options: any = {
     };
   },
   methods: {
-    toggleBluffs() {
-      this.isBluffsOpen = !this.isBluffsOpen;
-    },
-    toggleFabled() {
-      this.isFabledOpen = !this.isFabledOpen;
-    },
-    toggleGroups() {
-      this.isShowGroup = !this.isShowGroup;
-    },
     removeFabled(index) {
       if (this.session.isSpectator) {
         if (index === 0) {
@@ -684,14 +675,6 @@ const options: any = {
     notTyping() {
       this.interaction.setTyping(false);
     },
-    setUsingWraith() {
-      const usingWraith = this.roleActivity.wraith.using;
-      this.commands.commit("session/setIsRole", {
-        role: "wraith",
-        property: "using",
-        value: !usingWraith,
-      });
-    },
   },
 };
 
@@ -773,14 +756,27 @@ const isRole = computed(() => {
   );
   return activeRoles.length > 1 ? activeRoles.slice(0, 1) : activeRoles;
 });
+const toggleBluffs = () => {
+  isBluffsOpen.value = !isBluffsOpen.value;
+};
+const toggleFabled = () => {
+  isFabledOpen.value = !isFabledOpen.value;
+};
+const toggleGroups = () => {
+  isShowGroup.value = !isShowGroup.value;
+};
+const setUsingWraith = () => {
+  commitGameCommand("session/setIsRole", {
+    role: "wraith",
+    property: "using",
+    value: !roleActivity.wraith.using,
+  });
+};
 
 const methodNames = Object.keys(options.methods);
 for (const name of methodNames)
   context[name] = options.methods[name].bind(context);
 const {
-  toggleBluffs,
-  toggleFabled,
-  toggleGroups,
   removeFabled,
   handleTrigger,
   claimSeat,
@@ -803,7 +799,6 @@ const {
   checkToBottom,
   typing,
   notTyping,
-  setUsingWraith,
 } = context;
 
 watch(
