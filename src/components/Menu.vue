@@ -841,54 +841,6 @@ const options: any = {
         });
       }
     },
-    async toggleIsReview() {
-      if (this.isSpectator) return;
-
-      const confirm = this.review.isReview
-        ? false
-        : await this.showInputModal({
-            inputType: "confirm",
-            inputModal: "confirm",
-            inputData: {
-              name: ["是否开启复盘视角？（所有玩家将看到角色）"],
-            },
-          }).catch(() => {
-            return null;
-          });
-      if (confirm === null) return;
-
-      if (!this.review.isReview && confirm === true) {
-        this.commands.commit("session/setIsReview", !this.review.isReview);
-        this.commands.dispatch("players/realivePlayers");
-      } else if (this.review.isReview) {
-        this.commands.commit("session/setIsReview", false);
-      }
-    },
-    async clearLocalStorage() {
-      const clear = await this.showInputModal({
-        inputType: "confirm",
-        inputModal: "confirm",
-        inputData: {
-          name: ["确定清空所有内容吗？（将清除昵称头像和聊天记录等）"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      if (clear === null) return;
-
-      if (!clear) return;
-      clearTownsquareStorage(window.localStorage);
-      await this.showInputModal({
-        inputType: "alert",
-        inputModal: "text",
-        inputData: {
-          name: ["清理完成，请刷新网页！"],
-        },
-      }).catch(() => {
-        return null;
-      });
-      return;
-    },
   },
 };
 
@@ -1278,17 +1230,42 @@ const distributeGrimoire = async (role: string | null = null, seat = false) => {
   );
   distributingGrimoire.value = false;
 };
+const toggleIsReview = async () => {
+  if (session.isSpectator) return;
+  const confirmed = review.isReview
+    ? false
+    : await showInputModal({
+        inputType: "confirm",
+        inputModal: "confirm",
+        inputData: { name: ["是否开启复盘视角？（所有玩家将看到角色）"] },
+      }).catch(() => null);
+  if (confirmed === null) return;
+  if (!review.isReview && confirmed === true) {
+    commitGameCommand("session/setIsReview", true);
+    gameCommands.dispatch("players/realivePlayers");
+  } else if (review.isReview) {
+    commitGameCommand("session/setIsReview", false);
+  }
+};
+const clearLocalStorage = async () => {
+  const clear = await showInputModal({
+    inputType: "confirm",
+    inputModal: "confirm",
+    inputData: { name: ["确定清空所有内容吗？（将清除昵称头像和聊天记录等）"] },
+  }).catch(() => null);
+  if (!clear) return;
+  clearTownsquareStorage(window.localStorage);
+  await showInputModal({
+    inputType: "alert",
+    inputModal: "text",
+    inputData: { name: ["清理完成，请刷新网页！"] },
+  }).catch(() => null);
+};
 const methodNames = Object.keys(options.methods);
 const methodBindings = Object.fromEntries(
   methodNames.map((name) => [name, context[name]]),
 );
-const {
-  hostSession,
-  joinSession,
-  leaveSession,
-  toggleIsReview,
-  clearLocalStorage,
-} = methodBindings;
+const { hostSession, joinSession, leaveSession } = methodBindings;
 watch(
   () => grimoire.audioThreshold,
   (value) => {
