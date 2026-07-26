@@ -91,7 +91,7 @@ const legacyEditionPayloadSchema = z
 const legacyGameStatePlayerSchema = z
   .object({
     name: z.string().optional(),
-    id: z.string().optional(),
+    id: z.union([z.string(), z.number()]).optional(),
     image: z.string().optional(),
     stReminders: z.array(z.unknown()).optional(),
     isDead: z.boolean().optional(),

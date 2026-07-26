@@ -148,6 +148,7 @@
 - 入站座位确认 payload 已抽为共享 contracts tuple；本地座位申请只接受 `-1` 或非负整数，错误类型不会进入 WebSocket 传输。
 - `LiveSession` 的玩家运行时状态不再以 `unknown[]` 表示：常用身份、角色、状态、提醒、投票与群聊字段均有显式过渡投影，允许后续游戏状态与魔典 handler 在真实字段上继续收窄。
 - 游戏状态 contracts schema 现描述席位同步使用的姓名、身份、提醒、投票、状态与可选角色 ID；入站同步会跳过缺失本地玩家并将无效 nomination 回退为空候选人，保持 lightweight/full game state 的 v1 兼容路径。
+- 游戏状态的历史 player ID 保留 `string | number` 兼容：服务端房间转发回归测试锁定 numeric ID 的直发场景，避免 schema 收紧误拒绝旧 v1 游戏状态。
 - 魔典 contracts schema 已区分角色、玩家提醒与说书人提醒条目；入站处理只读取符合对应条目形状的数组，并跳过不存在的席位，避免不完整直发消息污染本地玩家状态。
 - 伪装与魔典分发的目标参数现有独立 TypeScript 结构，支持全体、角色、座位和 player ID 四种历史路由；座位不在当前玩家列表时不会生成无效直发消息。
 
