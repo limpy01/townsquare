@@ -77,8 +77,8 @@ type ScenarioState = {
   jinxes: Map<string, Map<string, string>>;
   states: unknown[];
   teamsNames: Record<string, string>;
-  firstNight: unknown[];
-  otherNight: unknown[];
+  firstNight: string[];
+  otherNight: string[];
 };
 
 export const useScenarioStore = defineStore("scenario", {
@@ -103,8 +103,8 @@ export const useScenarioStore = defineStore("scenario", {
       minion: "爪牙",
       demon: "恶魔",
     },
-    firstNight: [] as unknown[],
-    otherNight: [] as unknown[],
+    firstNight: [],
+    otherNight: [],
   }),
   actions: {
     setSelectedEditions(selectedEditions: Record<string, boolean>) {
@@ -118,12 +118,16 @@ export const useScenarioStore = defineStore("scenario", {
       this.teamsNames = names;
     },
     setFirstNight(firstNight: unknown[]) {
-      this.firstNight = firstNight;
-      usePlayersStore(pinia).firstNightOrder = firstNight;
+      this.firstNight = firstNight.filter(
+        (role): role is string => typeof role === "string",
+      );
+      usePlayersStore(pinia).firstNightOrder = this.firstNight;
     },
     setOtherNight(otherNight: unknown[]) {
-      this.otherNight = otherNight;
-      usePlayersStore(pinia).otherNightOrder = otherNight;
+      this.otherNight = otherNight.filter(
+        (role): role is string => typeof role === "string",
+      );
+      usePlayersStore(pinia).otherNightOrder = this.otherNight;
     },
     setCustomRoles(rawRoles: unknown) {
       if (!Array.isArray(rawRoles)) return false;

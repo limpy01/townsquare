@@ -65,4 +65,14 @@ describe("scenario store", () => {
     expect(scenario.setEdition({ roles: ["imp"] })).toBeUndefined();
     expect(scenario.edition).toBe(originalEdition);
   });
+
+  it("keeps only role IDs in custom night order lists", () => {
+    const scenario = useScenarioStore();
+
+    scenario.setFirstNight(["chef", 1, "imp", null]);
+    scenario.setOtherNight(["washerwoman", {}, "poisoner"]);
+
+    expect(scenario.firstNight).toEqual(["chef", "imp"]);
+    expect(scenario.otherNight).toEqual(["washerwoman", "poisoner"]);
+  });
 });
