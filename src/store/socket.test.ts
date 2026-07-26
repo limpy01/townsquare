@@ -112,6 +112,24 @@ describe("session socket message decoder", () => {
 
     expect(showModal).not.toHaveBeenCalled();
   });
+
+  it("rejects malformed talking and timer payloads before sending", () => {
+    const session = new LiveSession({
+      commit: vi.fn(),
+      state: {
+        players: { players: [] },
+        session: { playerId: "player-1", sessionId: "" },
+      },
+    });
+    const send = vi.spyOn(session, "_send");
+    (session as unknown as { _isSpectator: boolean })._isSpectator = false;
+
+    session.setTalking({ seatNum: "0", isTalking: true });
+    session.setTimer(-1);
+    session.startTimer(Number.NaN);
+
+    expect(send).not.toHaveBeenCalled();
+  });
 });
 
 afterEach(() => vi.useRealTimers());

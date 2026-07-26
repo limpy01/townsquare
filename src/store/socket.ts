@@ -3,8 +3,12 @@
 // Remove after the transport is split into typed lifecycle and protocol modules.
 import { wsBase } from "../config";
 import { pinia } from "../pinia";
-import { isLegacySessionPayload } from "@townsquare/contracts/legacy-client-command";
+import {
+  isLegacySessionPayload,
+  legacySetTalkingPayloadSchema,
+} from "@townsquare/contracts/legacy-client-command";
 import type { LegacyFeedback } from "@townsquare/contracts/legacy-envelope";
+import type { LegacySetTalkingPayload } from "@townsquare/contracts/legacy-client-command";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
 import type { InputModalRequest } from "../stores/input";
@@ -56,6 +60,17 @@ function isChatOutboxPayload(value: unknown): value is ChatOutboxPayload {
     typeof (value as Record<string, unknown>).message === "string" &&
     typeof (value as Record<string, unknown>).receivingPlayerId === "string"
   );
+}
+
+function parseSetTalkingPayload(
+  value: unknown,
+): LegacySetTalkingPayload | null {
+  const parsed = legacySetTalkingPayloadSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+function isTimerSeconds(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
 export class LiveSession {
@@ -1898,25 +1913,27 @@ export class LiveSession {
    * Set talking status to true to enable glowing animation
    * Send this update to all clients in the channel
    */
-  setTalking(payload) {
+  setTalking(payload: unknown): void {
+    const talkingPayload = parseSetTalkingPayload(payload);
+    if (!talkingPayload) return;
     if (
-      payload.seatNum < 0 ||
-      payload.seatNum >= this._store.state.players.players.length
+      talkingPayload.seatNum < 0 ||
+      talkingPayload.seatNum >= this._store.state.players.players.length
     )
       return;
     if (
-      !this._store.state.players.players[payload.seatNum].id ||
-      this._store.state.players.players[payload.seatNum].id !=
+      !this._store.state.players.players[talkingPayload.seatNum].id ||
+      this._store.state.players.players[talkingPayload.seatNum].id !=
         this._store.state.session.playerId
     )
       return;
-    this._send("setTalking", payload);
+    this._send("setTalking", talkingPayload);
   }
 
   /**
    * Set talking status to true to enable glowing animation when received
    */
-  _handleSetTalking(payload) {
+  _handleSetTalking(payload: LegacySetTalkingPayload): void {
     if (
       payload.seatNum < 0 ||
       payload.seatNum >= this._store.state.players.players.length
@@ -2390,8 +2407,9 @@ export class LiveSession {
    * Send out timer. ST only
    * @param payload
    */
-  setTimer(payload) {
+  setTimer(payload: unknown): void {
     if (this._isSpectator) return;
+    if (!isTimerSeconds(payload)) return;
     this._send("setTimer", payload);
   }
 
@@ -2399,7 +2417,7 @@ export class LiveSession {
    * Update timer when received.
    * @param payload
    */
-  _handleSetTimer(time) {
+  _handleSetTimer(time: number): void {
     this._store.commit("session/setTimer", time);
   }
 
@@ -2407,15 +2425,16 @@ export class LiveSession {
    * Send out starting timer. ST only
    * @param payload
    */
-  startTimer(payload) {
+  startTimer(payload: unknown): void {
     if (this._isSpectator) return;
+    if (!isTimerSeconds(payload)) return;
     this._send("startTimer", payload);
   }
 
   /**
    * Starting timer.
    */
-  _handleStartTimer(payload) {
+  _handleStartTimer(payload: number): void {
     this._store.commit("session/startTimer", payload);
   }
 
@@ -2423,7 +2442,7 @@ export class LiveSession {
    * Send out starting timer. ST only
    * @param payload
    */
-  stopTimer(payload) {
+  stopTimer(_payload: unknown): void {
     if (this._isSpectator) return;
     this._send("stopTimer", payload);
   }
