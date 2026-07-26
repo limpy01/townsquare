@@ -53,6 +53,23 @@
 import { computed } from "vue";
 import { useGrimoireStore } from "../stores/grimoire";
 
+type TokenRole = Record<string, unknown> & {
+  id?: string;
+  name?: string;
+  image?: string;
+  imageAlt?: string;
+  edition?: string;
+  team?: string;
+  ability?: string;
+  firstNight?: number;
+  firstNightReminder?: string;
+  otherNight?: number;
+  otherNightReminder?: string;
+  reminders?: unknown[];
+  remindersGlobal?: unknown[];
+  setup?: boolean;
+};
+
 const iconImages = import.meta.glob("../assets/icons/*.png", {
   eager: true,
   import: "default",
@@ -61,7 +78,7 @@ const tokenImage = new URL("../assets/token.png", import.meta.url).href;
 
 const props = withDefaults(
   defineProps<{
-    role?: Record<string, any>;
+    role?: TokenRole;
     id?: string;
     image?: string;
   }>(),
@@ -76,19 +93,21 @@ const emit = defineEmits<{ "set-role": [] }>();
 const grimoire = useGrimoireStore();
 const reminderLeaves = computed(
   () =>
-    (props.role.reminders || []).length +
-    (props.role.remindersGlobal || []).length,
+    (Array.isArray(props.role.reminders) ? props.role.reminders.length : 0) +
+    (Array.isArray(props.role.remindersGlobal)
+      ? props.role.remindersGlobal.length
+      : 0),
 );
 const tokenBackground = computed(() =>
   props.id && props.image ? {} : { backgroundImage: `url(${tokenImage})` },
 );
 const roleIcon = computed(() => {
-  const id = props.role.imageAlt || props.role.id.replace(/old1$/, "");
+  const id = props.role.imageAlt || props.role.id?.replace(/old1$/, "") || "";
   return iconImages[`../assets/icons/${id}.png`];
 });
 
-function nameToFontSize(name: string) {
-  return name && name.length > 10 ? "90%" : "110%";
+function nameToFontSize(name: unknown) {
+  return typeof name === "string" && name.length > 10 ? "90%" : "110%";
 }
 
 function setRole() {
