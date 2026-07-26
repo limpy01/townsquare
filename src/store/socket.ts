@@ -1,6 +1,3 @@
-// @ts-nocheck
-// MIG-011: Legacy runtime payload narrowing and transport method signatures remain untyped.
-// Remove after the transport is split into typed lifecycle and protocol modules.
 import { wsBase } from "../config";
 import { pinia } from "../pinia";
 import {
@@ -89,16 +86,17 @@ type LegacyRuntimeState = {
   players: {
     players: LegacyRuntimePlayer[];
     fabled: LegacyRuntimeRole[];
-  } & Record<string, unknown>;
+    bluffs: LegacyRuntimeRole[];
+  };
   session: {
     playerId: string;
     sessionId: string;
     stSecret: string;
-    stId: string;
+    stId: string | null;
     claimedSeat: number;
-    isListening: boolean;
+    isListening: number | null;
     isSpectator: boolean;
-  } & Record<string, unknown>;
+  };
   grimoire: { isNight: boolean };
   roles: Map<string, LegacyRuntimeRole>;
   edition: LegacyRuntimeEdition;
@@ -106,7 +104,7 @@ type LegacyRuntimeState = {
   teamsNames: Record<string, string>;
   firstNight: unknown[];
   otherNight: unknown[];
-} & Record<string, unknown>;
+};
 
 type LegacyRuntimeStore = {
   state: LegacyRuntimeState;
@@ -135,6 +133,16 @@ type PlayerPronounsPayload = {
   player: LegacyRuntimePlayer;
   value: string;
   isFromSockets: boolean;
+};
+
+type GroupChatPlayer = {
+  id: string;
+  name?: string | undefined;
+};
+
+type AddGroupChatPayload = {
+  chatId: string;
+  players: GroupChatPlayer[];
 };
 
 type LegacyPingPayload = [
@@ -172,6 +180,33 @@ function isChatOutboxPayload(value: unknown): value is ChatOutboxPayload {
     value !== null &&
     typeof (value as Record<string, unknown>).message === "string" &&
     typeof (value as Record<string, unknown>).receivingPlayerId === "string"
+  );
+}
+
+function isAddGroupChatPayload(value: unknown): value is AddGroupChatPayload {
+  if (typeof value !== "object" || value === null) return false;
+  const payload = value as Record<string, unknown>;
+  const players = payload.players;
+  return (
+    typeof payload.chatId === "string" &&
+    Array.isArray(players) &&
+    players.every(
+      (player) =>
+        typeof player === "object" &&
+        player !== null &&
+        typeof (player as Record<string, unknown>).id === "string",
+    )
+  );
+}
+
+function isSessionOutboundState(
+  value: unknown,
+): value is { session: { sessionId: unknown } } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Record<string, unknown>).session === "object" &&
+    (value as Record<string, unknown>).session !== null
   );
 }
 
@@ -1829,8 +1864,7 @@ export class LiveSession {
       }
     } else {
       // send all roles and reminders when requesting full grimoire (i.e. widow or spy)
-      const directMessage: Record<string, ["grimoire", GrimoireMessage]> =
-        {};
+      const directMessage: Record<string, ["grimoire", GrimoireMessage]> = {};
       this._store.state.players.players.forEach((player) => {
         if (player.id && player.role && player.role.id == role) {
           directMessage[player.id] = ["grimoire", { roles: [], reminders: [] }];
@@ -1926,8 +1960,8 @@ export class LiveSession {
     const nomination = Array.isArray(payload)
       ? payload
       : payload && typeof payload === "object"
-        ? payload.nomination
-        : undefined;
+      ? payload.nomination
+      : undefined;
     const players = this._store.state.players.players;
     if (
       !nomination ||
@@ -2006,8 +2040,8 @@ export class LiveSession {
       !this._isSpectator
     ) {
       if (
-        this._store.state.players.players[nomination[1]]?.role
-          .team === "traveler" ||
+        this._store.state.players.players[nomination[1]]?.role.team ===
+          "traveler" ||
         !this._voting.isSecretVote
       ) {
         // send to everyone if exile or secret vote is off
@@ -2234,13 +2268,14 @@ export class LiveSession {
    * @param chatId id of the chat group
    * @param players players within each chat group
    */
-  sendAddGroupChat({ chatId, players, playerIds }) {
+  sendAddGroupChat(payload: unknown) {
     if (this._isSpectator) return;
-    if (!!playerIds && !players) return;
+    if (!isAddGroupChatPayload(payload)) return;
+    const { chatId, players } = payload;
 
-    const allPlayersId = this._chat.groups
-      .filter((group) => group.id === chatId)[0]
-      .players.map((player) => player.id);
+    const group = this._chat.groups.find((group) => group.id === chatId);
+    if (!group) return;
+    const allPlayersId = group.players.map((player) => player.id);
     const newPlayersId = players.map((player) => player.id);
     const oldPlayersId = allPlayersId.filter(
       (id) => !newPlayersId.includes(id),
@@ -2609,12 +2644,13 @@ export class LiveSession {
 
     const groupChats = this._chat.groups;
     if (groupChatPlayers.length > 0) {
-      if (groupChats.length > 0) {
-        groupChats[0].players.forEach((player) => {
+      const group = groupChats[0];
+      if (group) {
+        group.players.forEach((player) => {
           if (!groupChatPlayers.includes(player.id))
             this._handleRemoveGroupChatMember(player.id);
         });
-        const inGroupPlayers = groupChats[0].players.map((player) => player.id);
+        const inGroupPlayers = group.players.map((player) => player.id);
         const addPlayers = groupChatPlayers.filter(
           (id) => !inGroupPlayers.includes(id),
         );
@@ -2691,14 +2727,15 @@ export class LiveSession {
   }
 }
 
-export default (store) => {
+export default (store: LegacyRuntimeStore) => {
   // lobby
   const lobby = new LiveLobby(store);
   if (window.location.pathname === "/") lobby.connect();
   // setup
   const session = new LiveSession(store);
 
-  mutationBus.subscribe((mutation, state: any) => {
+  mutationBus.subscribe((mutation, state) => {
+    if (!isSessionOutboundState(state)) return;
     dispatchSessionMutation(session, mutation, state);
   });
 };

@@ -2,12 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = process.cwd();
-const allowed = new Map([
-  [
-    "src/store/socket.ts",
-    "MIG-011: Legacy runtime payload narrowing and transport method signatures remain untyped.",
-  ],
-]);
+const allowed = new Map();
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -42,6 +37,4 @@ if (suppressions.length !== allowed.size) {
   );
 }
 
-console.log(
-  "TypeScript 抑制检查通过：仅保留已登记的 MIG-011 transport 迁移例外。",
-);
+console.log("TypeScript 抑制检查通过：未发现 @ts-nocheck。");

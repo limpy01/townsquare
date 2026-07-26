@@ -13,20 +13,20 @@ const createStore = (
     stSecret: string;
     stId: string;
     claimedSeat: number;
-    isListening: boolean;
+    isListening: number | null;
     isSpectator: boolean;
   }> = {},
 ) => ({
   commit,
   state: {
-    players: { players: [], fabled: [] },
+    players: { players: [], fabled: [], bluffs: [] },
     session: {
       playerId: "player-1",
       sessionId: "",
       stSecret: "",
       stId: "",
       claimedSeat: -1,
-      isListening: false,
+      isListening: null,
       isSpectator: false,
       ...session,
     },
