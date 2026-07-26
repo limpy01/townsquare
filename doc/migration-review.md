@@ -37,7 +37,7 @@ npm run check
 | 检查项                      | 结果                              |
 | --------------------------- | --------------------------------- |
 | TypeScript / Vue TypeScript | 通过                              |
-| Vitest                      | 47 个测试文件、160 个测试通过     |
+| Vitest                      | 49 个测试文件、166 个测试通过     |
 | 服务端集成测试              | 13 个测试通过                     |
 | Chromium E2E                | 4 个流程通过                      |
 | 视觉回归                    | 3 个测试、4 张截图通过            |
@@ -48,7 +48,7 @@ npm run check
 | 生产构建                    | 通过                              |
 | 工作区                      | 干净，无未提交改动                |
 
-本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；随后在 Node `v25.3.0`、npm `11.9.0` 下完成完整质量门，包含类型检查、160 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
+本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；最新一次完整质量门包含类型检查、166 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
 
 当前构建结果：
 
@@ -141,17 +141,11 @@ npm run check
 
 该文件当前约有 8% statements、5% branches 和 9% lines 覆盖率。它是系统中风险最高但测试最薄弱的模块，不适合在缺少 characterization tests 的情况下直接大拆。
 
-### 4.2 持久化仍是大型遗留适配器
+### 4.2 持久化已拆为可单测的兼容层，仍待移除外层 bridge
 
-`src/store/persistence.ts` 仍约 664 行，并保留：
+原约 664 行的 `src/store/persistence.ts` 已收敛为 19 行浏览器装配适配器；初始化恢复、旧值解析、写回投影和兼容类型分别位于 `persistence-hydrator.ts`、`persistence-codecs.ts`、`persistence-writer.ts` 与 `persistence-types.ts`。生产代码不再在该边界使用 `any` 或直接属性访问 localStorage。
 
-- `state: any`、`payload?: any`；
-- `localStorage: any`；
-- mutation bus 订阅；
-- 大型 mutation/command switch；
-- 页面标题等不属于 repository 的职责。
-
-该模块行覆盖率约 40%，尚未达到迁移计划为持久化边界设定的 95% lines、90% branches 目标。
+新增独立回归覆盖损坏值拒绝、旧头像迁移失败重试、会话/聊天/群聊/角色状态恢复、投票历史、群聊完整生命周期和角色状态清理。页面标题仍由最外层浏览器适配器提供，mutation bus 也暂时只保留在该适配器中，待 MIG-052 将调用方迁至明确 Pinia action/领域事件后删除。该边界尚未建立 95% lines、90% branches 的专属覆盖率门禁。
 
 ### 4.3 仍存在 legacy 命令体系
 
@@ -170,7 +164,6 @@ Vuex 已经删除，但下列过渡设施仍被大量组件和 transport 使用�
 
 严格 TypeScript 配置已经生效，但生产代码仍存在显式 `any`，主要分布在：
 
-- persistence bridge；
 - legacy command bridge；
 - players store 的部分状态；
 - 少数组件输入和群聊成员处理。
