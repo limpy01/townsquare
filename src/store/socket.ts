@@ -118,10 +118,10 @@ type ChatOutboxPayload = {
 };
 
 type TargetedDistribution = {
-  all?: boolean;
-  role?: string;
-  seatNum?: number;
-  playerId?: string;
+  all?: boolean | undefined;
+  role?: string | undefined;
+  seatNum?: number | undefined;
+  playerId?: string | undefined;
 };
 
 type PlayerUpdatePayload = {
@@ -1745,7 +1745,7 @@ export class LiveSession {
    * Update demon bluffs based on incoming data. Demon/Luantic only.
    * @param bluffs
    */
-  _updateBluff(bluffs) {
+  _updateBluff(bluffs: LegacyRuntimeRole[]) {
     if (!this._isSpectator) return;
     this._store.commit("players/updateBluff", bluffs);
   }
@@ -1800,7 +1800,9 @@ export class LiveSession {
         if (all) this._send("grimoire", message);
         if (playerId) this._sendDirect(playerId, "grimoire", message);
         if (seatNum) {
-          playerId = this._store.state.players.players[seatNum - 1].id;
+          const player = this._store.state.players.players[seatNum - 1];
+          if (!player) return;
+          playerId = player.id;
           this._sendDirect(playerId, "grimoire", message);
         }
       }
@@ -1840,10 +1842,9 @@ export class LiveSession {
       const update = grimRole[0];
       if (!update) return;
       // load role, first from session, the global, then fail gracefully
-      const role =
-        (update.value && this._store.state.roles.get(update.value)) ||
-        (update.value && rolesJSONbyId.get(update.value)) ||
-        {};
+      const role: LegacyRuntimeRole = (update.value &&
+        this._store.state.roles.get(update.value)) ||
+        (update.value && rolesJSONbyId.get(update.value)) || { id: "" };
       if (role.team === "traveler") return;
       const player = this._store.state.players.players[update.index];
       if (!player) return;
