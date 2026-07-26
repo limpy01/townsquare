@@ -19,7 +19,7 @@ async function openHome(page) {
     }),
   );
   await page.route("https://fonts.googleapis.com/**", (route) => route.abort());
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".intro")).toBeVisible();
 }
 
@@ -123,56 +123,63 @@ test("帮助菜单提供法律与署名入口", async ({ page }) => {
   await expect(legalDialog).toContainText("bra1n/townsquare");
 });
 
-test("首页空魔典视觉基线 @visual", async ({ page }) => {
-  await openHome(page);
+test.describe("视觉基线 @visual", () => {
+  // These scenarios share the same Vite process, WebSocket test backend, and
+  // deterministic room data. Keep their snapshots isolated while leaving the
+  // interaction suite fully parallel.
+  test.describe.configure({ mode: "serial" });
 
-  await expect(page).toHaveScreenshot("home-empty.png", {
-    animations: "disabled",
-    caret: "hide",
-    maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
-  });
-});
+  test("首页空魔典视觉基线 @visual", async ({ page }) => {
+    await openHome(page);
 
-test("创建房间弹窗视觉基线 @visual", async ({ page }) => {
-  await openHome(page);
-  await openCreateRoomDialog(page);
-  const roomDialog = page
-    .getByRole("dialog")
-    .filter({ hasText: "请输入房间号" });
-  await expect(roomDialog.locator("#input-1")).toBeVisible();
-
-  await expect(page).toHaveScreenshot("create-room-dialog.png", {
-    animations: "disabled",
-    caret: "hide",
-    maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
-  });
-});
-
-test("说书人魔典白天与夜晚视觉基线 @visual", async ({ page }) => {
-  await rejectClipboardWrites(page);
-  await openHome(page);
-  await openCreateRoomDialog(page);
-
-  const roomDialog = page
-    .getByRole("dialog")
-    .filter({ hasText: "请输入房间号" });
-  await roomDialog.locator("#input-1").fill("4242");
-  await roomDialog.locator("#input-2").fill("5");
-  await roomDialog.getByRole("button", { name: "确认", exact: true }).click();
-  await expect(page.locator("#townsquare .player")).toHaveCount(5);
-
-  await expect(page).toHaveScreenshot("storyteller-day.png", {
-    animations: "disabled",
-    caret: "hide",
-    maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
+    await expect(page).toHaveScreenshot("home-empty.png", {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
+    });
   });
 
-  await page.locator("#townsquare-app").focus();
-  await page.keyboard.press("s");
-  await expect(page.locator("#townsquare-app")).toHaveClass(/night/);
-  await expect(page).toHaveScreenshot("storyteller-night.png", {
-    animations: "disabled",
-    caret: "hide",
-    maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
+  test("创建房间弹窗视觉基线 @visual", async ({ page }) => {
+    await openHome(page);
+    await openCreateRoomDialog(page);
+    const roomDialog = page
+      .getByRole("dialog")
+      .filter({ hasText: "请输入房间号" });
+    await expect(roomDialog.locator("#input-1")).toBeVisible();
+
+    await expect(page).toHaveScreenshot("create-room-dialog.png", {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
+    });
+  });
+
+  test("说书人魔典白天与夜晚视觉基线 @visual", async ({ page }) => {
+    await rejectClipboardWrites(page);
+    await openHome(page);
+    await openCreateRoomDialog(page);
+
+    const roomDialog = page
+      .getByRole("dialog")
+      .filter({ hasText: "请输入房间号" });
+    await roomDialog.locator("#input-1").fill("4242");
+    await roomDialog.locator("#input-2").fill("5");
+    await roomDialog.getByRole("button", { name: "确认", exact: true }).click();
+    await expect(page.locator("#townsquare .player")).toHaveCount(5);
+
+    await expect(page).toHaveScreenshot("storyteller-day.png", {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
+    });
+
+    await page.locator("#townsquare-app").focus();
+    await page.keyboard.press("s");
+    await expect(page.locator("#townsquare-app")).toHaveClass(/night/);
+    await expect(page).toHaveScreenshot("storyteller-night.png", {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
+    });
   });
 });

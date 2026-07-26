@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（夜间顺序纯逻辑迁入 domain workspace，并继续收紧 WebSocket payload 边界）
+最后更新：2026-07-26（MIG-012 稳定视觉回归基线）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -41,6 +41,7 @@
 | MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口   | 11 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                                        | 旧前端可连接                    |
 | MIG-009 | 已完成 | Vue 3、Vite 运行时启动                     | typecheck、核心 E2E、视觉回归                                                                  | Vite 环境变量和静态资源保持兼容 |
 | MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除               | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                                           | 保持单窗口模态框与输入流程语义  |
+| MIG-012 | 已完成 | Playwright 视觉基线稳定性                  | 视觉组串行执行、`domcontentloaded` 导航与重复回归通过                                          | 截图、房间号与 v1 协议保持不变  |
 
 ## 迁移历史与当前质量基线
 
@@ -134,6 +135,7 @@
 - `@townsquare/domain` 的夜间顺序边界（无角色、无夜间顺序与重复数字顺序）已由表驱动回归覆盖；CI 现要求该纯逻辑包 statements/lines ≥95%、branches ≥90%，作为第一个按模块提升的覆盖率门禁。
 - `@townsquare/contracts` 已补齐标量 payload、未知入站命令、请求目标与自定义角色规范化失败路径的回归覆盖；CI 现要求 contracts 与 domain 两个共享包均达到 statements/lines ≥95%、branches ≥90%。
 - Playwright 视觉基线已扩展到真实房主魔典的白天与夜晚状态，固定本地测试后端、房间号、座位数和动画，避免后续样式归档只覆盖首页。
+- MIG-012 将共享 Vite 进程、WebSocket 测试后端和固定房间数据的视觉截图归入串行 test group；普通交互 E2E 保持并行。首页导航只等待 `domcontentloaded`，随后仍显式断言 Intro 可见，避免与用户流程无关的浏览器 `load` 事件拖慢或偶发阻塞基线。3 个视觉场景在单 worker 下连续重复 2 次通过。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
@@ -172,4 +174,4 @@
 - 禁止：改动游戏规则、UI、网络消息格式、存档格式、角色资源或 Vue 业务组件。
 - 停止条件：任一基线命令失败，或发现改动影响页面/协议行为。
 
-下一批：为 WebSocket payload 与存档逐命令补 schema，继续拆分 Menu/TownSquare 的临时 Options/命令适配层，并收紧 contracts/domain adapter。
+下一批：建立版本化 localStorage schema 和历史存档 fixture，优先收紧 `persistence`、`scenario` 与 `players` 的 `any`；不要在该批混入样式归档或 WebSocket 协议变更。
