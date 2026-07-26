@@ -38,6 +38,43 @@ test("enforces room membership and host authorization", async (t) => {
   ]);
 });
 
+test("lets the same host token take over without disconnecting players", async (t) => {
+  const { wsBase } = await createTestService(t);
+  const originalHost = await openClient(
+    `${wsBase}/ws/42/host-a/host?auth=host-secret`,
+  );
+  const player = await openClient(`${wsBase}/ws/42/player-a`);
+  const originalHostClosed = new Promise((resolve) =>
+    originalHost.socket.once("close", (code, reason) =>
+      resolve([code, reason.toString()]),
+    ),
+  );
+
+  const replacementHost = await openClient(
+    `${wsBase}/ws/42/host-b/host?auth=host-secret`,
+  );
+  assert.deepEqual(await originalHostClosed, [1012, "Storyteller reconnected"]);
+
+  replacementHost.send(["request", { checkAllowHost: ["host-b"] }]);
+  assert.deepEqual(
+    await replacementHost.next((message) => message[0] === "allowHost"),
+    ["allowHost", true],
+  );
+
+  replacementHost.send([
+    "direct",
+    { "player-a": ["gs", { gamestate: [{ id: "player-a" }] }] },
+  ]);
+  assert.deepEqual(await player.next((message) => message[0] === "gs"), [
+    "gs",
+    { gamestate: [{ id: "player-a" }] },
+    false,
+  ]);
+
+  replacementHost.socket.terminate();
+  player.socket.terminate();
+});
+
 test("forwards host broadcasts and player messages to the storyteller", async (t) => {
   const { wsBase } = await createTestService(t);
   const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
@@ -127,10 +164,16 @@ test("rejects malformed nested WebSocket payloads", async (t) => {
     [["remove", -1], /Invalid remove payload/],
     [["useOldOrder", { pithag: true }], /Invalid useOldOrder payload/],
     [["nomination", [0]], /Invalid nomination payload/],
-    [["player", { index: "0", property: "name", value: "Alice" }], /Invalid player payload/],
+    [
+      ["player", { index: "0", property: "name", value: "Alice" }],
+      /Invalid player payload/,
+    ],
     [["firstNight", ["dusk", 1]], /Invalid firstNight payload/],
     [["teamsNames", { townsfolk: 1 }], /Invalid teamsNames payload/],
-    [["direct", { "player-a": ["gs", { gamestate: {} }] }], /Invalid direct payload/],
+    [
+      ["direct", { "player-a": ["gs", { gamestate: {} }] }],
+      /Invalid direct payload/,
+    ],
   ]) {
     const client = await openClient(
       `${wsBase}/ws/42/${Math.random().toString(36).slice(2)}`,
