@@ -1,8 +1,12 @@
 import type { LegacyFeedback } from "@townsquare/contracts/legacy-envelope";
 
 type LegacyStore = {
-  commit(type: string, payload?: any): void;
-  state: any;
+  commit(type: string, payload?: unknown): void;
+  state: {
+    players: {
+      players: unknown[];
+    };
+  };
 };
 
 export interface SessionInboundTarget {
