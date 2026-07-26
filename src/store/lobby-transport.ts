@@ -4,8 +4,12 @@ import { pinia } from "../pinia";
 import { useLobbyStore } from "../stores/lobby";
 
 type LegacyLobbyStore = {
-  state: any;
-  commit(type: string, payload?: any): void;
+  state: {
+    session: {
+      playerId: string;
+    };
+  };
+  commit(type: string, payload?: unknown): void;
 };
 
 export default class LiveLobby {
@@ -44,9 +48,13 @@ export default class LiveLobby {
     };
   }
 
-  private _handleMessage({ data }: MessageEvent) {
+  private _handleMessage({ data }: MessageEvent<unknown>): void {
     let command: string | undefined;
     let params: unknown;
+    if (typeof data !== "string") {
+      console.log("unsupported socket message", data);
+      return;
+    }
     try {
       ({ command, params } = decodeLegacyEnvelope(JSON.parse(data)));
     } catch {
@@ -66,7 +74,7 @@ export default class LiveLobby {
     }
   }
 
-  connect() {
+  connect(): void {
     if (!this._store.state.session.playerId) {
       let playerId: string | undefined;
       while (
@@ -85,7 +93,7 @@ export default class LiveLobby {
     this._open();
   }
 
-  disconnect() {
+  disconnect(): void {
     this._pings = {};
     this._lobby.setPing(0);
     this._lobby.setIsReconnecting(false);
@@ -97,15 +105,19 @@ export default class LiveLobby {
     }
   }
 
-  private setRooms(params: unknown) {
-    if (Array.isArray(params)) this._lobby.setRooms(params);
+  private setRooms(params: unknown): void {
+    if (
+      Array.isArray(params) &&
+      params.every((room) => typeof room === "string")
+    )
+      this._lobby.setRooms(params);
   }
 
-  private addRoom(params: unknown) {
+  private addRoom(params: unknown): void {
     if (typeof params === "string") this._lobby.addRoom(params);
   }
 
-  private removeRoom(params: unknown) {
+  private removeRoom(params: unknown): void {
     if (typeof params === "string") this._lobby.removeRoom(params);
   }
 }

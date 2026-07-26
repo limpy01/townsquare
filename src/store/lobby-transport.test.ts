@@ -48,4 +48,24 @@ describe("lobby transport", () => {
     expect(lobby.rooms).toEqual(["1234", "5678"]);
     transport.disconnect();
   });
+
+  it("ignores malformed room lists", () => {
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    const lobby = useLobbyStore(pinia);
+    lobby.$reset();
+    const transport = new LiveLobby({
+      commit: vi.fn(),
+      state: { session: { playerId: "player-1" } },
+    });
+
+    transport.connect();
+    const socket = FakeWebSocket.instances[0];
+    if (!socket) throw new Error("lobby socket was not created");
+    socket.emit("message", {
+      data: JSON.stringify(["setRooms", ["1234", 5678]]),
+    });
+
+    expect(lobby.rooms).toBeNull();
+    transport.disconnect();
+  });
 });
