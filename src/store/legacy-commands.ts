@@ -332,6 +332,10 @@ export const gameRuntime = {
       roles: scenario.roles,
       fabled: scenario.fabled,
       edition: scenario.edition,
+      states: scenario.states,
+      teamsNames: scenario.teamsNames,
+      firstNight: scenario.firstNight,
+      otherNight: scenario.otherNight,
       session: {
         ...identity.$state,
         isListening: useAudioStore(pinia).listeningFrame,
