@@ -31,7 +31,7 @@
     "check:runtime-sources": "node scripts/check-runtime-source-extensions.cjs",
     "check:type-suppressions": "node scripts/check-type-suppressions.cjs",
     "test:integration": "npm run test:server",
-    "check": "npm run format:check && npm run lint:baseline && npm run check:runtime-sources && npm run check:type-suppressions && npm run typecheck && npm run test:unit && npm run test:integration && npm run test:e2e && npm run build"
+    "check": "npm run format:check && npm run lint:baseline && npm run check:runtime-sources && npm run check:type-suppressions && npm run typecheck && npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:visual && npm run build"
   },
   "main": "App.vue",
   "dependencies": {

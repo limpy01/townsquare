@@ -20,10 +20,10 @@
 | 0. 冻结行为基线           | 进行中 | Node、构建、协议、存档和测试基线可重复验证      |
 | 1. workspace 与共享契约   | 进行中 | v1 decoder/encoder、schema、domain 测试稳定     |
 | 2. 服务端 TypeScript 化   | 进行中 | 旧前端与新服务端的 HTTP/WS 集成矩阵通过         |
-| 3. Vue 3 + Vite 兼容启动  | 进行中 | Vite 下旧行为与视觉基线一致                     |
+| 3. Vue 3 + Vite 兼容启动  | 已完成 | Vite 下旧行为与视觉基线一致                     |
 | 4. 前端 TypeScript 基础层 | 进行中 | transport、持久化、协议和浏览器适配层严格类型化 |
 | 5. Vuex 至 Pinia          | 已完成 | 所有业务 store 独立、可测且存档兼容             |
-| 6. 组件 Composition API   | 进行中 | 所有 SFC 为 Vue TS，compat warning 为零         |
+| 6. 组件 Composition API   | 已完成 | 所有 SFC 为 Vue TS，compat warning 为零         |
 | 7. 样式与资源治理         | 进行中 | 全局样式归属明确，视觉与性能预算受控            |
 | 8. 清理、部署与收尾       | 进行中 | `npm run check` 全绿，部署与回滚演练完成        |
 
@@ -33,7 +33,7 @@
 | ------- | ------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------------- |
 | MIG-001 | 已完成 | 行为、HTTP、存档、WS command 清单          | 兼容性清单；服务端测试与构建                                                                   | 只读基线，不改协议              |
 | MIG-002 | 已完成 | 服务端大粒度测试拆分                       | 11 个独立 HTTP、room、lobby、queue、协议和版本信息测试                                         | 固定 v1 消息语义                |
-| MIG-003 | 进行中 | Playwright E2E 与视觉基线                  | 首页、创建房间流程和 2 张截图通过；CI 执行 E2E                                                 | 固定时间、随机数和视口          |
+| MIG-003 | 已完成 | Playwright E2E 与视觉基线                  | 首页、创建房间、说书人白天/夜晚截图通过；CI 执行 E2E 与视觉回归                                | 固定时间、随机数和视口          |
 | MIG-004 | 进行中 | 剧本与游戏状态 characterization fixtures   | WS/自定义剧本 fixture 与 11 个单元测试                                                         | 兼容历史 JSON 和存档            |
 | MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生     | lint 基线、服务端测试、构建                                                                    | 不改变运行时行为                |
 | MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter | 双向 command schema、首批嵌套载荷 schema、envelope decoder 与 HTTP 输入校验；27 个契约测试通过 | 网络继续传输旧三元组            |
@@ -49,11 +49,11 @@
 - `npm run build` 通过；入口产物约为 JS 1.78 MiB、CSS 250 KiB，仍存在资源体积警告。
 - ESLint：0 error、1,961 warning（34 个有告警文件）。在完全格式化前，CI 以此为不可增加的上限。
 - 当前前端为 Vue 3 + Vite + Pinia；服务端为 TypeScript、Express 5 与 `ws`。历史 Vuex/Vue CLI 记录仅用于说明迁移路径。
-- Playwright `1.61.1`：首页与创建房间流程可在 Chromium 中验证；`test:visual:update` 是唯一可写截图基线的命令，`test:visual` 仅比较。视觉截图暂在本地固定环境运行，待 Linux 字体镜像固定后加入 CI。
+- Playwright `1.61.1`：首页与创建房间流程可在 Chromium 中验证；`test:visual:update` 是唯一可写截图基线的命令，`test:visual` 仅比较。Chromium CI 作业会执行交互与视觉回归，失败时保留 Playwright 报告和追踪产物。
 - MIG-009 已将开发、构建与 E2E 启动链切换到 Vue 3、Vite 和 Vuex 4；`VITE_API_BASE`/`VITE_WS_BASE` 保持原有后端连接行为，Vue 3 移除的 filter、`$set` 与销毁钩子均已替换。未覆盖视觉基线；经定位，右上角折叠菜单在 Vue 3 下的变换栅格化最多相差 678 像素（小于目标视口的 0.1%），视觉测试以 800 像素的紧阈值继续防回归。
 - `MIG-LAW-001` 已补齐：服务端常规启动和 `--version` 均输出版权与 GPL 许可证告知；帮助菜单新增“法律与署名”入口，Playwright 覆盖其弹窗、版权和上游来源文本。
 - 服务端入口已移除 `@ts-nocheck`：为连接、房间、待投递消息、原始 WebSocket 数据、TLS 和监听地址建立了 TypeScript 类型，并继续使用 v1 旧数组 envelope decoder。HTTP/avatar 与完整的 lobby、room、离线消息队列 WebSocket 生命周期已分别拆入独立模块；入口现在只负责配置、HTTP 组装、TLS 与 upgrade 绑定。
-- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、111 个单元测试、13 个 HTTP/WS/CLI 集成测试、4 个浏览器流程和生产构建均会执行；CI 同步运行非浏览器质量门与浏览器流程，视觉截图仍固定在本地环境。
+- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、111 个单元测试、13 个 HTTP/WS/CLI 集成测试、4 个浏览器流程、3 个视觉回归和生产构建均会执行；CI 同步运行非浏览器质量门、浏览器流程与视觉回归。
 - 历史批次从独立、低风险的 lobby Vuex 模块开始；其余状态域与 transport 随后已迁至 Pinia/TypeScript，`allowJs` 和 Vuex 均已移除。
 - `Gradients.vue` 与基础 `Modal.vue` 已迁移至 `<script setup lang="ts">`；后续组件会按无状态、单一状态依赖、复杂交互的风险顺序迁移。
 - `lobby` 已成为第一个完全由 Pinia 持有的状态域：Vuex module 已删除，大厅 WebSocket、页面可见性和 UI 读取均直接使用 Pinia，并有单元测试锁定状态和房间生命周期。
@@ -122,7 +122,7 @@
 - v1 WebSocket 的代词、座位移除和旧规则选项 payload 已加入 contracts 校验，并由服务端拒绝畸形字段。
 - `getNightOrder` 已从前端目录迁入 `@townsquare/domain`；玩家、传奇角色、自定义顺序与缺失顺序的回退行为由纯函数测试锁定。Vite 在开发期直接解析 workspace 源码，类型检查则先构建 domain，避免使用过期声明文件。
 - WebSocket v1 的复杂广播与直发载荷现校验关键容器：游戏状态、剧本版本、角色/传奇角色、夜间顺序、座位更新、魔典、聊天和角色状态。服务端会在转发前以 `1008` 拒绝错误结构，合法的房间广播与离线消息队列继续保持原三元组格式。
-- CI 基线作业现在执行运行时源码扩展名门禁，浏览器作业会保留 Playwright 报告和失败追踪作为构建产物；视觉基线仍维持显式、本地比较，待固定 Linux 字体环境后单独接入。
+- CI 基线作业现在执行运行时源码扩展名门禁，浏览器作业会执行交互与视觉回归，并保留 Playwright 报告和失败追踪作为构建产物；更新视觉基线仍必须显式运行 `test:visual:update`。
 - 浏览器 session transport 会在调用入站 dispatcher 前使用共享协议 schema 拒绝畸形服务端消息；Vite 在开发期直连该 contracts 子入口，避免 workspace 构建产物过期导致的校验偏差。
 - 遗留 transport 的 Pinia 状态投影已补齐自定义剧本状态、阵营别名和首夜/其他夜顺序；发送完整游戏状态与独立剧本同步命令现在读取到与原 Vuex state 相同的字段。
 - 生产构建会校验当前入口 JS（1.8 MB）和 CSS（260 KB）的基线预算，后续代码拆分或资源优化可以收紧预算，但不会在迁移过程中无声扩大首屏产物。
