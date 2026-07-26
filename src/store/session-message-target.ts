@@ -1,17 +1,17 @@
 import type { LegacyFeedback } from "@townsquare/contracts/legacy-envelope";
 
-type LegacyStore = {
-  commit(type: string, payload?: unknown): void;
-  state: {
-    players: {
-      players: unknown[];
-    };
-  };
-};
-
 export interface SessionInboundTarget {
   readonly _isSpectator: boolean;
-  readonly _store: LegacyStore;
+  applyIncomingPlayerSwap(params: unknown): void;
+  applyIncomingPlayerMove(params: unknown): void;
+  applyIncomingPlayerRemove(params: unknown): void;
+  applyIncomingNomination(params: unknown): void;
+  applyIncomingMarkedPlayer(params: unknown): void;
+  applyIncomingNight(params: unknown): void;
+  applyIncomingVoteHistoryAllowed(params: unknown): void;
+  applyIncomingVotingSpeed(params: unknown): void;
+  applyIncomingVoteInProgress(params: unknown): void;
+  clearIncomingVoteHistory(): void;
   _alertPopup(params: unknown): void;
   _handleAllowHost(params: unknown): void;
   _handleAllowJoin(params: unknown): void;

@@ -8,41 +8,27 @@ export function handleVotingMessage(
   switch (command) {
     case "nomination":
       if (!target._isSpectator) return true;
-      if (!params) {
-        target._store.commit(
-          "session/addHistory",
-          target._store.state.players.players,
-        );
-        target._store.commit("session/addVoteSelected", {
-          selected: false,
-          players: target._store.state.players.players,
-          save: true,
-        });
-      }
-      target._store.commit("session/nomination", { nomination: params });
+      target.applyIncomingNomination(params);
       return true;
     case "marked":
-      if (target._isSpectator)
-        target._store.commit("session/setMarkedPlayer", params);
+      if (target._isSpectator) target.applyIncomingMarkedPlayer(params);
       return true;
     case "isNight":
-      if (target._isSpectator) target._store.commit("toggleNight", params);
+      if (target._isSpectator) target.applyIncomingNight(params);
       return true;
     case "isVoteHistoryAllowed":
       if (!target._isSpectator) return true;
-      target._store.commit("session/setVoteHistoryAllowed", params);
-      target._store.commit("session/clearVoteHistory");
+      target.applyIncomingVoteHistoryAllowed(params);
+      target.clearIncomingVoteHistory();
       return true;
     case "votingSpeed":
-      if (target._isSpectator)
-        target._store.commit("session/setVotingSpeed", params);
+      if (target._isSpectator) target.applyIncomingVotingSpeed(params);
       return true;
     case "clearVoteHistory":
-      if (target._isSpectator) target._store.commit("session/clearVoteHistory");
+      if (target._isSpectator) target.clearIncomingVoteHistory();
       return true;
     case "isVoteInProgress":
-      if (target._isSpectator)
-        target._store.commit("session/setVoteInProgress", params);
+      if (target._isSpectator) target.applyIncomingVoteInProgress(params);
       return true;
     case "vote":
       target._handleVote(params);

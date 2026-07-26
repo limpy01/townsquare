@@ -6,13 +6,19 @@ import { handlePlayerMessage } from "./session-message-handlers/player";
 import { handleVotingMessage } from "./session-message-handlers/voting";
 import type { SessionInboundTarget } from "./session-message-target";
 
-const createTarget = (
-  isSpectator: boolean,
-  commit = vi.fn(),
-): SessionInboundTarget =>
+const createTarget = (isSpectator: boolean): SessionInboundTarget =>
   ({
     _isSpectator: isSpectator,
-    _store: { commit, state: { players: { players: ["player-1"] } } },
+    applyIncomingPlayerSwap: vi.fn(),
+    applyIncomingPlayerMove: vi.fn(),
+    applyIncomingPlayerRemove: vi.fn(),
+    applyIncomingNomination: vi.fn(),
+    applyIncomingMarkedPlayer: vi.fn(),
+    applyIncomingNight: vi.fn(),
+    applyIncomingVoteHistoryAllowed: vi.fn(),
+    applyIncomingVotingSpeed: vi.fn(),
+    applyIncomingVoteInProgress: vi.fn(),
+    clearIncomingVoteHistory: vi.fn(),
   }) as unknown as SessionInboundTarget;
 
 describe("session message domain handlers", () => {
@@ -36,32 +42,20 @@ describe("session message domain handlers", () => {
   });
 
   it("keeps storyteller clients from applying player list mutations", () => {
-    const commit = vi.fn();
-    const host = createTarget(false, commit);
-    const spectator = createTarget(true, commit);
+    const host = createTarget(false);
+    const spectator = createTarget(true);
 
     expect(handlePlayerMessage(host, "swap", [0, 1])).toBe(true);
-    expect(commit).not.toHaveBeenCalled();
+    expect(host.applyIncomingPlayerSwap).not.toHaveBeenCalled();
     expect(handlePlayerMessage(spectator, "swap", [0, 1])).toBe(true);
-    expect(commit).toHaveBeenCalledWith("players/swap", [0, 1]);
+    expect(spectator.applyIncomingPlayerSwap).toHaveBeenCalledWith([0, 1]);
   });
 
   it("records a spectator nomination close before replacing nomination state", () => {
-    const commit = vi.fn();
-    const target = createTarget(true, commit);
+    const target = createTarget(true);
 
     expect(handleVotingMessage(target, "nomination", undefined)).toBe(true);
-    expect(commit).toHaveBeenNthCalledWith(1, "session/addHistory", [
-      "player-1",
-    ]);
-    expect(commit).toHaveBeenNthCalledWith(2, "session/addVoteSelected", {
-      selected: false,
-      players: ["player-1"],
-      save: true,
-    });
-    expect(commit).toHaveBeenNthCalledWith(3, "session/nomination", {
-      nomination: undefined,
-    });
+    expect(target.applyIncomingNomination).toHaveBeenCalledWith(undefined);
   });
 
   it("forwards chat feedback without applying it to another domain", () => {

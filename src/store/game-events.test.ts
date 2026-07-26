@@ -8,7 +8,6 @@ import {
   gameEvents,
   getGameEffectState,
 } from "./game-events";
-import { gameRuntime } from "./legacy-commands";
 
 describe("game event channel", () => {
   afterEach(() => {
@@ -54,12 +53,6 @@ describe("game event channel", () => {
     );
     expect(getGameEffectState()).toMatchObject({
       edition: scenario.edition,
-    });
-    expect(gameRuntime.state).toMatchObject({
-      states: ["drunk"],
-      teamsNames: { townsfolk: "Town" },
-      firstNight: ["washerwoman"],
-      otherNight: ["imp"],
     });
   });
 });

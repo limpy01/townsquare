@@ -10,13 +10,13 @@ export function handlePlayerMessage(
       target._updatePlayer(params);
       return true;
     case "swap":
-      if (target._isSpectator) target._store.commit("players/swap", params);
+      if (target._isSpectator) target.applyIncomingPlayerSwap(params);
       return true;
     case "move":
-      if (target._isSpectator) target._store.commit("players/move", params);
+      if (target._isSpectator) target.applyIncomingPlayerMove(params);
       return true;
     case "remove":
-      if (target._isSpectator) target._store.commit("players/remove", params);
+      if (target._isSpectator) target.applyIncomingPlayerRemove(params);
       return true;
     case "pronouns":
       target._updatePlayerPronouns(params);

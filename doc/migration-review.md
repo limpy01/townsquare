@@ -37,7 +37,7 @@ npm run check
 | 检查项                      | 结果                              |
 | --------------------------- | --------------------------------- |
 | TypeScript / Vue TypeScript | 通过                              |
-| Vitest                      | 53 个测试文件、172 个测试通过     |
+| Vitest                      | 53 个测试文件、173 个测试通过     |
 | 服务端集成测试              | 13 个测试通过                     |
 | Chromium E2E                | 4 个流程通过                      |
 | 视觉回归                    | 3 个测试、4 张截图通过            |
@@ -48,13 +48,13 @@ npm run check
 | 生产构建                    | 通过                              |
 | 工作区                      | 干净，无未提交改动                |
 
-本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；最新一次完整质量门包含类型检查、172 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
+本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；最新一次完整质量门包含类型检查、173 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
 
 当前构建结果：
 
 | 产物     |          当前值 |            预算 | 状态                  |
 | -------- | --------------: | --------------: | --------------------- |
-| 入口 JS  | 1,798,558 bytes | 1,800,000 bytes | 通过，但仅余约 1.4 KB |
+| 入口 JS  | 1,798,698 bytes | 1,800,000 bytes | 通过，但仅余约 1.3 KB |
 | 入口 CSS |   249,956 bytes |   260,000 bytes | 通过                  |
 
 当前 Vitest 全局覆盖率：
@@ -123,23 +123,20 @@ npm run check
 
 ## 4. 尚未完成的重点
 
-### 4.1 会话 transport 仍是最大风险
+### 4.1 会话 transport 已按领域收口，协议协调仍是最大风险
 
-`src/store/socket.ts` 仍约 2,664 行，同时负责：
+`src/store/socket.ts` 已由约 2,785 行缩至约 1,323 行，现只负责：
 
 - WebSocket 连接和关闭；
 - host/join 授权；
 - ping/pong；
 - 重连和多个 timer；
 - outbox 和 feedback；
-- 游戏状态同步；
-- 玩家、角色和魔典分发；
-- 提名、投票、聊天和群聊；
 - UI 告警和输入流程。
 
-虽然部分 guard、dispatcher 和 outbox 已经抽离，但计划中的 transport、reconnect policy、协议 handler 和 live-session 分层还没有完成。
+URL、timing、WebSocket client、reconnect policy、outbox controller 与五个入站领域 handler 已经抽离；聊天、投票、游戏状态、玩家状态、角色/魔典投递和席位认领均已分别迁至 session controller。transport 不再依赖 runtime 投影或字符串 command，并直接调用 Pinia store/action。后续改善应针对协议状态机与专属覆盖率，而不是继续按文件机械拆分。
 
-该文件当前约有 8% statements、5% branches 和 9% lines 覆盖率。它是系统中风险最高但测试最薄弱的模块，不适合在缺少 characterization tests 的情况下直接大拆。
+连接和断线、授权 timeout、ping/pong、outbox、timer 以及 player/voting 入站状态机已有 characterization tests；但尚未重新生成 controller 拆分后的专属覆盖率报告。它仍是系统中风险最高的协调边界，后续变更应保持 v1 envelope 和消息顺序不变。
 
 ### 4.2 持久化已拆为可单测的兼容层，仍待移除外层 bridge
 
@@ -147,16 +144,9 @@ npm run check
 
 新增独立回归覆盖损坏值拒绝、旧头像迁移失败重试、会话/聊天/群聊/角色状态恢复、投票历史、群聊完整生命周期和角色状态清理。页面标题仍由最外层浏览器适配器提供；MIG-052 已将原 mutation bus 替换为显式游戏事件通道。该边界尚未建立 95% lines、90% branches 的专属覆盖率门禁。
 
-### 4.3 仍存在 legacy 命令体系
+### 4.3 legacy 命令体系已删除
 
-Vuex 已经删除，但下列过渡设施仍被大量组件和 transport 使用：
-
-- `legacy-commands.ts`；
-- `LegacyRuntimeStore` 投影；
-- `commitGameCommand`；
-- `emitLegacyMutation`。
-
-`legacy-effects.ts`、`mutation-bus.ts` 与全部 `emitLegacyMutation` 调用已删除。App、投票、玩家、头像及全部相关弹窗现在在 Pinia action 后发布明确的游戏事件，持久化与 session transport 是该事件的消费者。持久化 hydration 与大厅 transport 已进一步直接消费 Pinia store，不再需要 runtime 投影或字符串命令；`Menu.vue` 已进一步移除全部 `commitGameCommand`/`gameCommands` 调用：房间生命周期、玩家和群聊清理、计时器、分发、剧本选项与复盘均直接调用 Pinia，Web Audio 的权限、分析器与动画帧循环则已独立至 `useMenuAudioDetection`。`TownSquare.vue` 的座位、提名、角色弹窗与玩家票数状态机现已抽到 `useTownSquareSeatActions`，并移除全部 command 调用。`Player.vue` 的状态、闭眼票、亡魂、授权与提醒同步已抽到 `player-state-actions`；`Vote.vue` 的计票时钟、锁票推进、历史、标记和投票限制已抽到 `useVoteController`。剩余的 `legacy-commands.ts` 与 `LegacyRuntimeStore` 投影只由 `socket.ts` 消费；移除它们需要在该高风险 transport 内把全部读取和写入改为明确的 Pinia store/action。
+Vuex、`legacy-effects.ts`、`mutation-bus.ts`、`legacy-commands.ts`、`LegacyRuntimeStore` 和字符串 command runtime projection 均已删除。App、组件、持久化与 socket 现在直接使用 Pinia store/action；明确的游戏事件仅用于触发持久化和 v1 transport 等外部效果。Menu、TownSquare、Player 与 Vote 的关键行为域也已分别拆为 composable。
 
 ### 4.4 TypeScript 仍有绕过点
 
@@ -254,17 +244,17 @@ canary、旧客户端交叉兼容、生产观察和回滚流程已有文档，�
 
 ## 5. 分阶段状态复核
 
-| 阶段                          | 账本状态 | 本次判断   | 说明                                                                     |
-| ----------------------------- | -------- | ---------- | ------------------------------------------------------------------------ |
-| 0. 冻结行为基线               | 进行中   | 基本完成   | 工具和基线已建立，但关键用户流程和视觉矩阵不足                           |
-| 1. workspace 与共享契约       | 进行中   | 基本完成   | contracts/domain 成熟；Web/server workspace 与部分协议矩阵未完成         |
-| 2. 服务端 TypeScript 化       | 进行中   | 部分完成   | TS 与 app factory 完成；模块拆分、边界测试和运维能力不足                 |
-| 3. Vue 3 + Vite               | 已完成   | 已完成     | 启动、构建、E2E 与视觉基线均可运行                                       |
-| 4. 前端 TypeScript 基础层     | 进行中   | 部分完成   | strict 已开启；socket、persistence、HTTP/browser adapter 和 `any` 未收口 |
-| 5. Vuex 至 Pinia              | 已完成   | 基本完成   | Vuex 已删除；legacy 字符串命令和副作用桥仍存在                           |
-| 6. Composition API 与组件拆分 | 已完成   | 部分完成   | 所有 SFC 已迁移语法；巨型组件和隐式命令仍未拆分                          |
-| 7. 样式与资源治理             | 进行中   | 早期至中期 | 已有样式层、报告和预算；告警、归档、lazy load 和资源优化未完成           |
-| 8. 清理、部署与收尾           | 进行中   | 早期       | `check` 已绿；清理、兼容演练、监控、canary 和回滚演练未完成              |
+| 阶段                          | 账本状态 | 本次判断   | 说明                                                                                |
+| ----------------------------- | -------- | ---------- | ----------------------------------------------------------------------------------- |
+| 0. 冻结行为基线               | 进行中   | 基本完成   | 工具和基线已建立，但关键用户流程和视觉矩阵不足                                      |
+| 1. workspace 与共享契约       | 进行中   | 基本完成   | contracts/domain 成熟；Web/server workspace 与部分协议矩阵未完成                    |
+| 2. 服务端 TypeScript 化       | 进行中   | 部分完成   | TS 与 app factory 完成；模块拆分、边界测试和运维能力不足                            |
+| 3. Vue 3 + Vite               | 已完成   | 已完成     | 启动、构建、E2E 与视觉基线均可运行                                                  |
+| 4. 前端 TypeScript 基础层     | 进行中   | 基本完成   | strict 已开启；socket 与 persistence 已收口，HTTP/browser adapter 和 `any` 仍待收敛 |
+| 5. Vuex 至 Pinia              | 已完成   | 已完成     | Vuex 与 legacy 字符串命令和副作用桥均已删除                                         |
+| 6. Composition API 与组件拆分 | 已完成   | 部分完成   | 所有 SFC 已迁移语法；巨型组件和隐式命令仍未拆分                                     |
+| 7. 样式与资源治理             | 进行中   | 早期至中期 | 已有样式层、报告和预算；告警、归档、lazy load 和资源优化未完成                      |
+| 8. 清理、部署与收尾           | 进行中   | 早期       | `check` 已绿；清理、兼容演练、监控、canary 和回滚演练未完成                         |
 
 ## 6. 迁移账本质量问题
 

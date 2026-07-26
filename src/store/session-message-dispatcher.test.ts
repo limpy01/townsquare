@@ -4,13 +4,19 @@ import {
   type SessionInboundTarget,
 } from "./session-message-dispatcher";
 
-const createTarget = (
-  isSpectator: boolean,
-  commit = vi.fn(),
-): SessionInboundTarget =>
+const createTarget = (isSpectator: boolean): SessionInboundTarget =>
   ({
     _isSpectator: isSpectator,
-    _store: { commit, state: { players: { players: ["player-1"] } } },
+    applyIncomingPlayerSwap: vi.fn(),
+    applyIncomingPlayerMove: vi.fn(),
+    applyIncomingPlayerRemove: vi.fn(),
+    applyIncomingNomination: vi.fn(),
+    applyIncomingMarkedPlayer: vi.fn(),
+    applyIncomingNight: vi.fn(),
+    applyIncomingVoteHistoryAllowed: vi.fn(),
+    applyIncomingVotingSpeed: vi.fn(),
+    applyIncomingVoteInProgress: vi.fn(),
+    clearIncomingVoteHistory: vi.fn(),
   }) as unknown as SessionInboundTarget;
 
 describe("session inbound message dispatcher", () => {
@@ -26,30 +32,18 @@ describe("session inbound message dispatcher", () => {
   });
 
   it("records a spectator nomination close before updating nomination state", () => {
-    const commit = vi.fn();
-    const target = createTarget(true, commit);
+    const target = createTarget(true);
 
     dispatchSessionInboundMessage(target, "nomination", undefined, undefined);
 
-    expect(commit).toHaveBeenNthCalledWith(1, "session/addHistory", [
-      "player-1",
-    ]);
-    expect(commit).toHaveBeenNthCalledWith(2, "session/addVoteSelected", {
-      selected: false,
-      players: ["player-1"],
-      save: true,
-    });
-    expect(commit).toHaveBeenNthCalledWith(3, "session/nomination", {
-      nomination: undefined,
-    });
+    expect(target.applyIncomingNomination).toHaveBeenCalledWith(undefined);
   });
 
   it("does not apply storyteller-only player changes to a host client", () => {
-    const commit = vi.fn();
-    const target = createTarget(false, commit);
+    const target = createTarget(false);
 
     dispatchSessionInboundMessage(target, "swap", [0, 1], undefined);
 
-    expect(commit).not.toHaveBeenCalled();
+    expect(target.applyIncomingPlayerSwap).not.toHaveBeenCalled();
   });
 });

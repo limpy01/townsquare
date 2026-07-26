@@ -25,9 +25,17 @@ import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import type { Nomination } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
-import { useRoleActivityStore } from "../stores/role-activity";
-import { useProfileStore } from "../stores/profile";
+import {
+  useRoleActivityStore,
+  type WraithProperty,
+} from "../stores/role-activity";
 import { useMessageOutboxStore } from "../stores/message-outbox";
+import { usePlayersStore } from "../stores/players";
+import { useScenarioStore } from "../stores/scenario";
+import { useGrimoireStore } from "../stores/grimoire";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import { useTimerStore } from "../stores/timer";
+import { useModalStore } from "../stores/modals";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
 import {
@@ -48,6 +56,12 @@ import {
 } from "./session-transport-lifecycle";
 import { SessionReconnectPolicy } from "./session-reconnect-policy";
 import { SessionWebSocketClient } from "./session-websocket-client";
+import { SessionChatController } from "./session-chat-controller";
+import { SessionVotingController } from "./session-voting-controller";
+import { SessionGameStateController } from "./session-game-state-controller";
+import { SessionPlayerController } from "./session-player-controller";
+import { SessionPlayerDeliveryController } from "./session-player-delivery-controller";
+import { SessionSeatController } from "./session-seat-controller";
 import {
   gameStatePlayerProperties,
   isAddGroupChatPayload,
@@ -93,35 +107,6 @@ type LegacyEditionPayload = {
   roles?: LegacyRuntimeRole[];
 };
 
-type LegacyRuntimeState = {
-  players: {
-    players: LegacyRuntimePlayer[];
-    fabled: LegacyRuntimeRole[];
-    bluffs: LegacyRuntimeRole[];
-  };
-  session: {
-    playerId: string;
-    sessionId: string;
-    stSecret: string;
-    stId: string | null;
-    claimedSeat: number;
-    isListening: number | null;
-    isSpectator: boolean;
-  };
-  grimoire: { isNight: boolean };
-  roles: Map<string, LegacyRuntimeRole>;
-  edition: LegacyRuntimeEdition;
-  states: unknown[];
-  teamsNames: Record<string, string>;
-  firstNight: unknown[];
-  otherNight: unknown[];
-};
-
-type LegacyRuntimeStore = {
-  state: LegacyRuntimeState;
-  commit(type: string, payload?: unknown): unknown;
-};
-
 type PlayerUpdatePayload = {
   player: LegacyRuntimePlayer;
   property: string;
@@ -136,7 +121,7 @@ type PlayerPronounsPayload = {
 
 type GroupChatPlayer = {
   id: string;
-  name?: string | undefined;
+  name?: string;
 };
 
 type LegacyPingPayload = [
@@ -151,22 +136,40 @@ type NominationPayload =
   | null
   | undefined;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isVoteValue = (value: unknown): value is boolean | number | undefined =>
+  typeof value === "boolean" ||
+  typeof value === "number" ||
+  value === undefined;
+
 export class LiveSession {
   private _wss!: string;
   private _socketClient!: SessionWebSocketClient;
   _isSpectator!: boolean;
   private _isAlive!: boolean;
   private _gamestate!: Array<Record<string, unknown>>;
-  _store!: LegacyRuntimeStore;
+  private _gamePlayers!: ReturnType<typeof usePlayersStore>;
+  private _scenario!: ReturnType<typeof useScenarioStore>;
+  private _grimoire!: ReturnType<typeof useGrimoireStore>;
+  private _identity!: ReturnType<typeof useSessionIdentityStore>;
+  private _timer!: ReturnType<typeof useTimerStore>;
+  private _modals!: ReturnType<typeof useModalStore>;
   private _connection!: ReturnType<typeof useSessionConnectionStore>;
   private _review!: ReturnType<typeof useReviewStore>;
   private _legacyOptions!: ReturnType<typeof useLegacyOptionsStore>;
   private _voting!: ReturnType<typeof useVotingStore>;
   private _settings!: ReturnType<typeof useSessionSettingsStore>;
   private _roles!: ReturnType<typeof useRoleActivityStore>;
-  private _profile!: ReturnType<typeof useProfileStore>;
   private _outbox!: ReturnType<typeof useMessageOutboxStore>;
   private _chat!: ReturnType<typeof useChatStore>;
+  private _chatController!: SessionChatController;
+  private _votingController!: SessionVotingController;
+  private _gameStateController!: SessionGameStateController;
+  private _playerController!: SessionPlayerController;
+  private _playerDeliveryController!: SessionPlayerDeliveryController;
+  private _seatController!: SessionSeatController;
   private _pingInterval!: number;
   private _pingTimer!: ReturnType<typeof setTimeout> | null;
   private _outboxController!: SessionOutboxController;
@@ -176,7 +179,7 @@ export class LiveSession {
   private _players!: Record<string, number>;
   private _pings!: Record<string, number>;
 
-  constructor(store: LegacyRuntimeStore) {
+  constructor() {
     this._wss = `${wsBase}/ws/`;
     // this._wss = "ws://localhost:8081/"; // uncomment if using local server with NODE_ENV=development
     // this._wss = "ws://192.168.1.2:8081/"; // uncomment if using local server with NODE_ENV=development
@@ -184,16 +187,59 @@ export class LiveSession {
     this._isSpectator = true;
     this._isAlive = true;
     this._gamestate = [];
-    this._store = store;
+    this._gamePlayers = usePlayersStore(pinia);
+    this._scenario = useScenarioStore(pinia);
+    this._grimoire = useGrimoireStore(pinia);
+    this._identity = useSessionIdentityStore(pinia);
+    this._timer = useTimerStore(pinia);
+    this._modals = useModalStore(pinia);
     this._connection = useSessionConnectionStore(pinia);
     this._review = useReviewStore(pinia);
     this._legacyOptions = useLegacyOptionsStore(pinia);
     this._voting = useVotingStore(pinia);
     this._settings = useSessionSettingsStore(pinia);
     this._roles = useRoleActivityStore(pinia);
-    this._profile = useProfileStore(pinia);
     this._outbox = useMessageOutboxStore(pinia);
     this._chat = useChatStore(pinia);
+    this._chatController = new SessionChatController({
+      isSpectator: () => this._isSpectator,
+      request: this._request.bind(this),
+      queueChat: this._queueChat.bind(this),
+      addGroupChat: this._addGroupChat.bind(this),
+      removeGroupChat: this._removeGroupChat.bind(this),
+      removeGroupChatMember: this._removeGroupChatMember.bind(this),
+    });
+    this._votingController = new SessionVotingController({
+      isSpectator: () => this._isSpectator,
+      send: this._send.bind(this),
+      sendDirect: this._sendDirect.bind(this),
+    });
+    this._gameStateController = new SessionGameStateController({
+      isSpectator: () => this._isSpectator,
+      send: this._send.bind(this),
+      sendDirect: this._sendDirect.bind(this),
+      distributeGrimoire: this.distributeGrimoire.bind(this),
+      showInputModal: this.showInputModal.bind(this),
+    });
+    this._playerController = new SessionPlayerController({
+      isSpectator: () => this._isSpectator,
+      send: this._send.bind(this),
+      sendDirect: this._sendDirect.bind(this),
+      uploadFile: this._uploadFile.bind(this),
+      showInputModal: this.showInputModal.bind(this),
+      gamestate: () => this._gameStateController.gamestate,
+    });
+    this._playerDeliveryController = new SessionPlayerDeliveryController({
+      isSpectator: () => this._isSpectator,
+      send: this._send.bind(this),
+      sendDirect: this._sendDirect.bind(this),
+    });
+    this._seatController = new SessionSeatController({
+      isSpectator: () => this._isSpectator,
+      sendDirect: this._sendDirect.bind(this),
+      recordPing: this._handlePing.bind(this),
+      removeGroupChatMember: this._removeGroupChatMember.bind(this),
+    });
     this._pingInterval = sessionTransportTiming.pingIntervalMs;
     this._pingTimer = null;
     this._outboxController = new SessionOutboxController({
@@ -201,8 +247,7 @@ export class LiveSession {
       getQueue: () => this._outbox.queue,
       transport: this._createOutboxTransport(),
       onAcknowledged: (message) => this._checkQueue(message),
-      deleteAt: (index) =>
-        this._store.commit("session/deleteMessageQueue", index),
+      deleteAt: (index) => this._outbox.remove(index),
     });
     this._reconnect = new SessionReconnectPolicy(
       sessionTransportTiming.reconnectDelayMs,
@@ -212,8 +257,8 @@ export class LiveSession {
     this._players = {}; // map of players connected to a session
     this._pings = {}; // map of player IDs to ping
     // reconnect to previous session
-    if (this._store.state.session.sessionId) {
-      this.connect(this._store.state.session.sessionId);
+    if (this._identity.sessionId) {
+      this.connect(this._identity.sessionId);
     }
   }
 
@@ -227,9 +272,9 @@ export class LiveSession {
     this._socketClient.open(
       buildSessionSocketUrl(this._wss, {
         channel,
-        playerId: this._store.state.session.playerId,
+        playerId: this._identity.playerId,
         isSpectator: this._isSpectator,
-        hostSecret: this._store.state.session.stSecret,
+        hostSecret: this._identity.stSecret,
       }),
       {
         onMessage: this._handleMessage.bind(this),
@@ -252,40 +297,38 @@ export class LiveSession {
       this._reconnect.schedule(() => this.connect(channel));
     } else {
       // vacate seat upon leaving the room
-      this._store.commit("session/claimSeat", -1);
+      this._identity.claimSeat(-1);
 
-      this._store.commit("session/setSessionId", "");
-      this._store.commit("session/setSpectator", false);
+      this._identity.setSessionId("");
+      this._identity.setSpectator(false);
       this._connection.setIsHostAllowed(null);
       this._connection.setIsJoinAllowed(null);
       // clear seats and return to intro
       if (this._voting.nomination) {
-        this._store.commit("session/nomination");
+        this._setNomination();
       }
-      // this._store.commit("players/clear", true);
-
       // clear customBootlegger
       if (this._settings.bootlegger) {
-        this._store.commit("session/setBootlegger", "");
+        this._settings.setBootlegger("");
       }
 
       // reset allowed votes
       if (this._voting.playerVotes > 1) {
-        this._store.commit("session/setPlayerVotes", 1);
+        this._voting.setPlayerVotes(1);
       }
 
       // reset secret vote
       if (this._voting.isSecretVote) {
-        this._store.commit("session/setSecretVote", false);
+        this._voting.setSecretVote(false);
       }
 
       // reset review
       if (this._review.isReview) {
-        this._store.commit("session/setIsReview", false);
+        this._review.setReview(false);
       }
 
       // reset fabled
-      this._store.commit("players/setFabled", {
+      this._gamePlayers.setFabled({
         fabled: [],
         emptyFabled: true,
       });
@@ -295,21 +338,21 @@ export class LiveSession {
 
       // exit group chat
       this._chat.groups.forEach((group) => {
-        this._store.commit("session/removeGroupChat", { chatId: group.id });
+        this._removeGroupChat({ chatId: group.id });
       });
 
       // clear messages
       while (this._outbox.queue.length > 0) {
-        this._store.commit("session/deleteMessageQueue", 0);
+        this._outbox.remove(0);
       }
 
       // reset wraith
-      this._store.commit("session/setIsRole", {
+      this._roles.setRole({
         role: "wraith",
         property: "active",
         value: false,
       });
-      this._store.commit("session/setIsRole", {
+      this._roles.setRole({
         role: "wraith",
         property: "using",
         value: false,
@@ -409,6 +452,144 @@ export class LiveSession {
     };
   }
 
+  private _setTalking(payload: { seatNum: number; isTalking: boolean }): void {
+    useAudioStore(pinia).setTalking(payload.isTalking);
+    this._gamePlayers.setTalking({
+      ...payload,
+      playerId: this._identity.playerId,
+    });
+  }
+
+  private _setNomination(payload?: unknown): void {
+    this._voting.setNomination(
+      payload === null ? undefined : (payload as never),
+      {
+        isSecretVote: this._voting.isSecretVote,
+        claimedSeat: this._identity.claimedSeat,
+      },
+    );
+  }
+
+  private _setMarkedPlayer(
+    payload: number | { val?: number; force?: boolean },
+  ): void {
+    this._voting.setMarkedPlayer(payload, {
+      isSecretVote: this._voting.isSecretVote,
+    });
+  }
+
+  private _queueChat(payload: ChatOutboxPayload): void {
+    if (
+      !this._identity.isSpectator ||
+      payload.sendingPlayerId === this._identity.playerId
+    ) {
+      this._outbox.add({
+        type: "direct",
+        playerId: payload.receivingPlayerId,
+        command: "chat",
+        params: payload,
+        id: new Date().getTime(),
+      });
+    }
+  }
+
+  private _addGroupChat({ chatId, players }: AddGroupChatPayload): void {
+    this._chat
+      .addGroup({
+        chatId,
+        players: players.map(({ id, name }) =>
+          name === undefined ? { id } : { id, name },
+        ),
+      })
+      .forEach((change) => this._gamePlayers.update(change));
+  }
+
+  private _removeGroupChat({ chatId }: { chatId: string }): void {
+    this._chat
+      .removeGroup(chatId)
+      .forEach((change) => this._gamePlayers.update(change));
+  }
+
+  private _removeGroupChatMember({
+    chatId,
+    player,
+  }: {
+    chatId: string;
+    player: GroupChatPlayer;
+  }): void {
+    const change = this._chat.removeGroupMember(chatId, player);
+    if (change) this._gamePlayers.update(change);
+  }
+
+  applyIncomingPlayerSwap(payload: unknown): void {
+    if (
+      Array.isArray(payload) &&
+      payload.length === 2 &&
+      payload.every((value) => typeof value === "number")
+    ) {
+      this._gamePlayers.swap(payload as [number, number]);
+    }
+  }
+
+  applyIncomingPlayerMove(payload: unknown): void {
+    if (
+      Array.isArray(payload) &&
+      payload.length === 2 &&
+      payload.every((value) => typeof value === "number")
+    ) {
+      this._gamePlayers.move(payload as [number, number]);
+    }
+  }
+
+  applyIncomingPlayerRemove(payload: unknown): void {
+    if (typeof payload === "number" && Number.isInteger(payload)) {
+      this._gamePlayers.remove(payload);
+    }
+  }
+
+  applyIncomingNomination(payload: unknown): void {
+    if (!payload) {
+      const entry = this._voting.createHistoryEntry(this._gamePlayers.players, {
+        isVoteHistoryAllowed: this._voting.isVoteHistoryAllowed,
+        isSpectator: this._identity.isSpectator,
+      });
+      if (entry) this._voting.addVotes(entry);
+      this._voting.addVoteSelected(
+        { selected: false, players: this._gamePlayers.players, save: true },
+        {
+          isVoteHistoryAllowed: this._voting.isVoteHistoryAllowed,
+          isSpectator: this._identity.isSpectator,
+        },
+      );
+    }
+    this._setNomination({ nomination: payload as Nomination });
+  }
+
+  applyIncomingMarkedPlayer(payload: unknown): void {
+    if (typeof payload === "number") this._setMarkedPlayer(payload);
+  }
+
+  applyIncomingNight(payload: unknown): void {
+    if (typeof payload === "boolean") this._grimoire.toggle("isNight", payload);
+  }
+
+  applyIncomingVoteHistoryAllowed(payload: unknown): void {
+    if (typeof payload === "boolean")
+      this._voting.setVoteHistoryAllowed(payload);
+  }
+
+  applyIncomingVotingSpeed(payload: unknown): void {
+    if (typeof payload === "number") this._voting.setVotingSpeed(payload);
+  }
+
+  applyIncomingVoteInProgress(payload: unknown): void {
+    if (typeof payload === "boolean") this._voting.setVoteInProgress(payload);
+  }
+
+  clearIncomingVoteHistory(): void {
+    this._voting.clearVoteHistory();
+  }
+
   _sendQueue() {
     this._outboxController.flush();
   }
@@ -443,9 +624,10 @@ export class LiveSession {
 
     const receivingPlayerId =
       message.params.receivingPlayerId === "host"
-        ? this._store.state.session.stId
+        ? this._identity.stId
         : message.params.receivingPlayerId;
-    this._store.commit("session/updateChatReceived", {
+    if (!receivingPlayerId) return;
+    this._chat.addReceivedMessage({
       message: message.params.message,
       playerId: receivingPlayerId,
     });
@@ -457,20 +639,16 @@ export class LiveSession {
    */
   _onOpen(): void {
     if (this._isSpectator) {
-      this._sendDirect(
-        "host",
-        "getGamestate",
-        this._store.state.session.playerId,
-      );
-      this._sendDirect("host", "getStId", this._store.state.session.playerId);
+      this._sendDirect("host", "getGamestate", this._identity.playerId);
+      this._sendDirect("host", "getStId", this._identity.playerId);
       this.checkAllowJoin();
       if (
-        this._store.state.session.claimedSeat >= 0 &&
-        !this._store.state.session.isListening &&
+        this._identity.claimedSeat >= 0 &&
+        !useAudioStore(pinia).listeningFrame &&
         !useAudioStore(pinia).isTalking
       ) {
-        this._store.commit("session/setTalking", {
-          seatNum: this._store.state.session.claimedSeat,
+        this._setTalking({
+          seatNum: this._identity.claimedSeat,
           isTalking: false,
         });
       }
@@ -492,17 +670,17 @@ export class LiveSession {
     this._handlePing();
     this._send("ping", [
       this._isSpectator
-        ? this._store.state.session.playerId
+        ? this._identity.playerId
         : Object.keys(this._players).length,
       "latency",
     ]);
     if (this._pingTimer !== null) clearTimeout(this._pingTimer);
     this._pingTimer = setTimeout(this._ping.bind(this), this._pingInterval);
-    // if (this._store.state.session.sessionId &&
+    // if (this._identity.sessionId &&
     //   !this._isAlive && !this._connection.isReconnecting
     // ) {
     //   this._isAlive = true;
-    //   this.connect(this._store.state.session.sessionId);
+    //   this.connect(this._identity.sessionId);
     // }
     // this._isAlive = false;
   }
@@ -546,11 +724,11 @@ export class LiveSession {
       channelNumber > 10000
     ) {
       this.disconnect();
-      this._store.commit("session/setSessionId", "");
+      this._identity.setSessionId("");
       await this._alertPopup("无效的房间号！");
       return;
     }
-    if (!this._store.state.session.playerId) {
+    if (!this._identity.playerId) {
       let playerId = "";
       // 禁止host、_host和player作为playerId
       while (
@@ -562,9 +740,9 @@ export class LiveSession {
       ) {
         playerId = Math.random().toString(36).substr(2);
       }
-      this._store.commit("session/setPlayerId", playerId);
+      this._identity.setPlayerId(playerId);
     }
-    if (!this._store.state.session.stSecret) {
+    if (!this._identity.stSecret) {
       let stSecret = "";
       // 禁止host、_host和player作为playerId
       while (
@@ -582,15 +760,15 @@ export class LiveSession {
           .replace(/\//g, "_")
           .replace(/=+$/, "");
       }
-      this._store.commit("session/setStSecret", stSecret);
+      this._identity.setStSecret(stSecret);
     }
     this._pings = {};
     this._connection.setPlayerCount(0);
     this._connection.setPing(0);
-    this._isSpectator = this._store.state.session.isSpectator === true;
-    if (this._store.state.session.claimedSeat >= 0) {
-      this._store.commit("session/setTalking", {
-        seatNum: this._store.state.session.claimedSeat,
+    this._isSpectator = this._identity.isSpectator === true;
+    if (this._identity.claimedSeat >= 0) {
+      this._setTalking({
+        seatNum: this._identity.claimedSeat,
         isTalking: false,
       });
     }
@@ -615,7 +793,7 @@ export class LiveSession {
     this._hostTimeout = null;
     if (this._socketClient.isConnected) {
       if (this._isSpectator) {
-        this._sendDirect("host", "bye", this._store.state.session.playerId);
+        this._sendDirect("host", "bye", this._identity.playerId);
       }
       this._socketClient.close(1000);
     }
@@ -647,7 +825,7 @@ export class LiveSession {
    */
   async checkAllowHost(): Promise<void> {
     if (this._connection.isHostAllowed === true) return;
-    this._request("checkAllowHost", this._store.state.session.playerId);
+    this._request("checkAllowHost", this._identity.playerId);
     this._hostTimeout = setTimeout(async () => {
       if (this._connection.isHostAllowed === null) {
         await this.showInputModal({
@@ -659,8 +837,8 @@ export class LiveSession {
         }).catch(() => {
           return null;
         });
-        this._store.commit("session/setSessionId", "");
-        this._store.commit("session/setSpectator", false);
+        this._identity.setSessionId("");
+        this._identity.setSpectator(false);
       }
     }, 6000);
   }
@@ -682,15 +860,13 @@ export class LiveSession {
         inputType: "alert",
         inputModal: "text",
         inputData: {
-          name: [
-            `房间"${this._store.state.session.sessionId}"已经存在说书人！`,
-          ],
+          name: [`房间"${this._identity.sessionId}"已经存在说书人！`],
         },
       }).catch(() => {
         return null;
       });
-      this._store.commit("session/setSessionId", "");
-      this._store.commit("session/setSpectator", false);
+      this._identity.setSessionId("");
+      this._identity.setSpectator(false);
     }
   }
 
@@ -699,7 +875,7 @@ export class LiveSession {
    */
   checkAllowJoin(): void {
     if (this._connection.isJoinAllowed === true) return;
-    this._request("checkAllowJoin", this._store.state.session.playerId);
+    this._request("checkAllowJoin", this._identity.playerId);
     this._joinTimeout = setTimeout(async () => {
       if (this._connection.isJoinAllowed === null) {
         await this.showInputModal({
@@ -711,8 +887,8 @@ export class LiveSession {
         }).catch(() => {
           return null;
         });
-        this._store.commit("session/setSessionId", "");
-        this._store.commit("session/setSpectator", false);
+        this._identity.setSessionId("");
+        this._identity.setSpectator(false);
       }
     }, 1000);
   }
@@ -728,24 +904,20 @@ export class LiveSession {
     this._connection.setIsJoinAllowed(allow ? allow : null);
 
     if (allow) {
-      this._sendDirect(
-        "host",
-        "getGamestate",
-        this._store.state.session.playerId,
-      );
-      this._sendDirect("host", "getStId", this._store.state.session.playerId);
+      this._sendDirect("host", "getGamestate", this._identity.playerId);
+      this._sendDirect("host", "getStId", this._identity.playerId);
     } else {
       await this.showInputModal({
         inputType: "alert",
         inputModal: "text",
         inputData: {
-          name: [`房间"${this._store.state.session.sessionId}"不存在！`],
+          name: [`房间"${this._identity.sessionId}"不存在！`],
         },
       }).catch(() => {
         return null;
       });
-      this._store.commit("session/setSessionId", "");
-      this._store.commit("session/setSpectator", false);
+      this._identity.setSessionId("");
+      this._identity.setSpectator(false);
     }
   }
 
@@ -756,647 +928,86 @@ export class LiveSession {
    * @param isLightweight
    */
   sendGamestate(playerId = "", isLightweight = false) {
-    if (this._isSpectator) return;
-    this._gamestate = this._store.state.players.players.map((player) => ({
-      name: player.name,
-      id: player.id,
-      image: player.image,
-      stReminders: this._review.isReview ? player.stReminders : [],
-      isDead: player.isDead,
-      isVoteless: player.isVoteless,
-      votes: player.votes,
-      pronouns: player.pronouns,
-      ...(player.role && player.role.team === "traveler"
-        ? { roleId: player.role.id }
-        : {}),
-    }));
-    if (isLightweight) {
-      this._sendDirect(playerId, "gs", {
-        gamestate: this._gamestate,
-        isLightweight,
-      });
-    } else {
-      const { grimoire, states, teamsNames, firstNight, otherNight } =
-        this._store.state;
-      const voting = this._voting;
-      const { fabled } = this._store.state.players;
-      this.sendEdition(playerId);
-      let votes = voting.nomination ? Array.from(voting.votes) : []; // 调整闭眼投票，只会发送各玩家自己的真实投票情况，其余均为不投票
-      if (voting.isSecretVote && playerId === "") {
-        votes = [];
-      } else if (voting.isSecretVote && votes.length > 0) {
-        const playerIndex = this._store.state.players.players.findIndex(
-          (player) => player.id === playerId,
-        );
-        for (let i = 0; i < votes.length; i++) {
-          // 如果不与playerIndex相同则调整至不投票状态
-          if (i != playerIndex && votes[i] === true) votes[i] = false;
-        }
-      }
-      this._sendDirect(playerId, "gs", {
-        gamestate: this._gamestate,
-        isNight: grimoire.isNight,
-        isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
-        isSecretVote: voting.isSecretVote,
-        isUseOldOrder: this._legacyOptions.useOldOrder,
-        isUseOldRole: this._legacyOptions.useOldRole,
-        isReview: this._review.isReview,
-        nomination: voting.nomination,
-        votingSpeed: voting.votingSpeed,
-        lockedVote: voting.lockedVote,
-        isVoteInProgress: voting.isVoteInProgress,
-        markedPlayer: voting.isSecretVote ? voting.markedPlayer : -1,
-        fabled,
-        states,
-        teamsNames,
-        firstNight,
-        otherNight,
-        ...(voting.nomination ? { votes } : {}),
-      });
-    }
-
-    if (this._review.isReview) {
-      this.distributeGrimoire(playerId ? { playerId } : { all: true });
-    }
-
-    // 场内玩家更新
-    const playerIndex = !playerId
-      ? -1
-      : this._store.state.players.players.findIndex(
-          (player) => player.id === playerId,
-        );
-    const groups: Record<string, string[]> = {};
-    if (!playerId || playerIndex > -1) {
-      const selectedPlayers = !playerId
-        ? this._store.state.players.players.filter((player) => !!player.id)
-        : (() => {
-            const player = this._store.state.players.players[playerIndex];
-            return player ? [player] : [];
-          })();
-
-      // 群聊
-      const chatIds = [
-        ...new Set(selectedPlayers.map((player) => player.chatGroup)),
-      ];
-      const groupChats = this._chat.groups.filter((group) =>
-        chatIds.includes(group.id),
-      );
-      groupChats.forEach((group) => {
-        const playerIds = group.players.map((player) => player.id);
-        groups[group.id] = playerIds;
-      });
-
-      selectedPlayers.forEach((player) => {
-        this._sendDirect(player.id, "syncPlayersStatus", {
-          isSecretVoteless: player.isSecretVoteless,
-          groupChatPlayers:
-            groups[player.chatGroup] === undefined
-              ? []
-              : groups[player.chatGroup],
-          isWraith: player.isWraith,
-          isUsingWraith: player.isUsingWraith,
-        });
-      });
-    }
+    this._gameStateController.sendGamestate(playerId, isLightweight);
   }
-
-  /**
-   * Update the gamestate based on incoming data.
-   * @param data
-   * @private
-   */
   _updateGamestate(data: LegacyGameStatePayload): void {
-    if (!this._isSpectator) return;
-    const {
-      gamestate,
-      isLightweight,
-      isNight,
-      isVoteHistoryAllowed,
-      isSecretVote,
-      isUseOldOrder,
-      isUseOldRole,
-      isReview,
-      nomination,
-      votingSpeed,
-      votes,
-      lockedVote,
-      isVoteInProgress,
-      markedPlayer,
-      fabled,
-      states,
-      teamsNames,
-      firstNight,
-      otherNight,
-    } = data;
-    const players = this._store.state.players.players;
-    // adjust number of players
-    if (players.length < gamestate.length) {
-      for (let x = players.length; x < gamestate.length; x++) {
-        const incomingPlayer = gamestate[x];
-        if (incomingPlayer)
-          this._store.commit("players/add", incomingPlayer.name);
-      }
-    } else if (players.length > gamestate.length) {
-      for (let x = players.length; x > gamestate.length; x--) {
-        this._store.commit("players/remove", x - 1);
-      }
-    }
-    // update status for each player
-    gamestate.forEach((state, x) => {
-      const player = players[x];
-      if (!player) return;
-      const { roleId } = state;
-      // update relevant properties
-      gameStatePlayerProperties.forEach((property) => {
-        const value = state[property];
-        if (player[property] !== value) {
-          if (property === "isVoteless") {
-            if (value || !player.isSecretVoteless)
-              this._store.commit("players/update", { player, property, value });
-          } else {
-            this._store.commit("players/update", { player, property, value });
-          }
-        }
-      });
-      // roles are special, because of travelers
-      if (roleId && player.role.id !== roleId) {
-        const role =
-          this._store.state.roles.get(roleId) || rolesJSONbyId.get(roleId);
-        if (role) {
-          this._store.commit("players/update", {
-            player,
-            property: "role",
-            value: role,
-          });
-        }
-      } else if (!roleId && player.role.team === "traveler") {
-        this._store.commit("players/update", {
-          player,
-          property: "role",
-          value: {},
-        });
-      }
-    });
-    if (!isLightweight) {
-      this._store.commit("toggleNight", !!isNight);
-      this._store.commit("session/setVoteHistoryAllowed", isVoteHistoryAllowed);
-      this._store.commit("session/setSecretVote", isSecretVote);
-      this._store.commit("session/setUseOldOrder", isUseOldOrder);
-      this._store.commit("session/setUseOldRole", isUseOldRole);
-      this._store.commit("session/setIsReview", isReview);
-      const nominatedPlayer =
-        Array.isArray(nomination) && nomination.length > 1
-          ? players[Number(nomination[1])] ?? null
-          : null;
-      this._store.commit("session/nomination", {
-        nomination,
-        votes,
-        votingSpeed,
-        lockedVote,
-        isVoteInProgress,
-        nominatedPlayer,
-      });
-      this._store.commit("session/setMarkedPlayer", {
-        val: markedPlayer,
-        force: false,
-      });
-      this._store.commit("players/setFabled", { fabled });
-      this._store.commit("setStates", states);
-      this._store.commit("setTeamsNames", teamsNames);
-      this._store.commit("setFirstNight", firstNight);
-      this._store.commit("setOtherNight", otherNight);
-    }
+    this._gameStateController._updateGamestate(data);
   }
-
   sendStId(playerId = "") {
-    if (this._isSpectator) return;
-    this._sendDirect(playerId, "stId", this._store.state.session.playerId);
+    this._gameStateController.sendStId(playerId);
   }
-
   _updateStId(data: string): void {
-    if (!this._isSpectator) return;
-    // this._store.state.session.stId = data;
-    this._store.commit("session/setStId", data);
+    this._gameStateController._updateStId(data);
   }
-
-  /**
-   * Publish an edition update. ST only
-   * @param playerId
-   */
   sendEdition(playerId = "") {
-    if (this._isSpectator) return;
-    const { edition } = this._store.state;
-    let roles;
-    if (!edition.isOfficial) {
-      roles = getCustomRolesStripped(this._store.state.roles.values());
-    }
-    this._sendDirect(playerId, "edition", {
-      edition: edition.isOfficial ? { id: edition.id } : edition,
-      ...(roles ? { roles } : {}),
-    });
+    this._gameStateController.sendEdition(playerId);
   }
-
-  /**
-   * Update edition and roles for custom editions.
-   * @param edition
-   * @param roles
-   * @private
-   */
-  async _updateEdition({ edition, roles }: LegacyEditionPayload) {
-    if (!this._isSpectator) return;
-    this._store.commit("setEdition", edition);
-    if (roles) {
-      this._store.commit("setCustomRoles", roles);
-      if (this._store.state.roles.size !== roles.length) {
-        const missing: string[] = [];
-        roles.forEach(({ id }) => {
-          if (!this._store.state.roles.get(id)) {
-            missing.push(id);
-          }
-        });
-        await this.showInputModal({
-          inputType: "alert",
-          inputModal: "text",
-          inputData: {
-            name: [
-              `此剧本中有未收录的角色。` +
-                `请先加载这些角色！` +
-                `这些角色包含：${missing.join("，")}`,
-            ],
-          },
-        }).catch(() => {
-          return null;
-        });
-        this._store.commit("toggleModal", "edition");
-      }
-    }
+  _updateEdition(payload: LegacyEditionPayload) {
+    return this._gameStateController._updateEdition(payload);
   }
-
-  /**
-   * Publish a states update. ST only
-   * @param playerId
-   */
   sendStates(playerId = "") {
-    if (this._isSpectator) return;
-    const { states } = this._store.state;
-    this._sendDirect(playerId, "states", states);
+    this._gameStateController.sendStates(playerId);
   }
-
-  /**
-   * Update states for custom editions.
-   * @param states
-   * @private
-   */
   _updateStates(states: unknown[]) {
-    if (!this._isSpectator) return;
-    this._store.commit("setStates", states);
+    this._gameStateController._updateStates(states);
   }
-
-  /**
-   * Publish a teams alias update. ST only
-   * @param playerId
-   */
   sendTeamsNames(playerId = "") {
-    if (this._isSpectator) return;
-    const { teamsNames } = this._store.state;
-    this._sendDirect(playerId, "teamsNames", teamsNames);
+    this._gameStateController.sendTeamsNames(playerId);
   }
-
-  /**
-   * Update teamsNames for custom editions.
-   * @param teamsNames
-   * @private
-   */
   _updateTeamsNames(teamsNames: Record<string, string>) {
-    if (!this._isSpectator) return;
-    this._store.commit("setTeamsNames", teamsNames);
+    this._gameStateController._updateTeamsNames(teamsNames);
   }
-
-  /**
-   * Publish a firstNight update. ST only
-   * @param playerId
-   */
   sendFirstNight(playerId = "") {
-    if (this._isSpectator) return;
-    const { firstNight } = this._store.state;
-    this._sendDirect(playerId, "firstNight", firstNight);
+    this._gameStateController.sendFirstNight(playerId);
   }
-
-  /**
-   * Update firstNight.
-   * @param firstNight
-   * @private
-   */
   _updateFirstNight(firstNight: string[]) {
-    if (!this._isSpectator) return;
-    this._store.commit("setFirstNight", firstNight);
+    this._gameStateController._updateFirstNight(firstNight);
   }
-
-  /**
-   * Publish an otherNight update. ST only
-   * @param playerId
-   */
   sendOtherNight(playerId = "") {
-    if (this._isSpectator) return;
-    const { otherNight } = this._store.state;
-    this._sendDirect(playerId, "otherNight", otherNight);
+    this._gameStateController.sendOtherNight(playerId);
   }
-
-  /**
-   * Update otherNight.
-   * @param otherNight
-   * @private
-   */
   _updateOtherNight(otherNight: string[]) {
-    if (!this._isSpectator) return;
-    this._store.commit("setOtherNight", otherNight);
+    this._gameStateController._updateOtherNight(otherNight);
   }
-
-  /**
-   * Publish a fabled update. ST only
-   */
   sendFabled() {
-    if (this._isSpectator) return;
-    const { fabled } = this._store.state.players;
-    this._send("fabled", fabled);
+    this._gameStateController.sendFabled();
   }
-
-  /**
-   * Update fabled roles.
-   * @param fabled
-   * @private
-   */
   _updateFabled(fabled: LegacyRuntimeRole[]) {
-    if (!this._isSpectator) return;
-    this._store.commit("players/setFabled", {
-      fabled,
-    });
+    this._gameStateController._updateFabled(fabled);
   }
 
-  /**
-   * Publish a player update.
-   * @param player
-   * @param property
-   * @param value
-   */
-  sendPlayer({ player, property, value }: PlayerUpdatePayload) {
-    if (
-      this._isSpectator ||
-      property === "reminders" ||
-      (property === "stReminders" && !this._review.isReview)
-    )
-      return;
-    const index = this._store.state.players.players.indexOf(player);
-    const staticProperties = ["isAllowRole"];
-    if (property === "role") {
-      if (!isLegacyRuntimeRole(value)) return;
-      if (this._review.isReview || (value.team && value.team === "traveler")) {
-        // update local gamestate to remember this player as a traveler
-        if (value.team && value.team === "traveler" && this._gamestate[index])
-          this._gamestate[index].roleId = value.id;
-        this._send("player", {
-          index,
-          property,
-          value: value.id,
-        });
-        if (
-          this._review.isReview &&
-          value.team != "traveler" &&
-          this._gamestate[index] &&
-          this._gamestate[index].roleId
-        )
-          delete this._gamestate[index].roleId;
-      } else if (this._gamestate[index] && this._gamestate[index].roleId) {
-        // player was previously a traveler
-        delete this._gamestate[index].roleId;
-        this._send("player", { index, property, value: "" });
-      }
-    } else if (property === "isSecretVoteless") {
-      this._sendDirect(player.id, "player", { index, property, value });
-    } else if (property === "isWraith") {
-      this._sendDirect(player.id, "isRole", {
-        role: "wraith",
-        property: "active",
-        value,
-      });
-    } else if (property === "isUsingWraith") {
-      this._sendDirect(player.id, "isRole", {
-        role: "wraith",
-        property: "using",
-        value,
-        st: true,
-      });
-    } else if (!staticProperties.includes(property)) {
-      this._send("player", { index, property, value });
-    }
+  sendPlayer(payload: PlayerUpdatePayload) {
+    this._playerController.sendPlayer(payload);
   }
-
-  /**
-   * Update a player based on incoming data. Player only.
-   * @param index
-   * @param property
-   * @param value
-   * @private
-   */
-  _updatePlayer({
-    index,
-    property,
-    value,
-  }: {
-    index: number;
-    property: string;
-    value: unknown;
-  }) {
-    if (!this._isSpectator) return;
-    const player = this._store.state.players.players[index];
-    if (!player) return;
-    // special case where a player stops being a traveler
-    if (property === "role") {
-      if (!value && player.role.team === "traveler") {
-        // reset to an unknown role
-        this._store.commit("players/update", {
-          player,
-          property: "role",
-          value: {},
-        });
-      } else {
-        // load role, first from session, the global, then fail gracefully
-        const roleId = typeof value === "string" ? value : "";
-        const role =
-          this._store.state.roles.get(roleId) ||
-          rolesJSONbyId.get(roleId) ||
-          {};
-        this._store.commit("players/update", {
-          player,
-          property: "role",
-          value: role,
-        });
-      }
-    } else if (property === "isSecretVoteless") {
-      // if (value === true) {
-      this._store.commit("players/update", { player, property, value });
-      // 如果是玩家则同时移除投票标记
-      if (player.id === this._store.state.session.playerId && value) {
-        this._store.commit("players/update", {
-          player,
-          property: "isVoteless",
-          value,
-        });
-      }
-      // }
-    } else if (property === "isVoteless") {
-      if (!player.isSecretVoteless || value)
-        this._store.commit("players/update", { player, property, value });
-    } else {
-      // just update the player otherwise
-      this._store.commit("players/update", { player, property, value });
-    }
+  _updatePlayer(payload: { index: number; property: string; value: unknown }) {
+    this._playerController._updatePlayer(payload);
   }
-
-  emptyPlayer({ id }: { id: string }) {
-    if (id === "") return; //必须指定玩家
-    this._sendDirect(id, "leaveSeat", undefined);
+  emptyPlayer(payload: { id: string }) {
+    this._playerController.emptyPlayer(payload);
   }
-
   _updateLeaveSeat() {
-    this._store.commit("session/claimSeat", -1);
+    this._playerController._updateLeaveSeat();
   }
-
-  /**
-   * Publish a player pronouns update
-   * @param player
-   * @param value
-   * @param isFromSockets
-   */
-  sendPlayerPronouns({ player, value, isFromSockets }: PlayerPronounsPayload) {
-    //send pronoun only for the seated player or storyteller
-    //Do not re-send pronoun data for an update that was recieved from the sockets layer
-    if (
-      isFromSockets ||
-      (this._isSpectator && this._store.state.session.playerId !== player.id)
-    )
-      return;
-    const index = this._store.state.players.players.indexOf(player);
-    this._send("pronouns", [index, value]);
+  sendPlayerPronouns(payload: PlayerPronounsPayload) {
+    this._playerController.sendPlayerPronouns(payload);
   }
-
-  /**
-   * Update a pronouns based on incoming data.
-   * @param index
-   * @param value
-   * @private
-   */
-  _updatePlayerPronouns([index, value]: [number, string]): void {
-    const player = this._store.state.players.players[index];
-    if (!player) return;
-
-    this._store.commit("players/update", {
-      player,
-      property: "pronouns",
-      value,
-      isFromSockets: true,
-    });
+  _updatePlayerPronouns(payload: [number, string]): void {
+    this._playerController._updatePlayerPronouns(payload);
   }
-
-  /**
-   * Update a role using status, player only.
-   * @param role role to be updated
-   * @param property property in the role set to be
-   * @param value value to be updated
-   */
-  setIsRole({ role, property, value, st }: LegacyRoleActivityPayload): void {
-    if (st === true) return;
-    if (!this._isSpectator) return;
-    if (property !== "using") return;
-    if (role !== "wraith" || !this._roles.wraith) return;
-    this._sendDirect("host", "usingRole", {
-      role,
-      value,
-      playerId: this._store.state.session.playerId,
-    });
+  setIsRole(payload: LegacyRoleActivityPayload): void {
+    this._playerController.setIsRole(payload);
   }
-
-  /**
-   * Update a role status.
-   * @param role role to be updated
-   * @param property property in the role set to be updated
-   * @param value value to be updated
-   */
-  _updateIsRole({
-    role,
-    property,
-    value,
-    st,
-  }: LegacyRoleActivityPayload): void {
-    if (!this._isSpectator && property !== "using") return;
-    if (this._isSpectator && property === "using" && !st) return;
-    this._store.commit("session/setIsRole", { role, property, value, st });
+  _updateIsRole(payload: LegacyRoleActivityPayload): void {
+    this._playerController._updateIsRole(payload);
   }
-
-  /**
-   * Update a role status.
-   * @param role role to be updated
-   * @param property property in the role set to be updated
-   * @param value value to be updated
-   */
-  _updateUsingRole({ role, value, playerId }: LegacyUsingRolePayload): void {
-    if (this._isSpectator) return;
-    const index = this._store.state.players.players.findIndex(
-      (player) => player.id === playerId,
-    );
-    if (index === -1) return;
-    const player = this._store.state.players.players[index];
-    if (!player) return;
-    if (role === "wraith") {
-      if (player.isWraith) {
-        this._store.commit("players/update", {
-          player,
-          property: "isUsingWraith",
-          value,
-        });
-      } else {
-        this._store.commit("players/update", {
-          player,
-          property: "isWraith",
-          value: false,
-        });
-        this._store.commit("players/update", {
-          player,
-          property: "isUsingWraith",
-          value: false,
-        });
-      }
-    }
+  _updateUsingRole(payload: LegacyUsingRolePayload): void {
+    this._playerController._updateUsingRole(payload);
   }
-
-  /**
-   * Upload avatar image to the server and create a link.
-   * @param image
-   */
   uploadAvatar(image: string) {
-    this._uploadFile("uploadAvatar", this._store.state.session.playerId, image);
+    this._playerController.uploadAvatar(image);
   }
-
-  /**
-   * Confirmation on receiving the uploaded image.
-   * @param image
-   */
-  async _avatarReceived(link: string): Promise<void> {
-    const playerId = this._store.state.session.playerId;
-    const linkId = link.split(".")[0];
-    if (playerId != linkId) return;
-
-    this._store.commit("session/updatePlayerAvatar", link);
-    await this.showInputModal({
-      inputType: "alert",
-      inputModal: "text",
-      inputData: {
-        name: ["头像上传成功！"],
-      },
-    }).catch(() => {
-      return null;
-    });
-    return;
+  _avatarReceived(link: string): Promise<void> {
+    return this._playerController._avatarReceived(link);
   }
 
   /**
@@ -1457,20 +1068,7 @@ export class LiveSession {
    * @param seat either -1 to vacate or the index of the seat claimed
    */
   claimSeat(seat: unknown): void {
-    if (!this._isSpectator) return;
-    if (typeof seat !== "number" || !Number.isInteger(seat) || seat < -1)
-      return;
-    const players = this._store.state.players.players;
-    const targetPlayer = seat >= 0 ? players[seat] : undefined;
-    if (players.length > seat && (seat < 0 || !targetPlayer?.id)) {
-      // this._send("claim", [seat, this._store.state.session.playerId, this._profile.playerName, this._profile.playerAvatar]);
-      this._sendDirect("host", "claim", [
-        seat,
-        this._store.state.session.playerId,
-        this._profile.playerName,
-        this._profile.playerAvatar,
-      ]);
-    }
+    this._seatController.claimSeat(seat);
   }
 
   /**
@@ -1480,84 +1078,7 @@ export class LiveSession {
    * @private
    */
   _updateSeat([index, value, name, image]: LegacyClaimPayload): void {
-    // index is the seat number, value is the playerId, name is the playerName
-    if (this._isSpectator) return;
-    // const property = "id";
-    const players = this._store.state.players.players;
-    const claimedPlayer = index >= 0 ? players[index] : undefined;
-    if (claimedPlayer?.id) return;
-    // remove previous seat
-    const oldIndex = players.findIndex(({ id }) => id === value);
-    if (oldIndex >= 0 && oldIndex !== index) {
-      const oldPlayer = players[oldIndex];
-      if (!oldPlayer) return;
-      if (oldPlayer.chatGroup != "") {
-        const player = oldPlayer;
-        const chatId = player.chatGroup;
-        this._store.commit("session/removeGroupChatMember", { chatId, player });
-      }
-      this._store.commit("players/update", {
-        player: oldPlayer,
-        property: "id",
-        value: "",
-      });
-      // this._store.commit("players/update", {
-      //   player: players[oldIndex],
-      //   property: "name",
-      //   value: ""
-      // });
-      // this._store.commit("players/update", {
-      //   player: players[oldIndex],
-      //   property: "image",
-      //   value: ""
-      // });
-      if (oldPlayer.isTalking === true) {
-        this._store.commit("players/update", {
-          player: oldPlayer,
-          property: "isTalking",
-          value: false,
-        });
-      }
-      if (oldPlayer.isWraith === true) {
-        this._store.commit("players/update", {
-          player: oldPlayer,
-          property: "isWraith",
-          value: false,
-        });
-      }
-      if (oldPlayer.isUsingWraith === true) {
-        this._store.commit("players/update", {
-          player: oldPlayer,
-          property: "isUsingWraith",
-          value: false,
-        });
-      }
-      if (oldPlayer.isAllowRole === false) {
-        this._store.commit("players/update", {
-          player: oldPlayer,
-          property: "isAllowRole",
-          value: true,
-        });
-      }
-    }
-    // add playerId to new seat
-    if (index >= 0) {
-      const player = players[index];
-      if (!player) return;
-      this._store.commit("players/update", {
-        player,
-        property: "image",
-        value: image,
-      });
-      this._store.commit("players/update", {
-        player,
-        property: "name",
-        value: name,
-      });
-      this._store.commit("players/update", { player, property: "id", value });
-    }
-    // update player session list as if this was a ping
-    this._handlePing([true, value, 0]);
+    this._seatController.updateSeat([index, value, name, image]);
   }
 
   /**
@@ -1566,16 +1087,8 @@ export class LiveSession {
    * @param value playerId to add
    * @private
    */
-  _createChatHistory([index]: LegacyClaimPayload): void {
-    if (index < 0) return;
-    const player = this._store.state.players.players[index];
-    if (!player) return;
-    const playerId = player.id;
-    if (playerId === "") return;
-    if (this._chat.histories.some((history) => history.id === playerId)) return;
-    if (this._isSpectator && this._store.state.session.playerId != playerId)
-      return;
-    this._store.commit("session/createChatHistory", playerId);
+  _createChatHistory(payload: LegacyClaimPayload): void {
+    this._seatController.createChatHistory(payload);
   }
 
   /**
@@ -1583,578 +1096,94 @@ export class LiveSession {
    * This will be split server side so that each player only receives their own (sub)message.
    */
   distributeRoles() {
-    if (this._isSpectator) return;
-    const message: Record<string, [string, unknown]> = {};
-    this._store.state.players.players.forEach((player, index) => {
-      if (player.id && player.role) {
-        message[player.id] = [
-          "player",
-          { index, property: "role", value: player.role.id },
-        ];
-      }
-    });
-    if (Object.keys(message).length) {
-      this._send("direct", message);
-    }
+    this._playerDeliveryController.distributeRoles();
   }
-
-  /**
-   * Distribute player types to all seated players in a direct message.
-   * This will be split server side so that each player only receives their own (sub)message.
-   */
   distributeTypes() {
-    if (this._isSpectator) return;
-    const message: Record<string, [string, unknown]> = {};
-    this._store.state.players.players.forEach((player, index) => {
-      if (player.id && player.role) {
-        message[player.id] = [
-          "player",
-          {
-            index,
-            property: "role",
-            value:
-              player.role.team === "traveler"
-                ? player.role.id
-                : player.role.team + "s",
-          }, //角色类型图标均有s后缀
-        ];
-      }
-    });
-    if (Object.keys(message).length) {
-      this._send("direct", message);
-    }
+    this._playerDeliveryController.distributeTypes();
   }
-
-  /**
-   * Distribute bluffs to demon, lunatic, minion players.
-   * This will be split server side so that each player only receives their own (sub)message.
-   * @param all is the boolean indicator if sending bluffs to everyone
-   * @param role is the role being sent a bluffs
-   * @param seatNum is the seat number being sent a bluffs
-   * @param playerId is the playerId being sent a bluffs, may or may not be seated.
-   */
-  distributeBluffs({
-    all,
-    role,
-    seatNum,
-    playerId,
-  }: TargetedDistribution): void {
-    if (this._isSpectator) return;
-    if (!all && !seatNum && !playerId && !role) return;
-
-    if (all) {
-      this._send("bluff", this._store.state.players.bluffs);
-      return;
-    }
-    if (playerId) {
-      this._sendDirect(playerId, "bluff", this._store.state.players.bluffs);
-      return;
-    }
-    if (seatNum) {
-      const player = this._store.state.players.players[seatNum - 1];
-      if (!player) return;
-      playerId = player.id;
-      this._sendDirect(playerId, "bluff", this._store.state.players.bluffs);
-      return;
-    }
-
-    let team: "demon" | "minion" | undefined;
-    switch (role) {
-      case "demon":
-      case "lunatic":
-      case "demonAll":
-        team = "demon";
-        break;
-      case "snitch":
-      case "widow":
-      case "spy":
-        team = "minion";
-        break;
-    }
-
-    const message: Record<string, ["bluff", unknown]> = {};
-    this._store.state.players.players.forEach((player) => {
-      if (player.id && player.role && player.role.team == team) {
-        if (team === "demon") {
-          let lunatic = false;
-          player.reminders.forEach((reminder) => {
-            if (reminder.role === "lunatic") {
-              lunatic = true;
-              return;
-            }
-          });
-          if ((role === "lunatic" && !lunatic) || (role === "demon" && lunatic))
-            return;
-        } else if (
-          (role === "widow" || role === "spy") &&
-          player.role.id != role
-        )
-          return;
-        message[player.id] = ["bluff", this._store.state.players.bluffs];
-      }
-    });
-    if (Object.keys(message).length) {
-      this._send("direct", message);
-    }
+  distributeBluffs(payload: TargetedDistribution): void {
+    this._playerDeliveryController.distributeBluffs(payload);
   }
-
-  /**
-   * Update demon bluffs based on incoming data. Demon/Luantic only.
-   * @param bluffs
-   */
   _updateBluff(bluffs: LegacyRuntimeRole[]) {
-    if (!this._isSpectator) return;
-    this._store.commit("players/updateBluff", bluffs);
+    this._playerDeliveryController._updateBluff(bluffs);
   }
-
-  /**
-   * Distribute grimoire to designated players.
-   * Takes one of the arguments, everything else will be null.
-   * role, seatNum, playerId in a direct message.
-   * This will be split server side so that each player only receives their own (sub)message.
-   * @param all is the boolean indicator if sending grimoire to everyone
-   * @param role is the role being sent a grimoire
-   * @param seatNum is the seat number being sent a grimoire
-   * @param playerId is the playerId being sent a grimoire, may or may not be seated.
-   */
-  distributeGrimoire({
-    all,
-    role,
-    seatNum,
-    playerId,
-  }: TargetedDistribution): void {
-    if (this._isSpectator) return;
-    if (!all && !seatNum && !playerId && !role) return;
-
-    const fullGrimoire = !!all || !!playerId ? false : true;
-
-    type GrimoireRoleEntry = [
-      { index: number; property: "role"; value: string | undefined },
-    ];
-    type GrimoireReminderEntry = [
-      {
-        index: number;
-        property: "reminder" | "stReminder";
-        value: Array<{ role?: string | undefined }>;
-      },
-    ];
-    type GrimoireMessage = {
-      roles: GrimoireRoleEntry[];
-      reminders?: GrimoireReminderEntry[];
-      stReminders?: GrimoireReminderEntry[];
-    };
-    if (!role) {
-      // not specifying a role
-      const grimoire: GrimoireMessage = { roles: [] };
-      if (fullGrimoire) {
-        grimoire.reminders = [];
-      }
-      if (all) {
-        grimoire.stReminders = [];
-      }
-      this._store.state.players.players.forEach((player, index) => {
-        grimoire.roles.push([
-          { index, property: "role", value: player.role.id },
-        ]);
-        if (fullGrimoire) {
-          grimoire.reminders?.push([
-            { index, property: "reminder", value: player.reminders },
-          ]);
-        }
-        if (all) {
-          grimoire.stReminders?.push([
-            { index, property: "stReminder", value: player.stReminders },
-          ]);
-        }
-      });
-      if (grimoire.roles.length) {
-        if (all) this._send("grimoire", grimoire);
-        if (playerId) this._sendDirect(playerId, "grimoire", grimoire);
-        if (seatNum) {
-          const player = this._store.state.players.players[seatNum - 1];
-          if (!player) return;
-          playerId = player.id;
-          this._sendDirect(playerId, "grimoire", grimoire);
-        }
-      }
-    } else {
-      // send all roles and reminders when requesting full grimoire (i.e. widow or spy)
-      const directMessage: Record<string, ["grimoire", GrimoireMessage]> = {};
-      this._store.state.players.players.forEach((player) => {
-        if (player.id && player.role && player.role.id == role) {
-          directMessage[player.id] = ["grimoire", { roles: [], reminders: [] }];
-          this._store.state.players.players.forEach((player2, index) => {
-            directMessage[player.id]?.[1].roles.push([
-              { index, property: "role", value: player2.role.id },
-            ]);
-            if (fullGrimoire) {
-              directMessage[player.id]?.[1].reminders?.push([
-                { index, property: "reminder", value: player2.reminders },
-              ]);
-            }
-          });
-        }
-      });
-      if (Object.keys(directMessage).length) {
-        this._send("direct", directMessage);
-      }
-    }
-
-    // send bluffs
-    this.distributeBluffs({ all, role, seatNum, playerId });
+  distributeGrimoire(payload: TargetedDistribution): void {
+    this._playerDeliveryController.distributeGrimoire(payload);
   }
-
-  /**
-   * Update grimoire once received
-   * @param payload is the grimoire details.
-   */
   _updateGrimoire(payload: LegacyGrimoirePayload): void {
-    // set roles
-    payload.roles.forEach((grimRole) => {
-      const update = grimRole[0];
-      if (!update) return;
-      // load role, first from session, the global, then fail gracefully
-      const role: LegacyRuntimeRole = (update.value &&
-        this._store.state.roles.get(update.value)) ||
-        (update.value && rolesJSONbyId.get(update.value)) || { id: "" };
-      if (role.team === "traveler") return;
-      const player = this._store.state.players.players[update.index];
-      if (!player) return;
-      this._store.commit("players/update", {
-        player,
-        property: "role",
-        value: role,
-      });
-    });
-
-    // set reminders
-    if (payload.reminders) {
-      payload.reminders.forEach((grimReminder) => {
-        const update = grimReminder[0];
-        if (!update || !update.value.length) return;
-        const player = this._store.state.players.players[update.index];
-        if (!player) return;
-        const value: Array<{ role?: string | undefined }> = Array.from(
-          player.reminders,
-        );
-        update.value.forEach((reminder) => {
-          if (reminder.role === "custom") return;
-          value.push(reminder);
-        });
-        this._store.commit("players/update", {
-          player,
-          property: "reminders",
-          value,
-        });
-      });
-    }
-    // set stReminders
-    if (payload.stReminders) {
-      payload.stReminders.forEach((grimReminder) => {
-        const update = grimReminder[0];
-        if (!update || !update.value.length) return;
-        const player = this._store.state.players.players[update.index];
-        if (!player) return;
-        this._store.commit("players/update", {
-          player,
-          property: "stReminders",
-          value: update.value,
-        });
-      });
-    }
+    this._playerDeliveryController._updateGrimoire(payload);
   }
 
-  /**
-   * A player nomination. ST only
-   * This also syncs the voting speed to the players.
-   * Payload can be an object with {nomination} property or just the nomination itself, or undefined.
-   * @param payload [nominator, nominee]|{nomination}
-   */
   nomination(payload: NominationPayload) {
-    if (this._isSpectator) return;
-    const nomination = Array.isArray(payload)
-      ? payload
-      : payload && typeof payload === "object"
-      ? payload.nomination
-      : undefined;
-    const players = this._store.state.players.players;
-    if (
-      !nomination ||
-      (players.length > nomination[0] && players.length > nomination[1])
-    ) {
-      this.setVotingSpeed(this._voting.votingSpeed);
-      this._send("nomination", nomination ?? null);
-    }
+    this._votingController.nomination(payload);
   }
-
-  /**
-   * Set the isVoteInProgress status. ST only
-   */
   setVoteInProgress() {
-    if (this._isSpectator) return;
-    this._send("isVoteInProgress", this._voting.isVoteInProgress);
+    this._votingController.setVoteInProgress();
   }
-
-  /**
-   * Send the isNight status. ST only
-   */
   setIsNight() {
-    if (this._isSpectator) return;
-    this._send("isNight", this._store.state.grimoire.isNight);
+    this._votingController.setIsNight();
   }
-
-  /**
-   * Send the isVoteHistoryAllowed state. ST only
-   */
   setVoteHistoryAllowed() {
-    if (this._isSpectator) return;
-    this._send("isVoteHistoryAllowed", this._voting.isVoteHistoryAllowed);
+    this._votingController.setVoteHistoryAllowed();
   }
-
-  /**
-   * Send the voting speed. ST only
-   * @param votingSpeed voting speed in seconds, minimum 1
-   */
   setVotingSpeed(votingSpeed: number) {
-    if (this._isSpectator) return;
-    if (votingSpeed) {
-      this._send("votingSpeed", votingSpeed);
-    }
+    this._votingController.setVotingSpeed(votingSpeed);
   }
-
-  /**
-   * Set which player is on the block. ST only
-   * @param playerIndex, player id or -1 for empty
-   */
   setMarked(playerIndex: number) {
-    if (this._isSpectator) return;
-    if (this._voting.isSecretVote) return;
-    this._send("marked", playerIndex);
+    this._votingController.setMarked(playerIndex);
   }
-
-  /**
-   * Clear the vote history for everyone. ST only
-   */
   clearVoteHistory() {
-    if (this._isSpectator) return;
-    this._send("clearVoteHistory", undefined);
+    this._votingController.clearVoteHistory();
   }
-
-  /**
-   * Send a vote. Player or ST
-   * @param index Seat of the player
-   * @param sync Flag whether to sync this vote with others or not
-   */
-  vote([index]: [number]) {
-    const nomination = this._voting.nomination;
-    if (!nomination) return;
-    const player = this._store.state.players.players[index];
-    if (!player) return;
-    if (
-      this._store.state.session.playerId === player.id ||
-      !this._isSpectator
-    ) {
-      if (
-        this._store.state.players.players[nomination[1]]?.role.team ===
-          "traveler" ||
-        !this._voting.isSecretVote
-      ) {
-        // send to everyone if exile or secret vote is off
-        // send vote only if it is your own vote or you are the storyteller
-        this._send("vote", [
-          index,
-          this._voting.votes[index],
-          !this._isSpectator,
-        ]);
-      } else {
-        // otherwise only send direct messages
-        if (this._isSpectator) {
-          this._sendDirect("host", "vote", [
-            index,
-            this._voting.votes[index],
-            !this._isSpectator,
-          ]);
-        } else {
-          this._sendDirect(player.id, "vote", [
-            index,
-            this._voting.votes[index],
-            !this._isSpectator,
-          ]);
-        }
-      }
-    }
+  vote(payload: [number]) {
+    this._votingController.vote(payload);
   }
-
-  /**
-   * Send a status change to whether anonymous votes are in progress. ST to players only
-   */
   setSecretVote(isSecretVote: boolean) {
-    if (this._isSpectator) return;
-    this._send("secretVote", isSecretVote);
+    this._votingController.setSecretVote(isSecretVote);
   }
-
   _handleSecretVote(isSecretVote: boolean): void {
-    if (!this._isSpectator) return;
-    this._voting.setSecretVote(isSecretVote);
+    this._votingController._handleSecretVote(isSecretVote);
   }
-
   setBootlegger(content: string) {
-    if (this._isSpectator) return;
-    this._send("bootlegger", content);
+    this._votingController.setBootlegger(content);
   }
-
   _handleSetBootlegger(content: string): void {
-    if (!this._isSpectator) return;
-    this._settings.setBootlegger(content);
+    this._votingController._handleSetBootlegger(content);
   }
-
   setUseOldOrder(isUseOldOrder: UseOldOrder) {
-    if (this._isSpectator) return;
-    this._send("useOldOrder", isUseOldOrder);
+    this._votingController.setUseOldOrder(isUseOldOrder);
   }
-
   _handleSetUseOldOrder(isUseOldOrder: UseOldOrder): void {
-    if (!this._isSpectator) return;
-    this._legacyOptions.setUseOldOrder(isUseOldOrder);
+    this._votingController._handleSetUseOldOrder(isUseOldOrder);
   }
-
   setUseOldRole(isUseOldRole: UseOldRole) {
-    if (this._isSpectator) return;
-    this._send("useOldRole", isUseOldRole);
+    this._votingController.setUseOldRole(isUseOldRole);
   }
-
   _handleSetUseOldRole(isUseOldRole: UseOldRole): void {
-    if (!this._isSpectator) return;
-    this._legacyOptions.setUseOldRole(isUseOldRole);
+    this._votingController._handleSetUseOldRole(isUseOldRole);
   }
-
   setIsReview(isReview: boolean) {
-    if (this._isSpectator) return;
-    this._send("isReview", isReview);
+    this._votingController.setIsReview(isReview);
   }
-
   _handleSetIsReview(isReview: boolean): void {
-    if (!this._isSpectator) return;
-    this._review.setReview(isReview);
-    if (!isReview) {
-      this._store.state.players.players.forEach((player) => {
-        this._store.commit("players/update", {
-          player,
-          property: "stReminders",
-          value: [],
-        });
-      });
-    }
+    this._votingController._handleSetIsReview(isReview);
   }
-
-  /**
-   * Set talking status to true to enable glowing animation
-   * Send this update to all clients in the channel
-   */
   setTalking(payload: unknown): void {
-    const talkingPayload = parseSetTalkingPayload(payload);
-    if (!talkingPayload) return;
-    if (
-      talkingPayload.seatNum < 0 ||
-      talkingPayload.seatNum >= this._store.state.players.players.length
-    )
-      return;
-    const player = this._store.state.players.players[talkingPayload.seatNum];
-    if (!player?.id || player.id != this._store.state.session.playerId) return;
-    this._send("setTalking", talkingPayload);
+    this._votingController.setTalking(payload);
   }
-
-  /**
-   * Set talking status to true to enable glowing animation when received
-   */
   _handleSetTalking(payload: LegacySetTalkingPayload): void {
-    if (
-      payload.seatNum < 0 ||
-      payload.seatNum >= this._store.state.players.players.length
-    )
-      return;
-    const player = this._store.state.players.players[payload.seatNum];
-    if (player) player.isTalking = payload.isTalking;
+    this._votingController._handleSetTalking(payload);
   }
-
-  /**
-   * Handle an incoming vote, but only if it is from ST or unlocked.
-   * @param index
-   * @param vote
-   * @param fromST
-   */
-  _handleVote([index, vote, fromST]: [
-    number,
-    boolean | number | null,
-    boolean,
-  ]) {
-    // do not reveal vote when anonymous voting is in progress, unless it's ST changing that player's vote
-    const voter = this._store.state.players.players[index];
-    const nomination = this._voting.nomination;
-    if (!nomination) return;
-    const nominatedPlayer = this._store.state.players.players[nomination[1]];
-    if (!voter || !nominatedPlayer) return;
-    const voteId = voter.id;
-    if (
-      this._isSpectator &&
-      voteId != this._store.state.session.playerId &&
-      this._voting.isSecretVote &&
-      nominatedPlayer.role.team != "traveler"
-    )
-      return;
-
-    const { players } = this._store.state;
-    const voting = this._voting;
-    const playerCount = players.players.length;
-    if (!playerCount) return;
-    const indexAdjusted =
-      (index - 1 + playerCount - nomination[1]) % playerCount;
-    if (fromST || indexAdjusted >= voting.lockedVote - 1) {
-      this._store.commit("session/vote", [index, vote]);
-    }
+  _handleVote(payload: [number, boolean | number | null, boolean]) {
+    this._votingController._handleVote(payload);
   }
-
-  /**
-   * Lock a vote. ST only
-   */
   lockVote() {
-    if (this._isSpectator) return;
-    const { lockedVote, votes, nomination } = this._voting;
-    if (!nomination) return;
-    const { players } = this._store.state.players;
-    if (!players.length) return;
-    const index = (nomination[1] + lockedVote - 1) % players.length;
-    this._send("lock", [this._voting.lockedVote, votes[index]]);
+    this._votingController.lockVote();
+  }
+  _handleLock(payload: [number, boolean | number | null]) {
+    this._votingController._handleLock(payload);
   }
 
-  /**
-   * Update vote lock and the locked vote, if it differs. Player only
-   * @param lock
-   * @param vote
-   * @private
-   */
-  _handleLock([lock, vote]: [number, boolean | number | null]) {
-    if (!this._isSpectator) return;
-    this._store.commit("session/lockVote", lock);
-
-    if (lock > 1) {
-      const { lockedVote, nomination } = this._voting;
-      if (!nomination) return;
-      const { players } = this._store.state.players;
-      if (!players.length) return;
-      const index = (nomination[1] + lockedVote - 1) % players.length;
-      // record as not voted when anonymous voting is in progress
-      const displayVote = this._voting.isSecretVote ? false : vote;
-      if (this._voting.votes[index] !== vote) {
-        this._store.commit("session/vote", [index, displayVote]);
-      }
-    }
-  }
-
-  /**
-   * Swap two player seats. ST only
-   * @param payload
-   */
   swapPlayer(payload: [number, number]) {
     if (this._isSpectator) return;
     this._send("swap", payload);
@@ -2184,410 +1213,47 @@ export class LiveSession {
    * @param players players within each chat group
    */
   sendAddGroupChat(payload: unknown) {
-    if (this._isSpectator) return;
-    if (!isAddGroupChatPayload(payload)) return;
-    const { chatId, players } = payload;
-
-    const group = this._chat.groups.find((group) => group.id === chatId);
-    if (!group) return;
-    const allPlayersId = group.players.map((player) => player.id);
-    const newPlayersId = players.map((player) => player.id);
-    const oldPlayersId = allPlayersId.filter(
-      (id) => !newPlayersId.includes(id),
-    );
-
-    newPlayersId.forEach((playerId) => {
-      this._store.commit("session/addMessageQueue", {
-        type: "direct",
-        playerId,
-        command: "addGroupChat",
-        params: allPlayersId,
-        id: new Date().getTime(),
-      });
-    });
-    oldPlayersId.forEach((playerId) => {
-      this._store.commit("session/addMessageQueue", {
-        type: "direct",
-        playerId,
-        command: "addGroupChat",
-        params: newPlayersId,
-        id: new Date().getTime(),
-      });
-    });
+    this._chatController.sendAddGroupChat(payload);
   }
 
-  /**
-   * Remove a group chat. ST only
-   * @param playerIds all ids for them to remove group chat.
-   */
-  sendRemoveGroupChat({ playerIds }: { playerIds?: string[] }) {
-    if (this._isSpectator) return;
-    if (!playerIds) return;
-
-    playerIds.forEach((id) => {
-      this._store.commit("session/addMessageQueue", {
-        type: "direct",
-        playerId: id,
-        command: "removeGroupChat",
-        // params: chatId, // temporarily removing chatId since every user has their own id
-        id: new Date().getTime(),
-      });
-    });
+  sendRemoveGroupChat(payload: { playerIds?: string[] }) {
+    this._chatController.sendRemoveGroupChat(payload);
   }
 
-  /**
-   * Remove members from a group chat. ST only
-   * @param chatId id of the chat group
-   * @param player player within the chat group
-   */
-  sendRemoveGroupChatMember({
-    chatId,
-    player,
-  }: {
+  sendRemoveGroupChatMember(payload: {
     chatId: string;
     player: LegacyRuntimePlayer;
   }) {
-    if (this._isSpectator) return;
-
-    this._store.commit("session/addMessageQueue", {
-      type: "direct",
-      playerId: player.id,
-      command: "removeGroupChat",
-      // params: chatId, // temporarily removing chatId since every user has their own id
-      id: new Date().getTime(),
-    });
-
-    const index = this._chat.groups.findIndex((group) => group.id === chatId);
-    if (index === -1) return;
-    const group = this._chat.groups[index];
-    if (!group) return;
-    group.players.forEach((member) => {
-      if (member.id === player.id) return;
-      this._store.commit("session/addMessageQueue", {
-        type: "direct",
-        playerId: member.id,
-        command: "removeGroupChatMember",
-        params: player.id,
-        id: new Date().getTime(),
-      });
-    });
+    this._chatController.sendRemoveGroupChatMember(payload);
   }
 
-  /**
-   * Update group chat.
-   * @param payload
-   */
   _handleChat(
-    { message, sendingPlayerId, receivingPlayerId }: LegacyChatPayload,
+    payload: LegacyChatPayload,
     feedback: LegacyFeedback | null | undefined,
   ): void {
-    if (feedback) {
-      this._request("deleteMessage", this._store.state.session.playerId, [
-        "direct",
-        feedback,
-      ]);
-      if (!this._outbox.checkUnique(String(feedback))) return;
-    }
-    if (
-      this._isSpectator &&
-      receivingPlayerId != this._store.state.session.playerId
-    )
-      return;
-    this._store.commit("session/updateChatReceived", {
-      message,
-      playerId: sendingPlayerId,
-    });
-    const num = 1;
-    if (!this._isSpectator) {
-      this._store.commit("players/setPlayerMessage", {
-        playerId: sendingPlayerId,
-        num,
-      });
-    } else {
-      useChatStore(pinia).addStorytellerUnread(num);
-    }
-
-    if (this._isSpectator) return;
-
-    const players = this._store.state.players.players;
-    const sendingPlayer = players.find(
-      (player) => player.id === sendingPlayerId,
-    );
-    if (!sendingPlayer) return;
-    const chatId = sendingPlayer.chatGroup;
-
-    const wraiths = players.filter(
-      (player) =>
-        player.isWraith &&
-        player.isUsingWraith &&
-        player.isAllowRole &&
-        !!player.id,
-    );
-    const sendingPlayerIndex = players.findIndex(
-      (player) => player.id === sendingPlayerId,
-    );
-    const wraithMessage = `[亡魂][（${sendingPlayerIndex + 1}号）${message}]`;
-    wraiths.forEach((player) => {
-      if (
-        !(
-          player.id === sendingPlayerId ||
-          (player.chatGroup && player.chatGroup === chatId)
-        )
-      )
-        this._store.commit("session/updateChatSent", {
-          message: wraithMessage,
-          sendingPlayerId: this._store.state.session.playerId,
-          receivingPlayerId: player.id,
-        });
-    });
-    // 处理暴露
-    const wraith = this._roles.wraith;
-    if (!wraith) return;
-    const prob = wraith.prob;
-    const rand = Math.random();
-    if (rand < prob && wraiths.length > 0) {
-      const randIndex = Math.floor(Math.random() * wraiths.length);
-      const wraithSpotted = wraiths[randIndex];
-      if (!wraithSpotted) return;
-      const indexSpotted = players.findIndex(
-        (player) => player.id === wraithSpotted.id,
-      );
-      const spottedPlayer = players[indexSpotted];
-      if (!spottedPlayer) return;
-      const spottedMessage = `[亡魂][亡魂是（${indexSpotted + 1}号）${
-        spottedPlayer.name
-      }]`;
-      this._store.commit("session/updateChatSent", {
-        message: spottedMessage,
-        sendingPlayerId: this._store.state.session.playerId,
-        receivingPlayerId: sendingPlayerId,
-      });
-      const indexExposed = players.findIndex(
-        (player) => player.id === sendingPlayerId,
-      );
-      const exposedMessage = `[亡魂][你已被${indexExposed + 1}号发现！！]`;
-      this._store.commit("session/updateChatSent", {
-        message: exposedMessage,
-        sendingPlayerId: this._store.state.session.playerId,
-        receivingPlayerId: wraithSpotted.id,
-      });
-    }
-
-    if (chatId === "") return;
-
-    const groupChats = this._chat.groups;
-    if (groupChats.length === 0) return;
-
-    const group = groupChats.find((group) => group.id === chatId);
-    if (!group) return;
-    const sendPlayers = group.players
-      .map((player) => player.id)
-      .filter((id) => id != sendingPlayerId);
-    sendPlayers.forEach((id) => {
-      this._store.commit("session/updateChatSent", {
-        message,
-        sendingPlayerId: this._store.state.session.playerId,
-        receivingPlayerId: id,
-      });
-    });
+    this._chatController._handleChat(payload, feedback);
   }
 
-  /**
-   * Create a chat group or add new members
-   * @param playerIds list of ids to add to the group chat.
-   */
   _handleAddGroupChat(
     playerIds: string[],
     feedback: LegacyFeedback | null = false,
   ): void {
-    if (feedback) {
-      this._request("deleteMessage", this._store.state.session.playerId, [
-        "direct",
-        feedback,
-      ]);
-      if (!this._outbox.checkUnique(String(feedback))) return;
-    }
-    if (!this._isSpectator) return;
-
-    const groupChats = this._chat.groups;
-    const names = this._store.state.players.players
-      .filter((player) => playerIds.includes(player.id))
-      .map((player) => {
-        return {
-          index: this._store.state.players.players.findIndex(
-            (player2) => player2.id === player.id,
-          ),
-          name: player.name,
-        };
-      });
-    const sendingPlayerId =
-      typeof this._store.state.session.stId === "string"
-        ? this._store.state.session.stId
-        : "";
-    const receivingPlayerId = this._store.state.session.playerId;
-
-    if (groupChats.length === 0) {
-      let message = "[你已加入群聊！]";
-      this._handleChat({ message, sendingPlayerId, receivingPlayerId }, null);
-
-      message = "[群聊中有";
-      for (let i = 0; i < names.length; i++) {
-        const player = names[i];
-        if (!player) continue;
-        message += `（${player.index + 1}号）${player.name}`;
-        if (i < names.length - 1) message += "、";
-      }
-      message += "]";
-      this._handleChat({ message, sendingPlayerId, receivingPlayerId }, null);
-    } else {
-      let message = "[";
-      for (let i = 0; i < names.length; i++) {
-        const player = names[i];
-        if (!player) continue;
-        message += `（${player.index + 1}号）${player.name}`;
-        if (i < names.length - 1) message += "、";
-      }
-      message += "加入群聊！]";
-      this._handleChat({ message, sendingPlayerId, receivingPlayerId }, null);
-    }
-
-    const chatId =
-      groupChats.length === 0
-        ? Math.random().toString(36).substr(2)
-        : groupChats[0]?.id ?? "";
-    const players = this._store.state.players.players.filter((player) => {
-      return playerIds.includes(player.id);
-    });
-    this._store.commit("session/addGroupChat", { chatId, players });
+    this._chatController._handleAddGroupChat(playerIds, feedback);
   }
 
-  /**
-   * Exit the group chat
-   * @param chatId single group chat id to be removed from the list.
-   */
   _handleRemoveGroupChat(feedback: LegacyFeedback | null = false): void {
-    if (feedback) {
-      this._request("deleteMessage", this._store.state.session.playerId, [
-        "direct",
-        feedback,
-      ]);
-      if (!this._outbox.checkUnique(String(feedback))) return;
-    }
-    if (!this._isSpectator) return;
-
-    const groupChats = this._chat.groups;
-    if (groupChats.length === 0) return;
-
-    const sendingPlayerId =
-      typeof this._store.state.session.stId === "string"
-        ? this._store.state.session.stId
-        : "";
-    const receivingPlayerId = this._store.state.session.playerId;
-
-    const message = "[你已退出群聊！]";
-    this._handleChat({ message, sendingPlayerId, receivingPlayerId }, null);
-
-    const chatId = groupChats[0]?.id;
-    if (!chatId) return;
-    this._store.commit("session/removeGroupChat", { chatId });
+    this._chatController._handleRemoveGroupChat(feedback);
   }
 
-  /**
-   * Remove a member (not self) from the group chat
-   * @param playerId single id of player to be removed from the group.
-   */
   _handleRemoveGroupChatMember(
     playerId: string,
     feedback: LegacyFeedback | null = false,
   ): void {
-    if (feedback) {
-      this._request("deleteMessage", this._store.state.session.playerId, [
-        "direct",
-        feedback,
-      ]);
-      if (!this._outbox.checkUnique(String(feedback))) return;
-    }
-    if (!this._isSpectator) return;
-
-    const groupChats = this._chat.groups;
-    if (groupChats.length === 0) return;
-    const group = groupChats[0];
-    if (!group) return;
-    const player = group.players.filter((player) => {
-      return player.id === playerId;
-    })[0];
-    if (!player) return;
-    const index = group.players.findIndex((player2) => player2.id === playerId);
-
-    const sendingPlayerId =
-      typeof this._store.state.session.stId === "string"
-        ? this._store.state.session.stId
-        : "";
-    const receivingPlayerId = this._store.state.session.playerId;
-
-    const message = `[（${index + 1}号）${player.name}退出群聊！]`;
-    this._handleChat({ message, sendingPlayerId, receivingPlayerId }, null);
-
-    const chatId = group.id;
-    this._store.commit("session/removeGroupChatMember", { chatId, player });
+    this._chatController._handleRemoveGroupChatMember(playerId, feedback);
   }
 
-  /**
-   * Sync seated player status.
-   * @param isSecretVoteless boolean says if this player is secretly voteless.
-   * @param groupChat list of latest player ID in the group chat.
-   */
-  _handleSyncPlayerStatus({
-    isSecretVoteless,
-    groupChatPlayers,
-    isWraith,
-    isUsingWraith,
-  }: LegacySessionStatusPayload): void {
-    if (!this._isSpectator) return;
-    if (this._store.state.session.claimedSeat === -1) return;
-
-    if (this._voting.isSecretVote && isSecretVoteless) {
-      this._store.commit("players/update", {
-        player:
-          this._store.state.players.players[
-            this._store.state.session.claimedSeat
-          ],
-        property: "isVoteless",
-        value: isSecretVoteless,
-      });
-    }
-
-    const groupChats = this._chat.groups;
-    if (groupChatPlayers.length > 0) {
-      const group = groupChats[0];
-      if (group) {
-        group.players.forEach((player) => {
-          if (!groupChatPlayers.includes(player.id))
-            this._handleRemoveGroupChatMember(player.id);
-        });
-        const inGroupPlayers = group.players.map((player) => player.id);
-        const addPlayers = groupChatPlayers.filter(
-          (id) => !inGroupPlayers.includes(id),
-        );
-        if (addPlayers.length > 0) this._handleAddGroupChat(addPlayers);
-      } else {
-        this._handleAddGroupChat(groupChatPlayers);
-      }
-    } else {
-      if (groupChats.length > 0) this._handleRemoveGroupChat();
-    }
-
-    this._store.commit("session/setIsRole", {
-      role: "wraith",
-      property: "active",
-      value: isWraith,
-    });
-    this._store.commit("session/setIsRole", {
-      role: "wraith",
-      property: "using",
-      value: isUsingWraith,
-      st: true,
-    });
+  _handleSyncPlayerStatus(payload: LegacySessionStatusPayload): void {
+    this._chatController._handleSyncPlayerStatus(payload);
   }
 
   /**
@@ -2605,7 +1271,7 @@ export class LiveSession {
    * @param payload
    */
   _handleSetTimer(time: number): void {
-    this._store.commit("session/setTimer", time);
+    this._timer.setTimer(time);
   }
 
   /**
@@ -2622,7 +1288,7 @@ export class LiveSession {
    * Starting timer.
    */
   _handleStartTimer(payload: number): void {
-    this._store.commit("session/startTimer", payload);
+    this._timer.startTimer(payload);
   }
 
   /**
@@ -2638,18 +1304,19 @@ export class LiveSession {
    * Starting timer.
    */
   _handleStopTimer() {
-    this._store.commit("session/stopTimer");
+    this._timer.stopTimer();
   }
 }
 
-export default (store: LegacyRuntimeStore) => {
+export default () => {
   // lobby
-  const lobby = new LiveLobby(store);
+  const lobby = new LiveLobby();
   if (window.location.pathname === "/") lobby.connect();
   // setup
-  const session = new LiveSession(store);
+  const session = new LiveSession();
 
-  gameEvents.subscribe((mutation, state) => {
+  gameEvents.subscribe((mutation) => {
+    const state = { session: useSessionIdentityStore(pinia).$state };
     if (!isSessionOutboundState(state)) return;
     dispatchSessionMutation(session, mutation, state);
   });

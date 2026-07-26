@@ -9,6 +9,7 @@ export type LegacyRuntimeRole = {
 
 export type ChatOutboxPayload = {
   message: string;
+  sendingPlayerId?: string;
   receivingPlayerId: string;
 };
 
@@ -50,6 +51,8 @@ export function isChatOutboxPayload(
     typeof value === "object" &&
     value !== null &&
     typeof (value as Record<string, unknown>).message === "string" &&
+    ((value as Record<string, unknown>).sendingPlayerId === undefined ||
+      typeof (value as Record<string, unknown>).sendingPlayerId === "string") &&
     typeof (value as Record<string, unknown>).receivingPlayerId === "string"
   );
 }

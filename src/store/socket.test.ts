@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveSession } from "./socket";
 import {
   decodeSessionMessage,
@@ -6,6 +6,9 @@ import {
 } from "./session-socket-protocol";
 import { useMessageOutboxStore } from "../stores/message-outbox";
 import { useSessionConnectionStore } from "../stores/session-connection";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import { usePlayersStore } from "../stores/players";
+import { useVotingStore } from "../stores/voting";
 import { pinia } from "../pinia";
 
 class FakeWebSocket {
@@ -34,40 +37,9 @@ class FakeWebSocket {
   }
 }
 
-const createStore = (
-  commit = vi.fn(),
-  session: Partial<{
-    playerId: string;
-    sessionId: string;
-    stSecret: string;
-    stId: string;
-    claimedSeat: number;
-    isListening: number | null;
-    isSpectator: boolean;
-  }> = {},
-) => ({
-  commit,
-  state: {
-    players: { players: [], fabled: [], bluffs: [] },
-    session: {
-      playerId: "player-1",
-      sessionId: "",
-      stSecret: "",
-      stId: "",
-      claimedSeat: -1,
-      isListening: null,
-      isSpectator: false,
-      ...session,
-    },
-    grimoire: { isNight: false },
-    roles: new Map(),
-    edition: { id: "tb", isOfficial: true },
-    states: [],
-    teamsNames: {},
-    firstNight: [],
-    otherNight: [],
-  },
-});
+const setSessionIdentity = (
+  state: Partial<ReturnType<typeof useSessionIdentityStore>["$state"]>,
+) => useSessionIdentityStore(pinia).$patch(state);
 
 describe("session socket message decoder", () => {
   it("decodes valid legacy envelopes", () => {
@@ -93,7 +65,7 @@ describe("session socket message decoder", () => {
 
   it("releases ping and outbound queue timers when disconnected", () => {
     vi.useFakeTimers();
-    const session = new LiveSession(createStore());
+    const session = new LiveSession();
 
     session._ping();
     session._startSendQueue();
@@ -104,8 +76,7 @@ describe("session socket message decoder", () => {
   });
 
   it("ignores malformed persisted chat messages when clearing the outbox", () => {
-    const commit = vi.fn();
-    const session = new LiveSession(createStore(commit, { stId: "host-a" }));
+    const session = new LiveSession();
     const checkQueue = (
       session as unknown as {
         _checkQueue(message: {
@@ -126,12 +97,11 @@ describe("session socket message decoder", () => {
       id: 1,
     });
 
-    expect(commit).not.toHaveBeenCalled();
+    expect(useMessageOutboxStore(pinia).queue).toEqual([]);
   });
 
   it("rejects non-scalar session channels before opening a socket", async () => {
-    const commit = vi.fn();
-    const session = new LiveSession(createStore(commit));
+    const session = new LiveSession();
     const disconnect = vi.spyOn(session, "disconnect");
     const alertPopup = vi
       .spyOn(session, "_alertPopup")
@@ -141,11 +111,11 @@ describe("session socket message decoder", () => {
 
     expect(disconnect).toHaveBeenCalledOnce();
     expect(alertPopup).toHaveBeenCalledWith("无效的房间号！");
-    expect(commit).toHaveBeenCalledWith("session/setSessionId", "");
+    expect(useSessionIdentityStore(pinia).sessionId).toBe("");
   });
 
   it("ignores malformed inbound alert payloads", async () => {
-    const session = new LiveSession(createStore());
+    const session = new LiveSession();
     const showModal = vi.spyOn(session, "showInputModal");
 
     await session._alertPopup({ text: "not an alert string" });
@@ -154,7 +124,7 @@ describe("session socket message decoder", () => {
   });
 
   it("rejects malformed talking and timer payloads before sending", () => {
-    const session = new LiveSession(createStore());
+    const session = new LiveSession();
     const send = vi.spyOn(session, "_send");
     (session as unknown as { _isSpectator: boolean })._isSpectator = false;
 
@@ -166,16 +136,15 @@ describe("session socket message decoder", () => {
   });
 
   it("ignores non-numeric queue acknowledgements", () => {
-    const commit = vi.fn();
-    const session = new LiveSession(createStore(commit));
+    const session = new LiveSession();
 
     session._deleteFromQueue("not-a-queue-id");
 
-    expect(commit).not.toHaveBeenCalled();
+    expect(useMessageOutboxStore(pinia).queue).toEqual([]);
   });
 
   it("rejects non-integer seat claims before sending", () => {
-    const session = new LiveSession(createStore());
+    const session = new LiveSession();
     const sendDirect = vi.spyOn(session, "_sendDirect");
 
     session.claimSeat("0");
@@ -183,21 +152,42 @@ describe("session socket message decoder", () => {
     expect(sendDirect).not.toHaveBeenCalled();
   });
 
+  it("applies inbound player and voting changes through Pinia actions", () => {
+    const session = new LiveSession();
+    const players = usePlayersStore(pinia);
+    players.add("first");
+    players.add("second");
+    (session as unknown as { _isSpectator: boolean })._isSpectator = true;
+
+    session.applyIncomingPlayerSwap([0, 1]);
+    session.applyIncomingNight(true);
+    session.applyIncomingVotingSpeed(250);
+    session.applyIncomingVoteInProgress(true);
+
+    expect(players.players.map((player) => player.name)).toEqual([
+      "second",
+      "first",
+    ]);
+    expect(useVotingStore(pinia)).toMatchObject({
+      votingSpeed: 250,
+      isVoteInProgress: true,
+    });
+  });
+
   it("clears a departed seat through the session command boundary", () => {
-    const commit = vi.fn();
-    const session = new LiveSession(createStore(commit, { claimedSeat: 2 }));
+    setSessionIdentity({ claimedSeat: 2 });
+    const session = new LiveSession();
 
     session._updateLeaveSeat();
 
-    expect(commit).toHaveBeenCalledWith("session/claimSeat", -1);
+    expect(useSessionIdentityStore(pinia).claimedSeat).toBe(-1);
   });
 
   it("reconnects an interrupted socket after the documented delay", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("WebSocket", FakeWebSocket);
-    const session = new LiveSession(
-      createStore(vi.fn(), { stSecret: "host-secret" }),
-    );
+    setSessionIdentity({ playerId: "player-1", stSecret: "host-secret" });
+    const session = new LiveSession();
 
     await session.connect("12");
     const firstSocket = FakeWebSocket.instances.at(-1);
@@ -217,23 +207,22 @@ describe("session socket message decoder", () => {
   it("does not reconnect a deliberately closed socket", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("WebSocket", FakeWebSocket);
-    const commit = vi.fn();
-    const session = new LiveSession(
-      createStore(commit, { stSecret: "host-secret" }),
-    );
+    setSessionIdentity({ playerId: "player-1", stSecret: "host-secret" });
+    const session = new LiveSession();
 
     await session.connect("12");
     FakeWebSocket.instances.at(-1)?.emitClose(1000);
 
     expect(useSessionConnectionStore(pinia).isReconnecting).toBe(false);
     expect(vi.getTimerCount()).toBe(0);
-    expect(commit).toHaveBeenCalledWith("session/setSessionId", "");
-    expect(commit).toHaveBeenCalledWith("session/setSpectator", false);
+    expect(useSessionIdentityStore(pinia).sessionId).toBe("");
+    expect(useSessionIdentityStore(pinia).isSpectator).toBe(false);
   });
 
   it("requests spectator bootstrap data before starting ping", () => {
     vi.useFakeTimers();
-    const session = new LiveSession(createStore());
+    setSessionIdentity({ playerId: "player-1" });
+    const session = new LiveSession();
     (session as unknown as { _isSpectator: boolean })._isSpectator = true;
     const sendDirect = vi.spyOn(session, "_sendDirect");
     const request = vi.spyOn(session, "_request");
@@ -262,10 +251,8 @@ describe("session socket message decoder", () => {
 
   it("returns a timed-out join attempt to the intro state", async () => {
     vi.useFakeTimers();
-    const commit = vi.fn();
-    const session = new LiveSession(
-      createStore(commit, { sessionId: "12", stSecret: "host-secret" }),
-    );
+    setSessionIdentity({ sessionId: "12", stSecret: "host-secret" });
+    const session = new LiveSession();
     const showInputModal = vi
       .spyOn(session, "showInputModal")
       .mockResolvedValue(true);
@@ -278,12 +265,12 @@ describe("session socket message decoder", () => {
       inputModal: "text",
       inputData: { name: ["连接失败，请重新进入房间！"] },
     });
-    expect(commit).toHaveBeenCalledWith("session/setSessionId", "");
-    expect(commit).toHaveBeenCalledWith("session/setSpectator", false);
+    expect(useSessionIdentityStore(pinia).sessionId).toBe("");
+    expect(useSessionIdentityStore(pinia).isSpectator).toBe(false);
   });
 
   it("routes queued messages in order through the unchanged v1 helpers", () => {
-    const session = new LiveSession(createStore());
+    const session = new LiveSession();
     const outbox = useMessageOutboxStore(pinia);
     const send = vi.spyOn(session, "_send").mockImplementation(() => undefined);
     const sendDirect = vi
@@ -339,7 +326,18 @@ describe("session socket message decoder", () => {
 afterEach(() => {
   useMessageOutboxStore(pinia).$reset();
   useSessionConnectionStore(pinia).$reset();
+  useSessionIdentityStore(pinia).$reset();
+  usePlayersStore(pinia).$reset();
+  useVotingStore(pinia).$reset();
   FakeWebSocket.instances = [];
   vi.unstubAllGlobals();
   vi.useRealTimers();
+});
+
+beforeEach(() => {
+  useMessageOutboxStore(pinia).$reset();
+  useSessionConnectionStore(pinia).$reset();
+  useSessionIdentityStore(pinia).$reset();
+  usePlayersStore(pinia).$reset();
+  useVotingStore(pinia).$reset();
 });

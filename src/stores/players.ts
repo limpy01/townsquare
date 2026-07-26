@@ -158,6 +158,9 @@ export const usePlayersStore = defineStore("players", {
       if (!normalizedRole) return;
       this.bluffs.splice(index, 1, normalizedRole);
     },
+    replaceBluffs(bluffs: GameRole[]) {
+      this.bluffs = bluffs;
+    },
     setPlayerMessage({ playerId, num }: { playerId: string; num: number }) {
       const player = this.players.find((item) => item.id === playerId);
       if (!player) return;
