@@ -82,6 +82,21 @@ import { emitLegacyMutation } from "../../store/legacy-effects";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
+
+type ScriptRole = Record<string, unknown> & { id?: string };
+type ScriptEdition = { id: string };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stringValues = (value: unknown) =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+
+const stringValue = (value: unknown, fallback: string) =>
+  typeof value === "string" ? value : fallback;
 
 const modals = useModalStore();
 const players = usePlayersStore();
@@ -135,74 +150,83 @@ async function alertError(message: string) {
     inputData: { name: [message] },
   }).catch(() => null);
 }
-function normalizeRoles(raw: unknown): any[] | null {
+function normalizeRoles(raw: unknown): ScriptRole[] | null {
   if (!Array.isArray(raw) || !raw.length) return null;
-  return raw.map((role) => (typeof role === "string" ? { id: role } : role));
+  return raw.flatMap((role) => {
+    if (typeof role === "string") return [{ id: role }];
+    return isRecord(role) ? [role] : [];
+  });
 }
-function getMeta(roles: any[]) {
+function getMeta(roles: ScriptRole[]) {
   const copy = [...roles];
-  const index = copy.findIndex(({ id }) => id === "_meta");
+  const index = copy.findIndex((role) => role.id === "_meta");
   return {
     roles:
       index >= 0
         ? copy.filter((_role, roleIndex) => roleIndex !== index)
         : copy,
-    meta: index >= 0 ? copy[index] : ({} as any),
+    meta: index >= 0 ? copy[index]! : {},
   };
 }
 function installScript(raw: unknown) {
   const normalized = normalizeRoles(raw);
   if (!normalized) return;
   const { roles, meta } = getMeta(normalized);
-  if (meta.bootlegger)
-    meta.bootlegger.forEach((ability: string, index: number) =>
-      roles.push({
-        id: `bootlegger${index}`,
-        reminders: [],
-        setup: false,
-        name: `私货商人${index + 1}`,
-        team: "fabled",
-        ability,
-      }),
-    );
+  stringValues(meta.bootlegger).forEach((ability, index) =>
+    roles.push({
+      id: `bootlegger${index}`,
+      reminders: [],
+      setup: false,
+      name: `私货商人${index + 1}`,
+      team: "fabled",
+      ability,
+    }),
+  );
   if (!scenario.setCustomRoles(roles)) return;
   emitLegacyMutation("setCustomRoles", roles);
   applyEdition(Object.assign({}, meta, { id: "custom" }));
-  const fabledMap = scenario.fabled as Map<any, any>;
-  const fabled = roles
-    .filter(
-      (role) =>
-        fabledMap.has(role.id || role) &&
-        (!meta.bootlegger || role.id !== "bootlegger"),
+  const fabledMap = scenario.fabled;
+  const fabled = roles.flatMap((role): ScenarioCatalogRole[] => {
+    if (
+      typeof role.id !== "string" ||
+      (stringValues(meta.bootlegger).length > 0 && role.id === "bootlegger")
     )
-    .map((role) => fabledMap.get(role.id || role));
+      return [];
+    const fabledRole = fabledMap.get(role.id);
+    return fabledRole ? [fabledRole] : [];
+  });
   if (fabled.length) {
     const payload = { fabled };
     players.setFabled(payload);
     emitLegacyMutation("players/setFabled", payload);
   }
   const states: Record<string, string>[] = [];
-  (meta.state ?? meta.status ?? []).forEach((state: any) =>
-    states.push({
-      [state.stateName ?? state.name]: state.stateDescription ?? state.skill,
-    }),
-  );
+  const stateEntries = Array.isArray(meta.state)
+    ? meta.state
+    : Array.isArray(meta.status)
+    ? meta.status
+    : [];
+  stateEntries.filter(isRecord).forEach((state) => {
+    const name = stringValue(state.stateName ?? state.name, "");
+    const description = stringValue(state.stateDescription ?? state.skill, "");
+    if (name) states.push({ [name]: description });
+  });
   scenario.setStates(states);
   emitLegacyMutation("setStates", states);
   const teamsNames = {
-    townsfolk: meta.townsfolksName || "镇民",
-    outsider: meta.outsidersName || "外来者",
-    minion: meta.minionsName || "爪牙",
-    demon: meta.demonsName || "恶魔",
+    townsfolk: stringValue(meta.townsfolksName, "镇民"),
+    outsider: stringValue(meta.outsidersName, "外来者"),
+    minion: stringValue(meta.minionsName, "爪牙"),
+    demon: stringValue(meta.demonsName, "恶魔"),
   };
   scenario.setTeamsNames(teamsNames);
   emitLegacyMutation("setTeamsNames", teamsNames);
-  const firstNight = (meta.firstNight ?? []).map((role: string) =>
+  const firstNight = stringValues(meta.firstNight).map((role) =>
     role.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
   );
   scenario.setFirstNight(firstNight);
   emitLegacyMutation("setFirstNight", firstNight);
-  const otherNight = (meta.otherNight ?? []).map((role: string) =>
+  const otherNight = stringValues(meta.otherNight).map((role) =>
     role.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
   );
   scenario.setOtherNight(otherNight);
@@ -261,7 +285,7 @@ async function readFromClipboard() {
     await alertError("读取剧本错误：剪贴板内容不是有效的JSON文件！");
   }
 }
-function setHomeEdition(edition: any) {
+function setHomeEdition(edition: ScriptEdition) {
   if (["tb", "bmr", "snv", "luf", "all", "custom_ankot"].includes(edition.id)) {
     scenario.setStates([]);
     emitLegacyMutation("setStates", []);
@@ -269,7 +293,7 @@ function setHomeEdition(edition: any) {
   applyEdition(edition);
 }
 
-function applyEdition(edition: any) {
+function applyEdition(edition: unknown) {
   const fabled = scenario.setEdition(edition);
   emitLegacyMutation("setEdition", edition);
   if (fabled) emitLegacyMutation("players/setFabled", { fabled });
