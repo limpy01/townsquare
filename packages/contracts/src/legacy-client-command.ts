@@ -71,13 +71,31 @@ const legacyEditionPayloadSchema = z
     roles: legacyRoleListSchema.optional(),
   })
   .passthrough();
-const legacyGameStatePlayerSchema = z.object({}).passthrough();
+const legacyGameStatePlayerSchema = z
+  .object({
+    name: z.string().optional(),
+    id: z.string().optional(),
+    image: z.string().optional(),
+    stReminders: z.array(z.unknown()).optional(),
+    isDead: z.boolean().optional(),
+    isSecretVoteless: z.boolean().optional(),
+    isVoteless: z.boolean().optional(),
+    pronouns: z.string().optional(),
+    votes: z.number().optional(),
+    roleId: z.string().optional(),
+  })
+  .passthrough();
 const legacyGameStatePayloadSchema = z
   .object({
     gamestate: z.array(legacyGameStatePlayerSchema),
     isLightweight: z.boolean().optional(),
   })
   .passthrough();
+
+export type LegacyGameStatePayload = z.infer<
+  typeof legacyGameStatePayloadSchema
+> &
+  Record<string, unknown>;
 const legacySessionStatusSchema = z
   .object({
     isSecretVoteless: z.boolean(),

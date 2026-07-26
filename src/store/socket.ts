@@ -10,6 +10,7 @@ import {
 import type {
   LegacyChatPayload,
   LegacyClaimPayload,
+  LegacyGameStatePayload,
   LegacyRoleActivityPayload,
   LegacySessionStatusPayload,
   LegacySetTalkingPayload,
@@ -79,6 +80,18 @@ type ChatOutboxPayload = {
   message: string;
   receivingPlayerId: string;
 };
+
+const gameStatePlayerProperties = [
+  "name",
+  "id",
+  "image",
+  "stReminders",
+  "isDead",
+  "isSecretVoteless",
+  "isVoteless",
+  "pronouns",
+  "votes",
+] as const;
 
 function isChatOutboxPayload(value: unknown): value is ChatOutboxPayload {
   return (
@@ -825,7 +838,7 @@ export class LiveSession {
    * @param data
    * @private
    */
-  _updateGamestate(data) {
+  _updateGamestate(data: LegacyGameStatePayload): void {
     if (!this._isSpectator) return;
     const {
       gamestate,
@@ -862,19 +875,10 @@ export class LiveSession {
     // update status for each player
     gamestate.forEach((state, x) => {
       const player = players[x];
+      if (!player) return;
       const { roleId } = state;
       // update relevant properties
-      [
-        "name",
-        "id",
-        "image",
-        "stReminders",
-        "isDead",
-        "isSecretVoteless",
-        "isVoteless",
-        "pronouns",
-        "votes",
-      ].forEach((property) => {
+      gameStatePlayerProperties.forEach((property) => {
         const value = state[property];
         if (player[property] !== value) {
           if (property === "isVoteless") {
@@ -911,7 +915,10 @@ export class LiveSession {
       this._store.commit("session/setUseOldOrder", isUseOldOrder);
       this._store.commit("session/setUseOldRole", isUseOldRole);
       this._store.commit("session/setIsReview", isReview);
-      const nominatedPlayer = nomination.length ? players[nomination[1]] : null;
+      const nominatedPlayer =
+        Array.isArray(nomination) && nomination.length > 1
+          ? players[Number(nomination[1])] ?? null
+          : null;
       this._store.commit("session/nomination", {
         nomination,
         votes,
