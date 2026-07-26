@@ -358,6 +358,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useSessionIdentityStore } from "../stores/session-identity";
 import { getNightOrder } from "@townsquare/domain";
+import { createPlayerStateActions } from "../composables/player-state-actions";
 import { emitGameEvent } from "../store/game-events";
 
 type PlayerRole = Record<string, unknown> & {
@@ -423,6 +424,16 @@ const menuTop = ref<number | null>(null);
 const menuHeight = ref<number | null>(null);
 const menuNewTop = ref<number | null>(null);
 const isShowVacant = ref(false);
+const playerStateActions = createPlayerStateActions({
+  player: props.player,
+  players: playersState,
+  grimoire,
+  session,
+  voting,
+  closeMenu: () => {
+    isMenuOpen.value = false;
+  },
+});
 
 const players = computed(() => playersState.players);
 const nightOrder = computed(() =>
@@ -515,46 +526,21 @@ async function changePronouns() {
   }
 }
 function toggleStatus() {
-  if (grimoire.isPublic) {
-    if (!props.player.isDead) {
-      updatePlayer("isDead", true);
-      if (props.player.isMarked) updatePlayer("isMarked", false);
-    } else if (props.player.isVoteless) {
-      updatePlayer("isVoteless", false);
-      updatePlayer("isDead", false);
-    } else updatePlayer("isVoteless", true);
-  } else {
-    updatePlayer("isDead", !props.player.isDead);
-    if (props.player.isMarked) updatePlayer("isMarked", false);
-    if (props.player.isVoteless) updatePlayer("isVoteless", false);
-    if (props.player.isSecretVoteless) {
-      updatePlayer("isSecretVoteless", false);
-      updatePlayer("isVoteless", false);
-    }
-  }
+  playerStateActions.toggleStatus();
 }
 
 function toggleVote() {
-  if (!props.player.isDead) return;
-  updatePlayer(
-    voting.isSecretVote && !props.player.isSecretVoteless
-      ? "isSecretVoteless"
-      : "isVoteless",
-    true,
-  );
+  playerStateActions.toggleVote();
 }
 
 function toggleAllowRole() {
-  if (!session.isSpectator)
-    updatePlayer("isAllowRole", !props.player.isAllowRole, true);
+  playerStateActions.toggleAllowRole();
 }
 
 async function toggleWraith() {
   if (session.isSpectator) return;
   if (props.player.isWraith) {
-    updatePlayer("isWraith", false, true);
-    updatePlayer("isUsingWraith", false, true);
-    updatePlayer("isAllowRole", true, true);
+    playerStateActions.setWraithEnabled(false);
     return;
   }
   const confirm = await showInputModal({
@@ -566,7 +552,7 @@ async function toggleWraith() {
       placeholder: [""],
     },
   }).catch(() => null);
-  if (confirm === true) updatePlayer("isWraith", true, true);
+  if (confirm === true) playerStateActions.setWraithEnabled(true);
   await nextTick();
 }
 
@@ -582,18 +568,7 @@ async function changeName() {
 
 function removeReminder(reminder: PlayerReminder) {
   if (review.isReview && session.isSpectator) return;
-  const updatedReminders = [...props.player.reminders];
-  updatedReminders.splice(props.player.reminders.indexOf(reminder), 1);
-  updatePlayer("reminders", updatedReminders, true);
-  if (!session.isSpectator && reminder.role !== "custom") {
-    const stReminders = [...props.player.stReminders];
-    const reminderIndex = stReminders.findIndex(
-      (item) => item.role === reminder.role,
-    );
-    if (reminderIndex === -1) return;
-    stReminders.splice(reminderIndex, 1);
-    updatePlayer("stReminders", stReminders, true);
-  }
+  playerStateActions.removeReminder(reminder);
 }
 
 async function checkOverTop(toggle = true) {
@@ -616,15 +591,7 @@ function resize() {
 }
 
 function updatePlayer(property: string, value: unknown, closeMenu = false) {
-  if (
-    session.isSpectator &&
-    !["reminders", "stReminders", "pronouns"].includes(property)
-  )
-    return;
-  const payload = { player: props.player, property, value };
-  playersState.update(payload);
-  emitGameEvent("players/update", payload);
-  if (closeMenu) isMenuOpen.value = false;
+  playerStateActions.update(property, value, closeMenu);
 }
 
 function emptyPlayer() {

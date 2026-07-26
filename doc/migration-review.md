@@ -37,7 +37,7 @@ npm run check
 | 检查项                      | 结果                              |
 | --------------------------- | --------------------------------- |
 | TypeScript / Vue TypeScript | 通过                              |
-| Vitest                      | 50 个测试文件、167 个测试通过     |
+| Vitest                      | 51 个测试文件、168 个测试通过     |
 | 服务端集成测试              | 13 个测试通过                     |
 | Chromium E2E                | 4 个流程通过                      |
 | 视觉回归                    | 3 个测试、4 张截图通过            |
@@ -48,7 +48,7 @@ npm run check
 | 生产构建                    | 通过                              |
 | 工作区                      | 干净，无未提交改动                |
 
-本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；最新一次完整质量门包含类型检查、167 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
+本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；最新一次完整质量门包含类型检查、168 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
 
 当前构建结果：
 
@@ -156,7 +156,7 @@ Vuex 已经删除，但下列过渡设施仍被大量组件和 transport 使用�
 - `commitGameCommand`；
 - `emitLegacyMutation`。
 
-`legacy-effects.ts`、`mutation-bus.ts` 与全部 `emitLegacyMutation` 调用已删除。App、投票、玩家、头像及全部相关弹窗现在在 Pinia action 后发布明确的游戏事件，持久化与 session transport 是该事件的消费者。`Menu.vue` 已进一步移除全部 `commitGameCommand`/`gameCommands` 调用：房间生命周期、玩家和群聊清理、计时器、分发、剧本选项与复盘均直接调用 Pinia。`TownSquare.vue` 的座位、提名、角色弹窗与玩家票数状态机现已抽到 `useTownSquareSeatActions`，并移除全部 command 调用。仍需迁移 Player、Vote 与 runtime store 投影，才能完成整个命令桥收口。
+`legacy-effects.ts`、`mutation-bus.ts` 与全部 `emitLegacyMutation` 调用已删除。App、投票、玩家、头像及全部相关弹窗现在在 Pinia action 后发布明确的游戏事件，持久化与 session transport 是该事件的消费者。`Menu.vue` 已进一步移除全部 `commitGameCommand`/`gameCommands` 调用：房间生命周期、玩家和群聊清理、计时器、分发、剧本选项与复盘均直接调用 Pinia。`TownSquare.vue` 的座位、提名、角色弹窗与玩家票数状态机现已抽到 `useTownSquareSeatActions`，并移除全部 command 调用。`Player.vue` 的状态、闭眼票、亡魂、授权与提醒同步已抽到 `player-state-actions`。仍需迁移 Vote 与 runtime store 投影，才能完成整个命令桥收口。
 
 ### 4.4 TypeScript 仍有绕过点
 
