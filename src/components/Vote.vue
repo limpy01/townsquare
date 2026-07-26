@@ -156,16 +156,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, watch } from "vue";
 import { useVotingStore } from "../stores/voting";
 import { usePlayersStore } from "../stores/players";
 import { useSessionIdentityStore } from "../stores/session-identity";
 import { emitGameEvent } from "../store/game-events";
+import { useVoteController } from "../composables/use-vote-controller";
 
 const voting = useVotingStore();
 const playerState = usePlayersStore();
 const session = useSessionIdentityStore();
-const voteTimer = ref<ReturnType<typeof setInterval> | null>(null);
 
 const players = computed(() => playerState.players);
 const alive = computed(
@@ -238,20 +238,16 @@ const voters = computed(() => {
     voting.lockedVote ? reordered.slice(0, voting.lockedVote - 1) : reordered
   ).filter(Boolean);
 });
+const controller = useVoteController({
+  voting,
+  session,
+  getPlayers: () => players.value,
+  getNomineeTeam: () => nominee.value?.role?.team,
+});
+const voteTimer = controller.timer;
 
 function clearVoteTimer() {
-  if (voteTimer.value) clearInterval(voteTimer.value);
-  voteTimer.value = null;
-}
-
-function setVoteInProgress(value: boolean) {
-  voting.setVoteInProgress(value);
-  emitGameEvent("session/setVoteInProgress", value);
-}
-
-function lockVote(value?: number) {
-  voting.lockVote(value);
-  emitGameEvent("session/lockVote", value);
+  controller.clearTimer();
 }
 
 function setVotingSpeedValue(value: number) {
@@ -264,88 +260,32 @@ function voteSync(payload: [number, boolean | number]) {
   emitGameEvent("session/voteSync", payload);
 }
 
-function advanceVote() {
-  lockVote();
-  if (voting.lockedVote > players.value.length) {
-    clearVoteTimer();
-    setVoteInProgress(false);
-  }
-}
-
 function countdown() {
-  lockVote(0);
-  setVoteInProgress(true);
-  voteTimer.value = setInterval(start, 4000);
+  controller.countdown();
 }
 
 function start() {
-  lockVote(1);
-  setVoteInProgress(true);
-  clearVoteTimer();
-  voteTimer.value = setInterval(advanceVote, voting.votingSpeed);
+  controller.start();
 }
 
 function start0() {
-  const speed = voting.votingSpeed;
-  setVotingSpeedValue(0);
-  start();
-  setVotingSpeedValue(speed);
+  controller.startImmediate();
 }
 
 function pause() {
-  if (voteTimer.value) {
-    clearVoteTimer();
-  } else {
-    voteTimer.value = setInterval(advanceVote, voting.votingSpeed);
-  }
+  controller.pause();
 }
 
 function stop() {
-  clearVoteTimer();
-  setVoteInProgress(false);
-  lockVote(0);
+  controller.stop();
 }
 
 function finish() {
-  clearVoteTimer();
-  const entry = voting.createHistoryEntry(players.value, {
-    isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
-    isSpectator: session.isSpectator,
-  });
-  if (entry) {
-    voting.addVotes(entry);
-    emitGameEvent("session/addVotes", entry);
-  }
-  const selection = {
-    selected: false,
-    players: players.value,
-    save: true,
-  };
-  voting.addVoteSelected(selection, {
-    isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
-    isSpectator: session.isSpectator,
-  });
-  emitGameEvent("session/addVoteSelected", selection);
-  voting.setNomination(undefined, {
-    isSecretVote: voting.isSecretVote,
-    claimedSeat: session.claimedSeat,
-  });
-  emitGameEvent("session/nomination");
+  controller.finish();
 }
 
 function vote(vote: boolean | number) {
-  if (!canVote.value) return false;
-  const index = players.value.findIndex((item) => item.id === session.playerId);
-  const limit = nominee.value.role.team === "traveler" ? 1 : voting.playerVotes;
-  if (index >= 0) {
-    const votes =
-      typeof vote === "number"
-        ? Math.max(Math.min(vote + Number(voting.votes[index]), limit), 0)
-        : vote
-        ? limit
-        : 0;
-    voteSync([index, votes]);
-  }
+  controller.cast(canVote.value, vote);
 }
 
 function setVotingSpeed(diff: number) {
@@ -354,18 +294,11 @@ function setVotingSpeed(diff: number) {
 }
 
 function setMarked() {
-  const payload = {
-    val: nomination.value[1],
-    force: true,
-  };
-  voting.setMarkedPlayer(payload, { isSecretVote: voting.isSecretVote });
-  emitGameEvent("session/setMarkedPlayer", payload);
+  controller.setMarked(nomination.value[1]);
 }
 
 function removeMarked() {
-  const payload = { val: -1, force: true };
-  voting.setMarkedPlayer(payload, { isSecretVote: voting.isSecretVote });
-  emitGameEvent("session/setMarkedPlayer", payload);
+  controller.setMarked(-1);
 }
 
 function setSecretVote() {
