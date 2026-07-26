@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { getEditionRoles, getOtherTravelers } from "@townsquare/domain";
 import { parseCustomScript } from "@townsquare/contracts/custom-script";
 import editionJSON from "../editions.json";
 import rolesJSON from "../roles.json";
@@ -13,36 +14,11 @@ import { useSessionIdentityStore } from "./session-identity";
 
 const clean = (id: string) => id.toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
 
-const getRolesByEdition = (edition: any = editionJSON[0]) => {
-  if (edition.id === "all") {
-    return new Map(
-      rolesJSON
-        .sort((a, b) => b.team.localeCompare(a.team))
-        .map((role) => [role.id, role]),
-    );
-  }
-  return new Map(
-    rolesJSON
-      .filter(
-        (role) =>
-          role.edition === edition.id || edition.roles.includes(role.id),
-      )
-      .sort((a, b) => b.team.localeCompare(a.team))
-      .map((role) => [role.id, role]),
-  );
-};
+const getRolesByEdition = (edition: any = editionJSON[0]) =>
+  new Map(getEditionRoles(rolesJSON, edition).map((role) => [role.id, role]));
 
 const getTravelersNotInEdition = (edition: any = editionJSON[0]) =>
-  new Map(
-    rolesJSON
-      .filter(
-        (role) =>
-          role.team === "traveler" &&
-          role.edition !== edition.id &&
-          !edition.roles.includes(role.id),
-      )
-      .map((role) => [role.id, role]),
-  );
+  new Map(getOtherTravelers(rolesJSON, edition).map((role) => [role.id, role]));
 
 const editionJSONbyId = new Map(
   editionJSON.map((edition) => [edition.id, edition]),

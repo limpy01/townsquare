@@ -7,6 +7,46 @@ export function countVotes(votes: readonly VoteRecord[]): number {
   return votes.filter((vote) => vote.voted).length;
 }
 
+export interface CatalogRole {
+  id: string;
+  team: string;
+  edition?: string;
+}
+
+export interface CatalogEdition {
+  id: string;
+  roles: readonly string[];
+}
+
+/** Select roles for an official edition without mutating the source catalog. */
+export function getEditionRoles<TRole extends CatalogRole>(
+  roles: readonly TRole[],
+  edition: CatalogEdition,
+): TRole[] {
+  return roles
+    .filter(
+      (role) =>
+        edition.id === "all" ||
+        role.edition === edition.id ||
+        edition.roles.includes(role.id),
+    )
+    .slice()
+    .sort((left, right) => right.team.localeCompare(left.team));
+}
+
+/** List travellers that are available but are not already in an edition. */
+export function getOtherTravelers<TRole extends CatalogRole>(
+  roles: readonly TRole[],
+  edition: CatalogEdition,
+): TRole[] {
+  return roles.filter(
+    (role) =>
+      role.team === "traveler" &&
+      role.edition !== edition.id &&
+      !edition.roles.includes(role.id),
+  );
+}
+
 export interface NightOrderRole {
   id?: string;
   firstNight?: number;

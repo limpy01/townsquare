@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（MIG-018 应用壳样式归档）
+最后更新：2026-07-26（MIG-019 剧本目录领域逻辑拆分）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -37,7 +37,7 @@
 | MIG-004 | 已完成 | 剧本与游戏状态 characterization fixtures   | WS、自定义剧本、历史 game-state fixture 与契约回归测试                                         | 兼容历史 JSON 和存档            |
 | MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生     | lint 基线、服务端测试、构建                                                                    | 不改变运行时行为                |
 | MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter | 双向 command schema、首批嵌套载荷 schema、envelope decoder 与 HTTP 输入校验；27 个契约测试通过 | 网络继续传输旧三元组            |
-| MIG-007 | 进行中 | `packages/domain` 纯逻辑模块               | 投票统计、夜间顺序严格类型化与表驱动测试；后续补覆盖率门禁                                     | 不导入 Vue/Express              |
+| MIG-007 | 已完成 | `packages/domain` 纯逻辑模块               | 投票、夜间顺序、剧本角色筛选与旅行者补集测试；严格覆盖率门禁通过                               | 不导入 Vue/Express              |
 | MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口   | 11 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                                        | 旧前端可连接                    |
 | MIG-009 | 已完成 | Vue 3、Vite 运行时启动                     | typecheck、核心 E2E、视觉回归                                                                  | Vite 环境变量和静态资源保持兼容 |
 | MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除               | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                                           | 保持单窗口模态框与输入流程语义  |
@@ -48,6 +48,7 @@
 | MIG-016 | 已完成 | 会话 transport 守卫拆分                    | 纯 payload 守卫、计时器值和游戏状态字段投影独立测试，socket 回归通过                           | 不改变 v1 消息顺序或格式        |
 | MIG-017 | 已完成 | 静态资源引用报告                           | 静态引用、Vite glob 目录和待人工确认的未引用资源可重复输出                                     | 只读分析，不删除资源            |
 | MIG-018 | 已完成 | 应用壳全局样式归档                         | 根组件全局选择器迁入样式层，生产构建与视觉回归通过                                             | 保持原有 DOM 与选择器           |
+| MIG-019 | 已完成 | 剧本目录领域逻辑拆分                       | `scenario` 复用无 Vue 的角色筛选/旅行者补集函数，domain 覆盖率通过                             | 保持版面、排序与旅行者语义      |
 
 ## 迁移历史与当前质量基线
 
@@ -149,6 +150,7 @@
 - MIG-016 将 `socket.ts` 中无副作用的 payload 守卫与运行时类型提取为独立模块，涵盖聊天、群聊、角色、座位发言、计时器和发送状态。原有 v1 transport 继续调用相同逻辑，新增单元测试锁定有效与畸形输入分支。
 - MIG-017 新增 `npm run report:assets`。它解析源码中的静态资源路径和 Vite glob，输出资源总数、直接引用数、glob 覆盖目录及待人工确认项；首次报告标记 `demon-head2.png` 与源码版 `wraith.svg`，不自动删除任何可能仍被外部使用的文件。
 - MIG-018 将根组件的应用壳、按钮、过渡和昼夜背景全局样式移至 `styles/app-shell`，让组件只保留对该样式层的引入。选择器和资源保持不变；生产构建及三项视觉基线均已通过。
+- MIG-019 将官方剧本的角色筛选、阵营倒序排序和未包含旅行者补集从 Pinia scenario store 提取到 `@townsquare/domain`。`all` 剧本、显示排序、原目录不变性和旅行者排除规则均由表驱动测试锁定；domain 覆盖率门禁为 statements/lines 100%、branches 96.43%。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。

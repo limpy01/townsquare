@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { countVotes, getNightOrder } from "../src/index.js";
+import {
+  countVotes,
+  getEditionRoles,
+  getNightOrder,
+  getOtherTravelers,
+} from "../src/index.js";
 
 describe("countVotes", () => {
   it("counts only affirmative votes without mutating the input", () => {
@@ -14,6 +19,39 @@ describe("countVotes", () => {
       { playerId: "a", voted: true },
       { playerId: "b", voted: false },
       { playerId: "c", voted: true },
+    ]);
+  });
+});
+
+describe("edition role catalog", () => {
+  const roles = [
+    { id: "chef", edition: "tb", team: "townsfolk" },
+    { id: "imp", edition: "tb", team: "demon" },
+    { id: "barista", edition: "bmr", team: "traveler" },
+    { id: "gunslinger", edition: "bmr", team: "traveler" },
+  ];
+
+  it("selects and sorts an edition without mutating its catalog", () => {
+    expect(getEditionRoles(roles, { id: "tb", roles: ["barista"] })).toEqual([
+      roles[2],
+      roles[0],
+      roles[1],
+    ]);
+    expect(roles.map((role) => role.id)).toEqual([
+      "chef",
+      "imp",
+      "barista",
+      "gunslinger",
+    ]);
+  });
+
+  it("keeps the complete catalog for the all-editions view", () => {
+    expect(getEditionRoles(roles, { id: "all", roles: [] })).toHaveLength(4);
+  });
+
+  it("finds only travellers absent from the selected edition", () => {
+    expect(getOtherTravelers(roles, { id: "tb", roles: ["barista"] })).toEqual([
+      roles[3],
     ]);
   });
 });

@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
+      "@townsquare/domain": fileURLToPath(
+        new URL("./packages/domain/src/index.ts", import.meta.url),
+      ),
       "@townsquare/contracts/local-storage": fileURLToPath(
         new URL("./packages/contracts/src/local-storage.ts", import.meta.url),
       ),
