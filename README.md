@@ -17,7 +17,7 @@
 
 ## 开发与验证
 
-当前前端使用 Vue 3、Vite 和 Pinia；服务端使用 TypeScript、Express 5 与 `ws`。推荐使用仓库固定的 Node `24.18.0` LTS：
+当前前端使用 Vue 3、Vite 和 Pinia；服务端使用 TypeScript、Express 5 与 `ws`。推荐使用仓库固定的 Node `25.3.0`：
 
 ```bash
 nvm use

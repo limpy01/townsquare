@@ -91,7 +91,7 @@
   ],
   "license": "GPL-3.0-or-later",
   "engines": {
-    "node": ">=24.18.0 <25",
+    "node": ">=25.3.0 <26",
     "npm": ">=11.0.0 <12"
   },
   "packageManager": "npm@11.9.0",

@@ -4,6 +4,35 @@ import {
   decodeSessionMessage,
   encodeSessionMessage,
 } from "./session-socket-protocol";
+import { useMessageOutboxStore } from "../stores/message-outbox";
+import { useSessionConnectionStore } from "../stores/session-connection";
+import { pinia } from "../pinia";
+
+class FakeWebSocket {
+  static instances: FakeWebSocket[] = [];
+
+  readonly send = vi.fn();
+  readonly addEventListener = vi.fn(
+    (_event: string, _listener: EventListener) => undefined,
+  );
+  readyState = 1;
+  onopen: (() => void) | null = null;
+  onclose: ((event: CloseEvent) => void) | null = null;
+
+  constructor(readonly url: string) {
+    FakeWebSocket.instances.push(this);
+  }
+
+  close(code = 1000): void {
+    this.readyState = 3;
+    this.onclose?.({ code, reason: "" } as CloseEvent);
+  }
+
+  emitClose(code: number, reason = ""): void {
+    this.readyState = 3;
+    this.onclose?.({ code, reason } as CloseEvent);
+  }
+}
 
 const createStore = (
   commit = vi.fn(),
@@ -162,6 +191,155 @@ describe("session socket message decoder", () => {
 
     expect(commit).toHaveBeenCalledWith("session/claimSeat", -1);
   });
+
+  it("reconnects an interrupted socket after the documented delay", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    const session = new LiveSession(
+      createStore(vi.fn(), { stSecret: "host-secret" }),
+    );
+
+    await session.connect("12");
+    const firstSocket = FakeWebSocket.instances.at(-1);
+    expect(firstSocket?.url).toContain("/12/player-1/host?auth=host-secret");
+
+    firstSocket?.emitClose(1006);
+    expect(useSessionConnectionStore(pinia).isReconnecting).toBe(true);
+    expect(vi.getTimerCount()).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+
+    session.disconnect();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("does not reconnect a deliberately closed socket", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    const commit = vi.fn();
+    const session = new LiveSession(
+      createStore(commit, { stSecret: "host-secret" }),
+    );
+
+    await session.connect("12");
+    FakeWebSocket.instances.at(-1)?.emitClose(1000);
+
+    expect(useSessionConnectionStore(pinia).isReconnecting).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(commit).toHaveBeenCalledWith("session/setSessionId", "");
+    expect(commit).toHaveBeenCalledWith("session/setSpectator", false);
+  });
+
+  it("requests spectator bootstrap data before starting ping", () => {
+    vi.useFakeTimers();
+    const session = new LiveSession(createStore());
+    (session as unknown as { _isSpectator: boolean })._isSpectator = true;
+    const sendDirect = vi.spyOn(session, "_sendDirect");
+    const request = vi.spyOn(session, "_request");
+    const send = vi.spyOn(session, "_send");
+
+    session._onOpen();
+
+    expect(sendDirect).toHaveBeenNthCalledWith(
+      1,
+      "host",
+      "getGamestate",
+      "player-1",
+    );
+    expect(sendDirect).toHaveBeenNthCalledWith(
+      2,
+      "host",
+      "getStId",
+      "player-1",
+    );
+    expect(request).toHaveBeenCalledWith("checkAllowJoin", "player-1");
+    expect(send).toHaveBeenCalledWith("ping", ["player-1", "latency"]);
+
+    session.disconnect();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("returns a timed-out join attempt to the intro state", async () => {
+    vi.useFakeTimers();
+    const commit = vi.fn();
+    const session = new LiveSession(
+      createStore(commit, { sessionId: "12", stSecret: "host-secret" }),
+    );
+    const showInputModal = vi
+      .spyOn(session, "showInputModal")
+      .mockResolvedValue(true);
+
+    session.checkAllowJoin();
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(showInputModal).toHaveBeenCalledWith({
+      inputType: "alert",
+      inputModal: "text",
+      inputData: { name: ["连接失败，请重新进入房间！"] },
+    });
+    expect(commit).toHaveBeenCalledWith("session/setSessionId", "");
+    expect(commit).toHaveBeenCalledWith("session/setSpectator", false);
+  });
+
+  it("routes queued messages in order through the unchanged v1 helpers", () => {
+    const session = new LiveSession(createStore());
+    const outbox = useMessageOutboxStore(pinia);
+    const send = vi.spyOn(session, "_send").mockImplementation(() => undefined);
+    const sendDirect = vi
+      .spyOn(session, "_sendDirect")
+      .mockImplementation(() => undefined);
+    const request = vi
+      .spyOn(session, "_request")
+      .mockImplementation(() => undefined);
+
+    outbox.add({
+      type: "direct",
+      playerId: "player-a",
+      command: "chat",
+      params: { message: "one" },
+      id: 1,
+    });
+    outbox.add({
+      type: "request",
+      playerId: "host",
+      command: "avatar",
+      params: "player-a",
+      id: 2,
+    });
+    outbox.add({
+      type: "broadcast",
+      playerId: "",
+      command: "isNight",
+      params: true,
+      id: 3,
+    });
+
+    session._sendQueue();
+
+    expect(sendDirect).toHaveBeenCalledWith(
+      "player-a",
+      "chat",
+      { message: "one" },
+      1,
+    );
+    expect(request).toHaveBeenCalledWith("avatar", "host", "player-a", 2);
+    expect(send).toHaveBeenCalledWith("isNight", true, 3);
+    const helperCalls = [
+      sendDirect.mock.invocationCallOrder[0] ?? -1,
+      request.mock.invocationCallOrder[0] ?? -1,
+      send.mock.invocationCallOrder[0] ?? -1,
+    ];
+    expect(helperCalls).toEqual(
+      [...helperCalls].sort((left, right) => left - right),
+    );
+  });
 });
 
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  useMessageOutboxStore(pinia).$reset();
+  useSessionConnectionStore(pinia).$reset();
+  FakeWebSocket.instances = [];
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});

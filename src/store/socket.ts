@@ -42,6 +42,12 @@ import {
   encodeSessionMessage,
 } from "./session-socket-protocol";
 import {
+  buildSessionSocketUrl,
+  sessionTransportTiming,
+} from "./session-transport-lifecycle";
+import { SessionReconnectPolicy } from "./session-reconnect-policy";
+import { SessionWebSocketClient } from "./session-websocket-client";
+import {
   gameStatePlayerProperties,
   isAddGroupChatPayload,
   isChatOutboxPayload,
@@ -146,7 +152,7 @@ type NominationPayload =
 
 export class LiveSession {
   private _wss!: string;
-  private _socket!: WebSocket | null;
+  private _socketClient!: SessionWebSocketClient;
   _isSpectator!: boolean;
   private _isAlive!: boolean;
   private _gamestate!: Array<Record<string, unknown>>;
@@ -164,7 +170,7 @@ export class LiveSession {
   private _pingTimer!: ReturnType<typeof setTimeout> | null;
   private _sendInterval!: number;
   private _sendTimer!: ReturnType<typeof setInterval> | null;
-  private _reconnectTimer!: ReturnType<typeof setTimeout> | null;
+  private _reconnect!: SessionReconnectPolicy;
   private _hostTimeout!: ReturnType<typeof setTimeout> | null;
   private _joinTimeout!: ReturnType<typeof setTimeout> | null;
   private _players!: Record<string, number>;
@@ -174,7 +180,7 @@ export class LiveSession {
     this._wss = `${wsBase}/ws/`;
     // this._wss = "ws://localhost:8081/"; // uncomment if using local server with NODE_ENV=development
     // this._wss = "ws://192.168.1.2:8081/"; // uncomment if using local server with NODE_ENV=development
-    this._socket = null;
+    this._socketClient = new SessionWebSocketClient();
     this._isSpectator = true;
     this._isAlive = true;
     this._gamestate = [];
@@ -188,11 +194,13 @@ export class LiveSession {
     this._profile = useProfileStore(pinia);
     this._outbox = useMessageOutboxStore(pinia);
     this._chat = useChatStore(pinia);
-    this._pingInterval = 3 * 1000; // 30 seconds between pings
+    this._pingInterval = sessionTransportTiming.pingIntervalMs;
     this._pingTimer = null;
-    this._sendInterval = 1.5 * 1000; // 1.5 seconds between unsent message cycles
+    this._sendInterval = sessionTransportTiming.sendQueueIntervalMs;
     this._sendTimer = null;
-    this._reconnectTimer = null;
+    this._reconnect = new SessionReconnectPolicy(
+      sessionTransportTiming.reconnectDelayMs,
+    );
     this._hostTimeout = null;
     this._joinTimeout = null;
     this._players = {}; // map of players connected to a session
@@ -210,113 +218,110 @@ export class LiveSession {
    */
   _open(channel: string) {
     this.disconnect();
-    this._socket = new WebSocket(
-      this._wss +
-        channel +
-        "/" +
-        this._store.state.session.playerId +
-        (!this._isSpectator ? "/host" : "") +
-        (!this._isSpectator
-          ? "?auth=" + this._store.state.session.stSecret
-          : ""),
+    this._socketClient.open(
+      buildSessionSocketUrl(this._wss, {
+        channel,
+        playerId: this._store.state.session.playerId,
+        isSpectator: this._isSpectator,
+        hostSecret: this._store.state.session.stSecret,
+      }),
+      {
+        onMessage: this._handleMessage.bind(this),
+        onOpen: this._onOpen.bind(this),
+        onClose: (event) => this._handleSocketClose(channel, event),
+      },
     );
-    if (this._socket === null) {
+    if (!this._socketClient.isConnected) {
       this._connection.setIsReconnecting(true);
-      this._reconnectTimer = setTimeout(() => this.connect(channel), 3 * 1000);
-      return;
+      this._reconnect.schedule(() => this.connect(channel));
     }
-    this._socket.addEventListener("message", this._handleMessage.bind(this));
-    this._socket.onopen = this._onOpen.bind(this);
-    this._socket.onclose = (err: CloseEvent) => {
-      this._socket = null;
-      if (this._pingTimer !== null) clearTimeout(this._pingTimer);
-      this._pingTimer = null;
-      if (err.code !== 1000) {
-        // connection interrupted, reconnect after 3 seconds
-        this._connection.setIsReconnecting(true);
-        this._reconnectTimer = setTimeout(
-          () => this.connect(channel),
-          3 * 1000,
-        );
-      } else {
-        // vacate seat upon leaving the room
-        this._store.commit("session/claimSeat", -1);
+  }
 
-        this._store.commit("session/setSessionId", "");
-        this._store.commit("session/setSpectator", false);
-        this._connection.setIsHostAllowed(null);
-        this._connection.setIsJoinAllowed(null);
-        // clear seats and return to intro
-        if (this._voting.nomination) {
-          this._store.commit("session/nomination");
-        }
-        // this._store.commit("players/clear", true);
+  private _handleSocketClose(channel: string, err: CloseEvent): void {
+    if (this._pingTimer !== null) clearTimeout(this._pingTimer);
+    this._pingTimer = null;
+    if (err.code !== 1000) {
+      // connection interrupted, reconnect after 3 seconds
+      this._connection.setIsReconnecting(true);
+      this._reconnect.schedule(() => this.connect(channel));
+    } else {
+      // vacate seat upon leaving the room
+      this._store.commit("session/claimSeat", -1);
 
-        // clear customBootlegger
-        if (this._settings.bootlegger) {
-          this._store.commit("session/setBootlegger", "");
-        }
-
-        // reset allowed votes
-        if (this._voting.playerVotes > 1) {
-          this._store.commit("session/setPlayerVotes", 1);
-        }
-
-        // reset secret vote
-        if (this._voting.isSecretVote) {
-          this._store.commit("session/setSecretVote", false);
-        }
-
-        // reset review
-        if (this._review.isReview) {
-          this._store.commit("session/setIsReview", false);
-        }
-
-        // reset fabled
-        this._store.commit("players/setFabled", {
-          fabled: [],
-          emptyFabled: true,
-        });
-
-        // close chat box
-        useInteractionStore(pinia).setChatOpen(false);
-
-        // exit group chat
-        this._chat.groups.forEach((group) => {
-          this._store.commit("session/removeGroupChat", { chatId: group.id });
-        });
-
-        // clear messages
-        while (this._outbox.queue.length > 0) {
-          this._store.commit("session/deleteMessageQueue", 0);
-        }
-
-        // reset wraith
-        this._store.commit("session/setIsRole", {
-          role: "wraith",
-          property: "active",
-          value: false,
-        });
-        this._store.commit("session/setIsRole", {
-          role: "wraith",
-          property: "using",
-          value: false,
-          st: true,
-        });
-
-        if (err.reason) {
-          this.showInputModal({
-            inputType: "alert",
-            inputModal: "text",
-            inputData: {
-              name: [err.reason],
-            },
-          }).catch(() => {
-            return null;
-          });
-        }
+      this._store.commit("session/setSessionId", "");
+      this._store.commit("session/setSpectator", false);
+      this._connection.setIsHostAllowed(null);
+      this._connection.setIsJoinAllowed(null);
+      // clear seats and return to intro
+      if (this._voting.nomination) {
+        this._store.commit("session/nomination");
       }
-    };
+      // this._store.commit("players/clear", true);
+
+      // clear customBootlegger
+      if (this._settings.bootlegger) {
+        this._store.commit("session/setBootlegger", "");
+      }
+
+      // reset allowed votes
+      if (this._voting.playerVotes > 1) {
+        this._store.commit("session/setPlayerVotes", 1);
+      }
+
+      // reset secret vote
+      if (this._voting.isSecretVote) {
+        this._store.commit("session/setSecretVote", false);
+      }
+
+      // reset review
+      if (this._review.isReview) {
+        this._store.commit("session/setIsReview", false);
+      }
+
+      // reset fabled
+      this._store.commit("players/setFabled", {
+        fabled: [],
+        emptyFabled: true,
+      });
+
+      // close chat box
+      useInteractionStore(pinia).setChatOpen(false);
+
+      // exit group chat
+      this._chat.groups.forEach((group) => {
+        this._store.commit("session/removeGroupChat", { chatId: group.id });
+      });
+
+      // clear messages
+      while (this._outbox.queue.length > 0) {
+        this._store.commit("session/deleteMessageQueue", 0);
+      }
+
+      // reset wraith
+      this._store.commit("session/setIsRole", {
+        role: "wraith",
+        property: "active",
+        value: false,
+      });
+      this._store.commit("session/setIsRole", {
+        role: "wraith",
+        property: "using",
+        value: false,
+        st: true,
+      });
+
+      if (err.reason) {
+        this.showInputModal({
+          inputType: "alert",
+          inputModal: "text",
+          inputData: {
+            name: [err.reason],
+          },
+        }).catch(() => {
+          return null;
+        });
+      }
+    }
   }
 
   /**
@@ -326,9 +331,7 @@ export class LiveSession {
    * @private
    */
   _send(command: string, params: unknown, feedback: LegacyFeedback = false) {
-    if (this._socket && this._socket.readyState === 1) {
-      this._socket.send(encodeSessionMessage(command, params, feedback));
-    }
+    this._socketClient.send(encodeSessionMessage(command, params, feedback));
   }
 
   /**
@@ -614,18 +617,16 @@ export class LiveSession {
     if (this._pingTimer !== null) clearTimeout(this._pingTimer);
     this._pingTimer = null;
     this._stopSendQueue();
-    if (this._reconnectTimer !== null) clearTimeout(this._reconnectTimer);
-    this._reconnectTimer = null;
+    this._reconnect.cancel();
     if (this._joinTimeout !== null) clearTimeout(this._joinTimeout);
     if (this._hostTimeout !== null) clearTimeout(this._hostTimeout);
     this._joinTimeout = null;
     this._hostTimeout = null;
-    if (this._socket) {
+    if (this._socketClient.isConnected) {
       if (this._isSpectator) {
         this._sendDirect("host", "bye", this._store.state.session.playerId);
       }
-      this._socket.close(1000);
-      this._socket = null;
+      this._socketClient.close(1000);
     }
   }
 

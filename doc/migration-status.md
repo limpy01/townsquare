@@ -1,6 +1,6 @@
 # 现代化迁移状态看板
 
-最后更新：2026-07-26（迁移复盘校准；最近实现任务为 MIG-047）
+最后更新：2026-07-26（Node 25.3.0 全量验证通过；会话 transport 拆分进行中）
 历史基线提交：`e0f1d34`
 本次复盘 HEAD：`5e86627`
 详细复盘：[`migration-review.md`](./migration-review.md)
@@ -33,22 +33,22 @@
 
 ## 当前执行队列
 
-当前没有正在实施的代码批次。开始下一项前，应先完成 MIG-048；每个批次完成后更新本表、验收证据和残余风险。
+MIG-048 已完成。当前正在实施 MIG-049；每个批次完成后更新本表、验收证据和残余风险。
 
-| ID      | 状态   | 目标                                         | 前置条件 | 验收                                                          |
-| ------- | ------ | -------------------------------------------- | -------- | ------------------------------------------------------------- |
-| MIG-048 | 待开始 | 在 Node 24.18.0 下重建可信基线，并校准账本   | 无       | `npm ci && npm run check`；更新测试、覆盖率、包体和阶段证据   |
-| MIG-049 | 待开始 | 为会话 transport 增加 characterization tests | MIG-048  | 覆盖连接、重连、timer、outbox、消息顺序与权限；不改变 v1 协议 |
-| MIG-050 | 待开始 | 拆分 session transport                       | MIG-049  | transport/reconnect/outbox/handler 独立，相关单测和根检查通过 |
-| MIG-051 | 待开始 | 建立独立的 persistence repository            | MIG-050  | 消除 persistence `any` 与 mutation bridge；旧存档兼容测试达标 |
-| MIG-052 | 待开始 | 删除 legacy command/effect/mutation bridge   | MIG-051  | 组件直接调用 Pinia action；旧 bridge 无引用；根检查通过       |
+| ID      | 状态   | 目标                                         | 前置条件 | 验收                                                                                                          |
+| ------- | ------ | -------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| MIG-048 | 已完成 | 在 Node 24.18.0 下重建可信基线，并校准账本   | 无       | Node 24.18.0 / npm 11.9.0 下 `npm ci`、类型检查、单元、集成、E2E、视觉与构建均通过                            |
+| MIG-049 | 进行中 | 为会话 transport 增加 characterization tests | MIG-048  | 已锁定连接、异常/正常关闭、重连、join timeout、timer 与 outbox 顺序；继续补权限和业务消息状态机，保持 v1 协议 |
+| MIG-050 | 进行中 | 拆分 session transport                       | MIG-049  | URL、timing、WebSocket client 与 reconnect policy 已独立且有单测；后续拆分 outbox/handler，并继续扩大回归范围 |
+| MIG-051 | 待开始 | 建立独立的 persistence repository            | MIG-050  | 消除 persistence `any` 与 mutation bridge；旧存档兼容测试达标                                                 |
+| MIG-052 | 待开始 | 删除 legacy command/effect/mutation bridge   | MIG-051  | 组件直接调用 Pinia action；旧 bridge 无引用；根检查通过                                                       |
 
 ### 当前阻塞与风险
 
 - `socket.ts` 和 `persistence.ts` 是高风险巨型模块，覆盖率不足以支持直接重构；
 - 入口 JS 距预算上限仅约 1.4 KB，新的功能或依赖可能立即导致构建失败；
 - E2E、移动端视觉、旧客户端交叉兼容与生产发布演练尚不足；
-- 是否需要迁入 `apps/web`、`apps/server` workspace 尚未决策，目录重排应在 MIG-048 明确后再进行。
+- 是否需要迁入 `apps/web`、`apps/server` workspace 尚未决策；MIG-048 的结论是保持当前目录，待 transport 与 persistence 风险收敛后再单独修订规划或实施目录重排。
 
 ## 已完成工作单元（历史索引）
 
@@ -105,17 +105,17 @@
 
 ## 当前验证基线
 
-- 项目固定 Node `24.18.0` LTS 和 npm `11.9.0`；2026-07-26 的本地完整复盘实际运行于 Node `v25.3.0`，因此仍需在 Node 24 下重新执行正式验收。
+- 项目固定 Node `25.3.0` 和 npm `11.9.0`；2026-07-26 已在该版本下执行完整 `npm run check`，其中包括 153 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
 - `npm run test:server` 通过；当前包含 13 个 HTTP、room、lobby、queue、未知 command、嵌套 payload 和版本信息集成测试。
 - `npm run build` 通过；入口 JS 为 1,798,558 bytes / 1,800,000 bytes，入口 CSS 为 249,956 bytes / 260,000 bytes。JS 预算仅余约 1.4 KB，需要优先进行代码拆分。
 - ESLint 当前为 0 error、0 warning；格式基线仍记录 23 个历史文件，Stylelint 仍记录 628 条历史告警。
-- Vitest 当前为 42 个测试文件、142 个测试；全局覆盖率为 statements 35.67%、branches 29.37%、functions 54.74%、lines 37.16%。contracts/domain 已达到高覆盖率门禁，但 session transport 和 persistence 覆盖明显不足。
+- Vitest 当前为 45 个测试文件、153 个测试；全局覆盖率为 statements 38.75%、branches 31.37%、functions 57.79%、lines 40.48%。contracts/domain 已达到高覆盖率门禁，但 `socket.ts` 仍仅有 15.50% lines、8.34% branches，persistence 覆盖也明显不足。
 - 当前前端为 Vue 3 + Vite + Pinia；服务端为 TypeScript、Express 5 与 `ws`。历史 Vuex/Vue CLI 记录仅用于说明迁移路径。
 - Playwright `1.61.1`：首页与创建房间流程可在 Chromium 中验证；`test:visual:update` 是唯一可写截图基线的命令，`test:visual` 仅比较。Chromium CI 作业会执行交互与视觉回归，失败时保留 Playwright 报告和追踪产物。
 - MIG-009 已将开发、构建与 E2E 启动链切换到 Vue 3 和 Vite；后续 MIG-010 已完成 Pinia 替换并移除 Vuex。`VITE_API_BASE`/`VITE_WS_BASE` 保持原有后端连接行为，Vue 3 移除的 filter、`$set` 与销毁钩子均已替换。当前视觉测试以 800 像素阈值覆盖首页、创建房间弹窗以及说书人白天/夜晚状态。
 - `MIG-LAW-001` 已补齐：服务端常规启动和 `--version` 均输出版权与 GPL 许可证告知；帮助菜单新增“法律与署名”入口，Playwright 覆盖其弹窗、版权和上游来源文本。
 - 服务端入口已移除 `@ts-nocheck`：为连接、房间、待投递消息、原始 WebSocket 数据、TLS 和监听地址建立了 TypeScript 类型，并继续使用 v1 旧数组 envelope decoder。HTTP/avatar 与完整的 lobby、room、离线消息队列 WebSocket 生命周期已分别拆入独立模块；入口现在只负责配置、HTTP 组装、TLS 与 upgrade 绑定。
-- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、142 个单元/组件测试、13 个 HTTP/WS/CLI 集成测试、4 个浏览器流程、3 个视觉测试和生产构建均会执行；CI 同步运行非浏览器质量门、浏览器流程与视觉回归。
+- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、153 个单元/组件测试、13 个 HTTP/WS/CLI 集成测试、4 个浏览器流程、3 个视觉测试和生产构建均会执行；CI 同步运行非浏览器质量门、浏览器流程与视觉回归。
 
 ## 历史记录（仅供追溯）
 
@@ -272,7 +272,7 @@
 
 ## 详细风险清单
 
-- Node 24 LTS 下的完整质量门尚需重新验证；
+- `socket.ts` 与新 transport adapter 的回归仍需继续扩展，尚未达到 MIG-049 的覆盖率门槛；
 - `src/store/socket.ts` 仍是约 2,664 行的会话 transport，且行覆盖率不足 10%；
 - `src/store/persistence.ts` 仍是约 664 行的 legacy adapter，存在生产代码 `any`，行覆盖率约 40%；
 - `legacy-commands`、`legacy-effects`、mutation bus 和 runtime store 投影仍被组件与 transport 使用；
