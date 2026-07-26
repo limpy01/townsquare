@@ -67,8 +67,17 @@ type LegacyRuntimePlayer = {
   [key: string]: unknown;
 };
 
+type LegacyRuntimeRole = {
+  id: string;
+  team?: string;
+  [key: string]: unknown;
+};
+
 type LegacyRuntimeState = {
-  players: { players: LegacyRuntimePlayer[] } & Record<string, unknown>;
+  players: {
+    players: LegacyRuntimePlayer[];
+    fabled: LegacyRuntimeRole[];
+  } & Record<string, unknown>;
   session: {
     playerId: string;
     sessionId: string;
@@ -78,6 +87,12 @@ type LegacyRuntimeState = {
     isListening: boolean;
     isSpectator: boolean;
   } & Record<string, unknown>;
+  grimoire: { isNight: boolean };
+  roles: { get(roleId: string): LegacyRuntimeRole | undefined };
+  states: unknown[];
+  teamsNames: Record<string, string>;
+  firstNight: unknown[];
+  otherNight: unknown[];
 } & Record<string, unknown>;
 
 type LegacyRuntimeStore = {
@@ -818,11 +833,14 @@ export class LiveSession {
       : this._store.state.players.players.findIndex(
           (player) => player.id === playerId,
         );
-    const groups = {};
+    const groups: Record<string, string[]> = {};
     if (!playerId || playerIndex > -1) {
       const selectedPlayers = !playerId
         ? this._store.state.players.players.filter((player) => !!player.id)
-        : [this._store.state.players.players[playerIndex]];
+        : (() => {
+            const player = this._store.state.players.players[playerIndex];
+            return player ? [player] : [];
+          })();
 
       // 群聊
       const chatIds = [
@@ -882,7 +900,9 @@ export class LiveSession {
     // adjust number of players
     if (players.length < gamestate.length) {
       for (let x = players.length; x < gamestate.length; x++) {
-        this._store.commit("players/add", gamestate[x].name);
+        const incomingPlayer = gamestate[x];
+        if (incomingPlayer)
+          this._store.commit("players/add", incomingPlayer.name);
       }
     } else if (players.length > gamestate.length) {
       for (let x = players.length; x > gamestate.length; x--) {

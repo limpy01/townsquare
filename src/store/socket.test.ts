@@ -19,7 +19,7 @@ const createStore = (
 ) => ({
   commit,
   state: {
-    players: { players: [] },
+    players: { players: [], fabled: [] },
     session: {
       playerId: "player-1",
       sessionId: "",
@@ -30,6 +30,12 @@ const createStore = (
       isSpectator: false,
       ...session,
     },
+    grimoire: { isNight: false },
+    roles: new Map(),
+    states: [],
+    teamsNames: {},
+    firstNight: [],
+    otherNight: [],
   },
 });
 
