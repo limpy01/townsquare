@@ -12,6 +12,42 @@ type LegacyPersistenceStore = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+type LegacyGroupChat = {
+  id: string;
+  playerIds: string[];
+  keep: boolean;
+};
+
+const readGroupChats = (storage: Pick<Storage, "getItem">) =>
+  readStoredArray(storage, "groupChats").flatMap((group): LegacyGroupChat[] => {
+    if (
+      !isRecord(group) ||
+      typeof group.id !== "string" ||
+      !Array.isArray(group.playerIds) ||
+      !group.playerIds.every((playerId) => typeof playerId === "string")
+    )
+      return [];
+
+    return [
+      {
+        id: group.id,
+        playerIds: group.playerIds,
+        keep: group.keep === true,
+      },
+    ];
+  });
+
+const readPlayerIds = (players: unknown) => {
+  if (!Array.isArray(players)) return undefined;
+
+  const playerIds = players.flatMap((player) => {
+    if (!isRecord(player) || typeof player.id !== "string") return [];
+    return [player.id];
+  });
+
+  return playerIds.length === players.length ? playerIds : undefined;
+};
+
 export default (store: LegacyPersistenceStore) => {
   if (window.location.pathname != "/") return;
 
@@ -202,14 +238,7 @@ export default (store: LegacyPersistenceStore) => {
     });
   }
   if (localStorage.getItem("groupChats")) {
-    const groupChats = readStoredArray(localStorage, "groupChats");
-    groupChats.filter(isRecord).forEach((group) => {
-      if (
-        typeof group.id !== "string" ||
-        !Array.isArray(group.playerIds) ||
-        !group.playerIds.every((playerId) => typeof playerId === "string")
-      )
-        return;
+    readGroupChats(localStorage).forEach((group) => {
       store.commit("session/addGroupChat", {
         chatId: group.id,
         playerIds: group.playerIds,
@@ -462,76 +491,69 @@ export default (store: LegacyPersistenceStore) => {
         break;
       case "session/addGroupChat":
         {
-          if (!!payload.playerIds && !payload.players) return;
+          if (!isRecord(payload) || (!!payload.playerIds && !payload.players))
+            return;
+
           const chatId = payload.chatId;
-          const playerIds = payload.players.map((player: any) => player.id);
-          const groupChats: any[] =
-            localStorage.groupChats != undefined
-              ? (readStoredArray(localStorage, "groupChats") as any[])
-              : [];
-          const chats = groupChats.map((group: any) => group.id);
-          if (chats.includes(chatId)) {
-            const group = groupChats.filter(
-              (group: any) => group.id === chatId,
-            )[0];
-            playerIds.forEach((id: any) => {
-              if (group.playerIds.includes(id)) return;
-              group.playerIds.push(id);
+          const playerIds = readPlayerIds(payload.players);
+          if (typeof chatId !== "string" || !playerIds) return;
+
+          const groupChats = readGroupChats(localStorage);
+          const group = groupChats.find((group) => group.id === chatId);
+          if (group) {
+            playerIds.forEach((id) => {
+              if (!group.playerIds.includes(id)) group.playerIds.push(id);
             });
           } else {
-            groupChats.push({
-              id: chatId,
-              playerIds,
-              keep: false,
-            });
+            groupChats.push({ id: chatId, playerIds, keep: false });
           }
           localStorage.setItem("groupChats", JSON.stringify(groupChats));
         }
         break;
       case "session/removeGroupChat":
-        if (localStorage.groupChats != undefined) {
-          const groupChats = readStoredArray(
-            localStorage,
-            "groupChats",
-          ) as any[];
+        if (localStorage.groupChats != undefined && isRecord(payload)) {
+          const groupChats = readGroupChats(localStorage);
           const newGroupChats = groupChats.filter(
-            (group: any) => group.id != payload.chatId,
+            (group) => group.id !== payload.chatId,
           );
           localStorage.setItem("groupChats", JSON.stringify(newGroupChats));
         }
         break;
       case "session/removeGroupChatMember":
-        if (!!payload.playerIds && !payload.players) return;
+        if (!isRecord(payload) || (!!payload.playerIds && !payload.players))
+          return;
         if (localStorage.groupChats != undefined) {
-          const groupChats = readStoredArray(
-            localStorage,
-            "groupChats",
-          ) as any[];
           const chatId = payload.chatId;
-          const playerId = payload.player.id;
-          const index = groupChats.findIndex(
-            (group: any) => group.id === chatId,
-          );
-          if (index === -1) return;
+          const player = payload.player;
+          if (
+            typeof chatId !== "string" ||
+            !isRecord(player) ||
+            typeof player.id !== "string"
+          )
+            return;
 
-          groupChats[index].playerIds = groupChats[index].playerIds.filter(
-            (player: any) => player != playerId,
+          const groupChats = readGroupChats(localStorage);
+          const index = groupChats.findIndex((group) => group.id === chatId);
+          const group = groupChats[index];
+          if (!group) return;
+
+          group.playerIds = group.playerIds.filter(
+            (playerId) => playerId !== player.id,
           );
           localStorage.setItem("groupChats", JSON.stringify(groupChats));
         }
         break;
       case "session/toggleGroupKeep":
-        if (localStorage.groupChats != undefined) {
-          const groupChats = readStoredArray(
-            localStorage,
-            "groupChats",
-          ) as any[];
-          const index = groupChats.findIndex(
-            (group: any) => group.id === payload,
-          );
-          if (index === -1) return;
+        if (
+          localStorage.groupChats != undefined &&
+          typeof payload === "string"
+        ) {
+          const groupChats = readGroupChats(localStorage);
+          const index = groupChats.findIndex((group) => group.id === payload);
+          const group = groupChats[index];
+          if (!group) return;
 
-          groupChats[index].keep = !groupChats[index].keep;
+          group.keep = !group.keep;
           localStorage.setItem("groupChats", JSON.stringify(groupChats));
         }
         break;

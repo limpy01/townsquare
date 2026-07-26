@@ -155,6 +155,7 @@
 - session transport 的 `leaveSeat` 已不再直接写入只读 runtime projection，而是走 `session/claimSeat` 兼容命令；此路径已有 socket 回归。创建房间流程中的 readonly computed Vue warning 仍存在，已确认并非该离座写入所致，后续将按组件双向绑定单独定位。
 - lobby transport 的遗留 store 适配器已收窄为仅含 player ID 的状态投影；入站 WebSocket 仅接受字符串帧和全字符串房间列表，混合类型列表不会写入 Pinia lobby 状态，并有独立回归覆盖。
 - 持久化恢复的聊天、群聊、角色状态和玩家角色 ID 已由 `unknown` 经 record/array guard 收窄；群聊成员必须全部为字符串 ID，损坏或混合类型的旧 JSON 不会阻断新的会话或写入 Pinia。
+- 群聊持久化的新增、移除成员和保留标记现在复用同一受验证的旧存档投影；畸形群聊条目会在下一次合法写入时被排除，合法群聊与其 `keep` 状态保持原有 JSON 格式。回归测试覆盖混合有效/无效旧条目后的新增群聊。
 - 抽取角色的 Pinia 临时池已从 `any[]` 收窄为带稳定角色 ID 的记录列表；抽取时从数组移除角色后会显式确认元素存在，避免异常状态下把 `undefined` 传入显示和分发路径。
 
 ## 本批次约束

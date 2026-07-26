@@ -72,6 +72,36 @@ describe("persistence compatibility plugin", () => {
     );
   });
 
+  it("keeps only valid legacy groups when adding a new group", () => {
+    const localStorage = createStorage({
+      groupChats: JSON.stringify([
+        { id: "group-a", playerIds: ["player-a"], keep: true },
+        { id: "bad-group", playerIds: [1] },
+      ]),
+    });
+    vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
+    const unsubscribe = persistence({ commit: vi.fn(), state: {} });
+
+    mutationBus.emit(
+      {
+        type: "session/addGroupChat",
+        payload: {
+          chatId: "group-b",
+          players: [{ id: "player-b" }],
+        },
+      },
+      {},
+    );
+
+    unsubscribe?.();
+    expect(localStorage.getItem("groupChats")).toBe(
+      JSON.stringify([
+        { id: "group-a", playerIds: ["player-a"], keep: true },
+        { id: "group-b", playerIds: ["player-b"], keep: false },
+      ]),
+    );
+  });
+
   it("ignores persisted group members without string player IDs", () => {
     const localStorage = createStorage({
       groupChats: JSON.stringify([{ id: "group-a", playerIds: [1] }]),
