@@ -9,8 +9,10 @@ import {
 } from "@townsquare/contracts/legacy-client-command";
 import type {
   LegacyChatPayload,
+  LegacyRoleActivityPayload,
   LegacySessionStatusPayload,
   LegacySetTalkingPayload,
+  LegacyUsingRolePayload,
 } from "@townsquare/contracts/legacy-client-command";
 import type { LegacyFeedback } from "@townsquare/contracts/legacy-envelope";
 import LiveLobby from "./lobby-transport";
@@ -1213,7 +1215,7 @@ export class LiveSession {
    * @param value
    * @private
    */
-  _updatePlayerPronouns([index, value]) {
+  _updatePlayerPronouns([index, value]: [number, string]): void {
     const player = this._store.state.players.players[index];
 
     this._store.commit("players/update", {
@@ -1230,11 +1232,11 @@ export class LiveSession {
    * @param property property in the role set to be
    * @param value value to be updated
    */
-  setIsRole({ role, property, value, st }) {
+  setIsRole({ role, property, value, st }: LegacyRoleActivityPayload): void {
     if (st === true) return;
     if (!this._isSpectator) return;
     if (property !== "using") return;
-    if (!this._roles[role]) return;
+    if (role !== "wraith" || !this._roles.wraith) return;
     this._sendDirect("host", "usingRole", {
       role,
       value,
@@ -1248,7 +1250,12 @@ export class LiveSession {
    * @param property property in the role set to be updated
    * @param value value to be updated
    */
-  _updateIsRole({ role, property, value, st }) {
+  _updateIsRole({
+    role,
+    property,
+    value,
+    st,
+  }: LegacyRoleActivityPayload): void {
     if (!this._isSpectator && property !== "using") return;
     if (this._isSpectator && property === "using" && !st) return;
     this._store.commit("session/setIsRole", { role, property, value, st });
@@ -1260,7 +1267,7 @@ export class LiveSession {
    * @param property property in the role set to be updated
    * @param value value to be updated
    */
-  _updateUsingRole({ role, value, playerId }) {
+  _updateUsingRole({ role, value, playerId }: LegacyUsingRolePayload): void {
     if (this._isSpectator) return;
     const index = this._store.state.players.players.findIndex(
       (player) => player.id === playerId,

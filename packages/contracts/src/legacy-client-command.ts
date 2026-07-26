@@ -108,6 +108,11 @@ const legacyRoleActivityPayloadSchema = z
     st: z.boolean().optional(),
   })
   .passthrough();
+
+export type LegacyRoleActivityPayload = z.infer<
+  typeof legacyRoleActivityPayloadSchema
+>;
+
 const legacyUsingRolePayloadSchema = z
   .object({
     role: z.string().min(1),
@@ -115,6 +120,10 @@ const legacyUsingRolePayloadSchema = z
     playerId: z.string().min(1),
   })
   .passthrough();
+
+export type LegacyUsingRolePayload = z.infer<
+  typeof legacyUsingRolePayloadSchema
+>;
 const legacyNominationPayloadSchema = z.union([
   z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]),
   z.null(),
