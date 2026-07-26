@@ -71,4 +71,20 @@ describe("persistence compatibility plugin", () => {
       JSON.stringify([{ id: "group-a", playerIds: ["player-a"], keep: false }]),
     );
   });
+
+  it("ignores persisted group members without string player IDs", () => {
+    const localStorage = createStorage({
+      groupChats: JSON.stringify([{ id: "group-a", playerIds: [1] }]),
+    });
+    vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
+    const commit = vi.fn();
+    const unsubscribe = persistence({ commit, state: {} });
+
+    unsubscribe?.();
+
+    expect(commit).not.toHaveBeenCalledWith(
+      "session/addGroupChat",
+      expect.anything(),
+    );
+  });
 });

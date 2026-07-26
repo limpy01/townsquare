@@ -154,6 +154,7 @@
 - 已在 numeric player ID 兼容修复后重新运行完整 `npm run check`：格式、lint、运行时源码、唯一 TypeScript 抑制、类型检查、106 个单元、13 个服务端集成、4 个 Chromium E2E 和生产构建全部通过。浏览器流程仍会输出既有的 readonly computed Vue warning，未作为本批改动范围扩展。
 - session transport 的 `leaveSeat` 已不再直接写入只读 runtime projection，而是走 `session/claimSeat` 兼容命令；此路径已有 socket 回归。创建房间流程中的 readonly computed Vue warning 仍存在，已确认并非该离座写入所致，后续将按组件双向绑定单独定位。
 - lobby transport 的遗留 store 适配器已收窄为仅含 player ID 的状态投影；入站 WebSocket 仅接受字符串帧和全字符串房间列表，混合类型列表不会写入 Pinia lobby 状态，并有独立回归覆盖。
+- 持久化恢复的聊天、群聊、角色状态和玩家角色 ID 已由 `unknown` 经 record/array guard 收窄；群聊成员必须全部为字符串 ID，损坏或混合类型的旧 JSON 不会阻断新的会话或写入 Pinia。
 
 ## 本批次约束
 

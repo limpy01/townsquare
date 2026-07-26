@@ -9,7 +9,7 @@ type LegacyPersistenceStore = {
   getters?: any;
 };
 
-const isRecord = (value: any) =>
+const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 export default (store: LegacyPersistenceStore) => {
@@ -122,15 +122,16 @@ export default (store: LegacyPersistenceStore) => {
   if (localStorage.players) {
     store.commit(
       "players/set",
-      (readStoredArray(localStorage, "players") as any[])
+      readStoredArray(localStorage, "players")
         .filter(isRecord)
-        .map((player) => ({
-          ...player,
-          role:
-            store.state.roles.get(player.role) ||
-            rolesJSONbyId.get(player.role) ||
-            {},
-        })),
+        .map((player) => {
+          const roleId = typeof player.role === "string" ? player.role : "";
+          return {
+            ...player,
+            role:
+              store.state.roles.get(roleId) || rolesJSONbyId.get(roleId) || {},
+          };
+        }),
     );
   }
   /**** Session related data *****/
@@ -188,11 +189,11 @@ export default (store: LegacyPersistenceStore) => {
     store.commit("session/setBootlegger", customBootlegger);
   }
   if (localStorage.getItem("chatHistory")) {
-    const chatHistory: any[] = readStoredArray(localStorage, "chatHistory");
+    const chatHistory = readStoredArray(localStorage, "chatHistory");
     chatHistory.filter(isRecord).forEach((player) => {
       if (typeof player.id !== "string" || !Array.isArray(player.chat)) return;
       store.commit("session/createChatHistory", player.id);
-      player.chat.forEach((message: any) => {
+      player.chat.forEach((message) => {
         store.commit("session/updateChatReceived", {
           message,
           playerId: player.id,
@@ -201,9 +202,13 @@ export default (store: LegacyPersistenceStore) => {
     });
   }
   if (localStorage.getItem("groupChats")) {
-    const groupChats: any[] = readStoredArray(localStorage, "groupChats");
+    const groupChats = readStoredArray(localStorage, "groupChats");
     groupChats.filter(isRecord).forEach((group) => {
-      if (typeof group.id !== "string" || !Array.isArray(group.playerIds))
+      if (
+        typeof group.id !== "string" ||
+        !Array.isArray(group.playerIds) ||
+        !group.playerIds.every((playerId) => typeof playerId === "string")
+      )
         return;
       store.commit("session/addGroupChat", {
         chatId: group.id,
@@ -225,7 +230,7 @@ export default (store: LegacyPersistenceStore) => {
     );
   }
   if (localStorage.getItem("isRole")) {
-    const isRole: any = readStoredRecord(localStorage, "isRole");
+    const isRole = readStoredRecord(localStorage, "isRole");
     const role = Object.keys(isRole)[0];
     if (role && isRecord(isRole[role])) {
       for (const property in isRole[role]) {
