@@ -75,6 +75,33 @@ test("lets the same host token take over without disconnecting players", async (
   player.socket.terminate();
 });
 
+test("replaces a duplicate player connection in the same room", async (t) => {
+  const { wsBase } = await createTestService(t);
+  const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
+  const originalPlayer = await openClient(`${wsBase}/ws/42/player-a`);
+  const originalPlayerClosed = new Promise((resolve) =>
+    originalPlayer.socket.once("close", (code, reason) =>
+      resolve([code, reason.toString()]),
+    ),
+  );
+
+  const replacementPlayer = await openClient(`${wsBase}/ws/42/player-a`);
+  assert.deepEqual(await originalPlayerClosed, [1012, "Reconnected elsewhere"]);
+
+  replacementPlayer.send([
+    "direct",
+    { host: ["claim", [0, "player-a", "Reconnected Player"]] },
+  ]);
+  assert.deepEqual(await host.next((message) => message[0] === "claim"), [
+    "claim",
+    [0, "player-a", "Reconnected Player"],
+    false,
+  ]);
+
+  host.socket.terminate();
+  replacementPlayer.socket.terminate();
+});
+
 test("forwards host broadcasts and player messages to the storyteller", async (t) => {
   const { wsBase } = await createTestService(t);
   const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
