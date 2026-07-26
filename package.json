@@ -13,7 +13,7 @@
     "pretest:server": "npm run build:server-types",
     "test:server": "node --test server/test/**/*.test.js",
     "test:unit": "vitest run",
-    "typecheck": "npm run build --workspace=@townsquare/contracts && tsc -p packages/domain/tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit && vue-tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run build --workspace=@townsquare/contracts && npm run build --workspace=@townsquare/domain && tsc -p server/tsconfig.json --noEmit && vue-tsc --noEmit -p tsconfig.web.json",
     "build:packages": "npm run build --workspace=@townsquare/contracts && npm run build --workspace=@townsquare/domain",
     "build:server-types": "npm run build --workspace=@townsquare/contracts && tsc -p server/tsconfig.json",
     "test:e2e": "playwright test --project=chromium --grep-invert=@visual",

@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-24（WebSocket command 与首批嵌套载荷边界、transport 计时器释放与组件命令类型化批次完成）
+最后更新：2026-07-26（夜间顺序纯逻辑迁入 domain workspace，并继续收紧 WebSocket payload 边界）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -37,7 +37,7 @@
 | MIG-004 | 进行中 | 剧本与游戏状态 characterization fixtures   | WS/自定义剧本 fixture 与 11 个单元测试                                                         | 兼容历史 JSON 和存档            |
 | MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生     | lint 基线、服务端测试、构建                                                                    | 不改变运行时行为                |
 | MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter | 双向 command schema、首批嵌套载荷 schema、envelope decoder 与 HTTP 输入校验；27 个契约测试通过 | 网络继续传输旧三元组            |
-| MIG-007 | 待开始 | `packages/domain` 第一个纯逻辑模块         | 严格类型与高覆盖率                                                                             | 不导入 Vue/Express              |
+| MIG-007 | 进行中 | `packages/domain` 纯逻辑模块               | 投票统计、夜间顺序严格类型化与表驱动测试；后续补覆盖率门禁                                     | 不导入 Vue/Express              |
 | MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口   | 11 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                                        | 旧前端可连接                    |
 | MIG-009 | 已完成 | Vue 3、Vite 运行时启动                     | typecheck、核心 E2E、视觉回归                                                                  | Vite 环境变量和静态资源保持兼容 |
 | MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除               | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                                           | 保持单窗口模态框与输入流程语义  |
@@ -120,6 +120,7 @@
 - 服务端 v1 WebSocket 校验已扩展至稳定的投票、锁票、说书人标识和私货商人标量 payload；错误的元组形状或标量类型会在房间广播前以 1008 拒绝。
 - v1 WebSocket 的座位标记、换位/移动和 ping payload 也已按客户端真实出站格式校验；对象标记保留 `val`/`force` 兼容形状。
 - v1 WebSocket 的代词、座位移除和旧规则选项 payload 已加入 contracts 校验，并由服务端拒绝畸形字段。
+- `getNightOrder` 已从前端目录迁入 `@townsquare/domain`；玩家、传奇角色、自定义顺序与缺失顺序的回退行为由纯函数测试锁定。Vite 在开发期直接解析 workspace 源码，类型检查则先构建 domain，避免使用过期声明文件。
 
 ## 本批次约束
 

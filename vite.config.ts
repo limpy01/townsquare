@@ -8,6 +8,9 @@ export default defineConfig({
     extensions: [".mjs", ".js", ".ts", ".jsx", ".tsx", ".json", ".vue"],
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "@townsquare/domain": fileURLToPath(
+        new URL("./packages/domain/src/index.ts", import.meta.url),
+      ),
       "@townsquare/contracts/legacy-envelope": fileURLToPath(
         new URL("./packages/contracts/src/legacy-envelope.ts", import.meta.url),
       ),

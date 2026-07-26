@@ -359,7 +359,7 @@ import { useVotingStore } from "../stores/voting";
 import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { getNightOrder } from "../domain/night-order";
+import { getNightOrder } from "@townsquare/domain";
 import { emitLegacyMutation } from "../store/legacy-effects";
 
 const props = defineProps<{ player: any }>();

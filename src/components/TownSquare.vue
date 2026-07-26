@@ -234,7 +234,7 @@ import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import { useRoleActivityStore } from "../stores/role-activity";
-import { getNightOrder } from "../domain/night-order";
+import { getNightOrder } from "@townsquare/domain";
 import { useViewport } from "../composables/use-viewport";
 import { useProfileStore } from "../stores/profile";
 import { useAppMetaStore } from "../stores/app-meta";
