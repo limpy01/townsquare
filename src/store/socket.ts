@@ -4,6 +4,7 @@
 import { wsBase } from "../config";
 import { pinia } from "../pinia";
 import { isLegacySessionPayload } from "@townsquare/contracts/legacy-client-command";
+import type { LegacyFeedback } from "@townsquare/contracts/legacy-envelope";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
@@ -19,9 +20,13 @@ import { useProfileStore } from "../stores/profile";
 import { useMessageOutboxStore } from "../stores/message-outbox";
 import { dispatchSessionInboundMessage } from "./session-message-dispatcher";
 import { dispatchSessionMutation } from "./session-mutation-dispatcher";
-import { dispatchSessionOutboxMessage } from "./session-outbox-dispatcher";
+import {
+  dispatchSessionOutboxMessage,
+  type SessionOutboxTransport,
+} from "./session-outbox-dispatcher";
 import { getCustomRolesStripped, rolesJSONbyId } from "./selectors";
 import { mutationBus } from "./mutation-bus";
+import type { OutboxMessage } from "../stores/message-outbox";
 import {
   decodeSessionMessage,
   encodeSessionMessage,
@@ -36,6 +41,20 @@ type LegacyRuntimeStore = {
   state: LegacyRuntimeState;
   commit(type: string, payload?: unknown): unknown;
 };
+
+type ChatOutboxPayload = {
+  message: string;
+  receivingPlayerId: string;
+};
+
+function isChatOutboxPayload(value: unknown): value is ChatOutboxPayload {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Record<string, unknown>).message === "string" &&
+    typeof (value as Record<string, unknown>).receivingPlayerId === "string"
+  );
+}
 
 export class LiveSession {
   private _wss!: string;
@@ -218,7 +237,7 @@ export class LiveSession {
    * @param params
    * @private
    */
-  _send(command, params, feedback = false) {
+  _send(command: string, params: unknown, feedback: LegacyFeedback = false) {
     if (this._socket && this._socket.readyState === 1) {
       this._socket.send(encodeSessionMessage(command, params, feedback));
     }
@@ -232,7 +251,12 @@ export class LiveSession {
    * @param params
    * @private
    */
-  _sendDirect(playerId, command, params, feedback = false) {
+  _sendDirect(
+    playerId: string | null | undefined,
+    command: string,
+    params: unknown,
+    feedback: LegacyFeedback = false,
+  ) {
     if (playerId) {
       this._send("direct", { [playerId]: [command, params] }, feedback);
     } else {
@@ -247,7 +271,12 @@ export class LiveSession {
    * @param params
    * @private
    */
-  _request(command, playerId, params, feedback = false) {
+  _request(
+    command: string,
+    playerId: string,
+    params?: unknown,
+    feedback: LegacyFeedback = false,
+  ) {
     this._send("request", { [command]: [playerId, params] }, feedback);
   }
 
@@ -259,7 +288,12 @@ export class LiveSession {
    * @param params
    * @private
    */
-  _uploadFile(command, playerId, params, feedback = false) {
+  _uploadFile(
+    command: string,
+    playerId: string | null | undefined,
+    params: unknown,
+    feedback: LegacyFeedback = false,
+  ) {
     if (playerId) {
       this._send("uploadFile", { [command]: [playerId, params] }, feedback);
     }
@@ -267,7 +301,7 @@ export class LiveSession {
 
   _sendQueue() {
     if (this._outbox.queue.length <= 0) return;
-    const transport = {
+    const transport: SessionOutboxTransport = {
       send: (command, params, feedback) =>
         this._send(command, params, feedback),
       sendDirect: (playerId, command, params, feedback) =>
@@ -302,7 +336,7 @@ export class LiveSession {
    *
    * @param id id for identifying and deleting the query
    */
-  _deleteFromQueue(id) {
+  _deleteFromQueue(id: number) {
     if (this._outbox.queue.length <= 0) return;
     for (let i = 0; i < this._outbox.queue.length; i++) {
       if (this._outbox.queue[i].id === id) {
@@ -318,25 +352,18 @@ export class LiveSession {
    *
    * @param message check the specific message and perform certain actions before deleting
    */
-  _checkQueue(message) {
-    switch (message.type) {
-      case "direct":
-        switch (message.command) {
-          case "chat":
-            {
-              const receivingPlayerId =
-                message.params.receivingPlayerId === "host"
-                  ? this._store.state.session.stId
-                  : message.params.receivingPlayerId;
-              this._store.commit("session/updateChatReceived", {
-                message: message.params.message,
-                playerId: receivingPlayerId,
-              }); // sending out to other players, receivingPlayerId is the recorded chat ID
-            }
-            break;
-        }
-        break;
-    }
+  _checkQueue(message: OutboxMessage) {
+    if (message.type !== "direct" || message.command !== "chat") return;
+    if (!isChatOutboxPayload(message.params)) return;
+
+    const receivingPlayerId =
+      message.params.receivingPlayerId === "host"
+        ? this._store.state.session.stId
+        : message.params.receivingPlayerId;
+    this._store.commit("session/updateChatReceived", {
+      message: message.params.message,
+      playerId: receivingPlayerId,
+    });
   }
 
   /**

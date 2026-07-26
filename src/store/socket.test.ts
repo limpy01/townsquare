@@ -44,6 +44,38 @@ describe("session socket message decoder", () => {
     session.disconnect();
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it("ignores malformed persisted chat messages when clearing the outbox", () => {
+    const commit = vi.fn();
+    const session = new LiveSession({
+      commit,
+      state: {
+        players: { players: [] },
+        session: { playerId: "player-1", sessionId: "", stId: "host-a" },
+      },
+    });
+    const checkQueue = (
+      session as unknown as {
+        _checkQueue(message: {
+          type: string;
+          command: string;
+          params: unknown;
+          playerId: string;
+          id: number;
+        }): void;
+      }
+    )._checkQueue;
+
+    checkQueue.call(session, {
+      type: "direct",
+      command: "chat",
+      params: { message: "missing recipient" },
+      playerId: "host",
+      id: 1,
+    });
+
+    expect(commit).not.toHaveBeenCalled();
+  });
 });
 
 afterEach(() => vi.useRealTimers());
