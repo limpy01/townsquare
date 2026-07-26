@@ -66,6 +66,16 @@ describe("players store", () => {
     expect(players.players).toEqual([{ name: "Bob", role: {} }]);
   });
 
+  it("accepts only role records for fabled and bluff slots", () => {
+    const players = usePlayersStore();
+
+    players.setBluff({ index: 0, role: "not-a-role" });
+    players.setFabled({ fabled: [{ id: "storyteller" }, "not-a-role"] });
+
+    expect(players.bluffs).toEqual([]);
+    expect(players.fabled).toEqual([{ id: "storyteller" }]);
+  });
+
   it("moves and swaps seats without losing player records", () => {
     const players = usePlayersStore();
     players.setPlayers([

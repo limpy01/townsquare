@@ -537,7 +537,7 @@ const openChat = (playerIndex: number, maximise = true) => {
   if (maximise) maximiseChat();
   if (session.isSpectator) {
     const name =
-      chat.groups.length === 0 ? playersState.fabled[0].name : "群聊";
+      chat.groups.length === 0 ? playersState.fabled[0]?.name ?? "" : "群聊";
     if (chatWith.value) chatWith.value.innerText = name;
     if (maximise) chat.clearStorytellerUnread();
   } else {

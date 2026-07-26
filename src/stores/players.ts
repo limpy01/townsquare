@@ -5,27 +5,43 @@ import { useSessionSettingsStore } from "./session-settings";
 import { useSessionIdentityStore } from "./session-identity";
 import { useVotingStore } from "./voting";
 
-type PlayersState = {
-  players: any[];
-  fabled: any[];
-  bluffs: any[];
-  firstNightOrder: any[];
-  otherNightOrder: any[];
-  image: string;
-};
-
-type SetFabledPayload = {
-  index?: number;
-  fabled?: any;
-  stImage?: string;
-  stName?: string;
-  emptyFabled?: boolean;
+export type GameRole = Record<string, unknown> & {
+  id: string;
+  name?: string;
+  team?: string;
+  ability?: string;
+  firstNightReminder?: string;
+  otherNightReminder?: string;
+  reminders?: string[];
 };
 
 export type MutablePlayer = Record<string, unknown> & {
   id?: string;
   votes?: number;
 };
+
+type PlayersState = {
+  players: any[];
+  fabled: GameRole[];
+  bluffs: GameRole[];
+  firstNightOrder: string[];
+  otherNightOrder: string[];
+  image: string;
+};
+
+type SetFabledPayload = {
+  index?: number;
+  fabled?: unknown;
+  stImage?: string;
+  stName?: string;
+  emptyFabled?: boolean;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const asGameRole = (value: unknown): GameRole | null =>
+  isRecord(value) && typeof value.id === "string" ? (value as GameRole) : null;
 
 const createPlayer = (name = "") => ({
   name,
@@ -133,12 +149,14 @@ export const usePlayersStore = defineStore("players", {
         useVotingStore(pinia).setPlayerVotes(value);
       }
     },
-    setBluff({ index, role }: { index?: number; role?: any } = {}) {
+    setBluff({ index, role }: { index?: number; role?: unknown } = {}) {
       if (index === undefined) {
         this.bluffs = [];
         return;
       }
-      this.bluffs.splice(index, 1, role);
+      const normalizedRole = asGameRole(role);
+      if (!normalizedRole) return;
+      this.bluffs.splice(index, 1, normalizedRole);
     },
     setPlayerMessage({ playerId, num }: { playerId: string; num: number }) {
       const player = this.players.find((item) => item.id === playerId);
@@ -197,7 +215,7 @@ export const usePlayersStore = defineStore("players", {
       }
       if (!fabled) return;
 
-      const storyteller = {
+      const storyteller: GameRole = {
         id: "storyteller",
         image: "https://botcgrimoire.top/avatars/" + stImage,
         firstNightReminder: "",
@@ -209,27 +227,43 @@ export const usePlayersStore = defineStore("players", {
         ability: "点击和说书人私聊。",
       };
       const customBootlegger = useSessionSettingsStore(pinia).bootlegger;
-      if (fabled.id === "bootlegger" && customBootlegger) {
-        fabled.ability = customBootlegger;
+      const selectedFabled = Array.isArray(fabled)
+        ? fabled.flatMap((role) => {
+            const normalized = asGameRole(role);
+            return normalized ? [normalized] : [];
+          })
+        : asGameRole(fabled);
+      if (!selectedFabled) return;
+      if (
+        !Array.isArray(selectedFabled) &&
+        selectedFabled.id === "bootlegger" &&
+        customBootlegger
+      ) {
+        selectedFabled.ability = customBootlegger;
       }
-      if (Array.isArray(fabled) && fabled.length === 0 && this.fabled.length) {
+      if (
+        Array.isArray(selectedFabled) &&
+        selectedFabled.length === 0 &&
+        this.fabled.length
+      ) {
         const bootleggerIndex = this.fabled.findIndex(
           (role) => role.id === "bootlegger",
         );
         if (bootleggerIndex > 0) this.setFabled({ index: bootleggerIndex });
       }
-      if (!Array.isArray(fabled)) {
-        this.fabled.push(fabled);
+      if (!Array.isArray(selectedFabled)) {
+        this.fabled.push(selectedFabled);
         return;
       }
       if (
         !emptyFabled &&
-        ((fabled.length > 0 && fabled[0].id !== "storyteller") ||
-          fabled.length === 0)
+        ((selectedFabled.length > 0 &&
+          selectedFabled[0]?.id !== "storyteller") ||
+          selectedFabled.length === 0)
       ) {
-        fabled.unshift(storyteller);
+        selectedFabled.unshift(storyteller);
       }
-      this.fabled = fabled;
+      this.fabled = selectedFabled;
     },
   },
 });

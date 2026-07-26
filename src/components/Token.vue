@@ -78,7 +78,7 @@ const tokenImage = new URL("../assets/token.png", import.meta.url).href;
 
 const props = withDefaults(
   defineProps<{
-    role?: TokenRole;
+    role?: TokenRole | undefined;
     id?: string;
     image?: string;
   }>(),
