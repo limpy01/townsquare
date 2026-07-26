@@ -6,6 +6,7 @@ export * from "./legacy-session-command.js";
 export * from "./custom-script.js";
 export * from "./dynamic-init.js";
 export * from "./game-state.js";
+export * from "./game-data.js";
 export * from "./local-storage.js";
 
 export const playerIdSchema = z
