@@ -48,7 +48,9 @@ async function captureVueWarnings(page) {
     const warn = console.warn;
     console.warn = (...args) => {
       const message = args.map(String).join(" ");
-      if (message.includes("Write operation failed: computed value is readonly")) {
+      if (
+        message.includes("Write operation failed: computed value is readonly")
+      ) {
         window.vueWarnings.push({ message, stack: new Error().stack });
       }
       warn(...args);
