@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { useDrawStore } from "../../stores/draw";
+import { type DrawRole, useDrawStore } from "../../stores/draw";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
@@ -69,9 +69,9 @@ const session = useSessionIdentityStore();
 const draw = useDrawStore();
 const players = computed(() => playerState.players);
 const otherTravelers = computed(() => scenario.otherTravelers);
-const displayRole = ref<Record<string, any>>({});
+const displayRole = ref<DrawRole | Record<string, never>>({});
 const drawingIndex = ref(0);
-const drawnRoles = ref<any[]>([]);
+const drawnRoles = ref<DrawRole[]>([]);
 const windowWidth = ref(window.innerWidth);
 const tokenWidth = computed(() =>
   windowWidth.value * 0.06 >= 80 ? "width: 6vw" : "width: 80px",
@@ -93,7 +93,7 @@ function handleResize() {
   windowWidth.value = window.innerWidth;
 }
 
-function storeRole(role: any) {
+function storeRole(role: DrawRole) {
   if (Object.keys(displayRole.value).length) displayRole.value = {};
   const index = draw.roles.indexOf(role);
   if (index < 0) return;
@@ -107,7 +107,7 @@ function nextRole() {
   displayRole.value = {};
   drawingIndex.value++;
   while (
-    drawingIndex.value < (players.value as any).index &&
+    drawingIndex.value < players.value.length &&
     players.value[drawingIndex.value].role.team === "traveler"
   ) {
     drawingIndex.value++;
