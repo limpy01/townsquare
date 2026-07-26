@@ -38,6 +38,8 @@ npm run server
 
 前端默认连接正式 API；本地联调可设置 `VITE_API_BASE` 和 `VITE_WS_BASE`。服务端的 `PORT`、`HOST`、`DATA_DIR` 和跨域设置见 [server/README.md](server/README.md)。
 
+生产发布与回滚须知也在 [server/README.md](server/README.md) 中：服务端房间和待发直连消息保存在内存中，重启会中断当前房间；请在维护窗口发布，并保留上一版构建与头像数据备份。
+
 提交前执行完整质量门禁：
 
 ```bash
