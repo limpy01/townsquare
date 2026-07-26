@@ -82,6 +82,13 @@ type ChatOutboxPayload = {
   receivingPlayerId: string;
 };
 
+type TargetedDistribution = {
+  all?: boolean;
+  role?: string;
+  seatNum?: number;
+  playerId?: string;
+};
+
 const gameStatePlayerProperties = [
   "name",
   "id",
@@ -1583,7 +1590,12 @@ export class LiveSession {
    * @param seatNum is the seat number being sent a bluffs
    * @param playerId is the playerId being sent a bluffs, may or may not be seated.
    */
-  distributeBluffs({ all, role, seatNum, playerId }) {
+  distributeBluffs({
+    all,
+    role,
+    seatNum,
+    playerId,
+  }: TargetedDistribution): void {
     if (this._isSpectator) return;
     if (!all && !seatNum && !playerId && !role) return;
 
@@ -1596,12 +1608,14 @@ export class LiveSession {
       return;
     }
     if (seatNum) {
-      playerId = this._store.state.players.players[seatNum - 1].id;
+      const player = this._store.state.players.players[seatNum - 1];
+      if (!player) return;
+      playerId = player.id;
       this._sendDirect(playerId, "bluff", this._store.state.players.bluffs);
       return;
     }
 
-    let team;
+    let team: "demon" | "minion" | undefined;
     switch (role) {
       case "demon":
       case "lunatic":
@@ -1615,7 +1629,7 @@ export class LiveSession {
         break;
     }
 
-    const message = {};
+    const message: Record<string, ["bluff", unknown]> = {};
     this._store.state.players.players.forEach((player) => {
       if (player.id && player.role && player.role.team == team) {
         if (team === "demon") {
@@ -1660,7 +1674,12 @@ export class LiveSession {
    * @param seatNum is the seat number being sent a grimoire
    * @param playerId is the playerId being sent a grimoire, may or may not be seated.
    */
-  distributeGrimoire({ all, role, seatNum, playerId }) {
+  distributeGrimoire({
+    all,
+    role,
+    seatNum,
+    playerId,
+  }: TargetedDistribution): void {
     if (this._isSpectator) return;
     if (!all && !seatNum && !playerId && !role) return;
 

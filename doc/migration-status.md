@@ -138,7 +138,7 @@
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
 - 服务端同样覆盖相同玩家 ID 的重连替换：旧玩家连接以 1012 关闭，新连接可继续向说书人发送 v1 claim 消息，避免 room registry 残留旧 socket。
-- 严格 TypeScript 诊断已确认唯一剩余 `@ts-nocheck` 为 `src/store/socket.ts`；MIG-011 已完成 LiveSession 字段、出站 helper、队列 payload guard、连接生命周期、稳定标量、聊天/群聊、角色状态与座位 handler 声明；玩家运行时投影、游戏状态和魔典同步字段也已收窄。移除抑制后的错误数从 701 降至 146，剩余主要为出站 transport 方法和兼容 mutation payload 的收窄。该例外由 CI 限制为唯一允许项，禁止新增匿名抑制，并将按生命周期与协议 handler 分段移除。
+- 严格 TypeScript 诊断已确认唯一剩余 `@ts-nocheck` 为 `src/store/socket.ts`；MIG-011 已完成 LiveSession 字段、出站 helper、队列 payload guard、连接生命周期、稳定标量、聊天/群聊、角色状态与座位 handler 声明；玩家运行时投影、游戏状态、魔典同步与定向分发参数也已收窄。移除抑制后的错误数从 701 降至 133，剩余主要为魔典出站组装和兼容 mutation payload 的收窄。该例外由 CI 限制为唯一允许项，禁止新增匿名抑制，并将按生命周期与协议 handler 分段移除。
 - MIG-011 的连接生命周期现已在 transport 边界收窄：会话号仅接受有限的字符串或数字标量，WebSocket close/message 事件、输入弹窗请求和授权回调均有显式类型；非布尔授权与非字符串告警会被安全忽略，避免未校验服务端 payload 污染 Pinia 授权状态或弹窗。
 - 已由共享 contracts 校验的稳定入站标量命令（说书人标识、头像链接、离开通知、匿名投票、私货商人说明、旧规则选项和复盘状态）现在直接传入精确的 TypeScript handler 参数；不会改变既有 v1 payload 格式。
 - `setTalking`、设置/启动倒计时现在会在 session transport 出站前使用 contracts schema 或有限数值 guard 收窄；畸形 mutation payload 不会写入 WebSocket，已有 fake transport 回归覆盖。
@@ -149,6 +149,7 @@
 - `LiveSession` 的玩家运行时状态不再以 `unknown[]` 表示：常用身份、角色、状态、提醒、投票与群聊字段均有显式过渡投影，允许后续游戏状态与魔典 handler 在真实字段上继续收窄。
 - 游戏状态 contracts schema 现描述席位同步使用的姓名、身份、提醒、投票、状态与可选角色 ID；入站同步会跳过缺失本地玩家并将无效 nomination 回退为空候选人，保持 lightweight/full game state 的 v1 兼容路径。
 - 魔典 contracts schema 已区分角色、玩家提醒与说书人提醒条目；入站处理只读取符合对应条目形状的数组，并跳过不存在的席位，避免不完整直发消息污染本地玩家状态。
+- 伪装与魔典分发的目标参数现有独立 TypeScript 结构，支持全体、角色、座位和 player ID 四种历史路由；座位不在当前玩家列表时不会生成无效直发消息。
 
 ## 本批次约束
 
