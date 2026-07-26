@@ -124,6 +124,29 @@ type TargetedDistribution = {
   playerId?: string;
 };
 
+type PlayerUpdatePayload = {
+  player: LegacyRuntimePlayer;
+  property: string;
+  value: unknown;
+};
+
+type PlayerPronounsPayload = {
+  player: LegacyRuntimePlayer;
+  value: string;
+  isFromSockets: boolean;
+};
+
+type LegacyPingPayload = [
+  (string | number | boolean)?,
+  (string | number | undefined)?,
+  unknown?,
+];
+
+const isLegacyRuntimeRole = (value: unknown): value is LegacyRuntimeRole =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as Record<string, unknown>).id === "string";
+
 const gameStatePlayerProperties = [
   "name",
   "id",
@@ -1159,7 +1182,7 @@ export class LiveSession {
    * @param property
    * @param value
    */
-  sendPlayer({ player, property, value }) {
+  sendPlayer({ player, property, value }: PlayerUpdatePayload) {
     if (
       this._isSpectator ||
       property === "reminders" ||
@@ -1169,6 +1192,7 @@ export class LiveSession {
     const index = this._store.state.players.players.indexOf(player);
     const staticProperties = ["isAllowRole"];
     if (property === "role") {
+      if (!isLegacyRuntimeRole(value)) return;
       if (this._review.isReview || (value.team && value.team === "traveler")) {
         // update local gamestate to remember this player as a traveler
         if (value.team && value.team === "traveler" && this._gamestate[index])
@@ -1274,7 +1298,7 @@ export class LiveSession {
 
   emptyPlayer({ id }: { id: string }) {
     if (id === "") return; //必须指定玩家
-    this._sendDirect(id, "leaveSeat");
+    this._sendDirect(id, "leaveSeat", undefined);
   }
 
   _updateLeaveSeat() {
@@ -1287,7 +1311,7 @@ export class LiveSession {
    * @param value
    * @param isFromSockets
    */
-  sendPlayerPronouns({ player, value, isFromSockets }) {
+  sendPlayerPronouns({ player, value, isFromSockets }: PlayerPronounsPayload) {
     //send pronoun only for the seated player or storyteller
     //Do not re-send pronoun data for an update that was recieved from the sockets layer
     if (
@@ -1307,6 +1331,7 @@ export class LiveSession {
    */
   _updatePlayerPronouns([index, value]: [number, string]): void {
     const player = this._store.state.players.players[index];
+    if (!player) return;
 
     this._store.commit("players/update", {
       player,
@@ -1364,6 +1389,7 @@ export class LiveSession {
     );
     if (index === -1) return;
     const player = this._store.state.players.players[index];
+    if (!player) return;
     if (role === "wraith") {
       if (player.isWraith) {
         this._store.commit("players/update", {
@@ -1390,7 +1416,7 @@ export class LiveSession {
    * Upload avatar image to the server and create a link.
    * @param image
    */
-  uploadAvatar(image) {
+  uploadAvatar(image: string) {
     this._uploadFile("uploadAvatar", this._store.state.session.playerId, image);
   }
 
@@ -1422,32 +1448,34 @@ export class LiveSession {
    * @param latency
    * @private
    */
-  _handlePing([playerIdOrCount = 0, latency] = []) {
+  _handlePing([playerIdOrCount = 0, latency]: LegacyPingPayload = []): void {
     const now = new Date().getTime();
     // if (!this._players.length) return;
     if (!this._isSpectator) {
       // store new player data
       if (playerIdOrCount) {
-        this._players[playerIdOrCount] = now;
-        const ping = parseInt(latency, 10);
+        this._players[String(playerIdOrCount)] = now;
+        const ping = Number(latency);
         if (ping && ping > 0 && ping < 30 * 1000) {
           // ping to Players
-          this._pings[playerIdOrCount] = ping;
+          this._pings[String(playerIdOrCount)] = ping;
           const pings = Object.values(this._pings);
           this._connection.setPing(
             Math.round(pings.reduce((a, b) => a + b, 0) / pings.length),
           );
         }
       }
-    } else if (latency) {
+    } else if (latency !== undefined) {
       // ping to ST
-      this._connection.setPing(parseInt(latency, 10));
+      this._connection.setPing(Number(latency));
     }
     // update player count
     if (!this._isSpectator || playerIdOrCount) {
-      this._connection.setPlayerCount(
-        this._isSpectator ? playerIdOrCount : Object.keys(this._players).length,
-      );
+      const playerCount = this._isSpectator
+        ? Number(playerIdOrCount)
+        : Object.keys(this._players).length;
+      if (Number.isFinite(playerCount))
+        this._connection.setPlayerCount(playerCount);
     }
   }
 
@@ -1476,7 +1504,8 @@ export class LiveSession {
     if (typeof seat !== "number" || !Number.isInteger(seat) || seat < -1)
       return;
     const players = this._store.state.players.players;
-    if (players.length > seat && (seat < 0 || !players[seat].id)) {
+    const targetPlayer = seat >= 0 ? players[seat] : undefined;
+    if (players.length > seat && (seat < 0 || !targetPlayer?.id)) {
       // this._send("claim", [seat, this._store.state.session.playerId, this._profile.playerName, this._profile.playerAvatar]);
       this._sendDirect("host", "claim", [
         seat,
@@ -1498,17 +1527,20 @@ export class LiveSession {
     if (this._isSpectator) return;
     // const property = "id";
     const players = this._store.state.players.players;
-    if (index >= 0 && players[index].id) return;
+    const claimedPlayer = index >= 0 ? players[index] : undefined;
+    if (claimedPlayer?.id) return;
     // remove previous seat
     const oldIndex = players.findIndex(({ id }) => id === value);
     if (oldIndex >= 0 && oldIndex !== index) {
-      if (players[oldIndex].chatGroup != "") {
-        const player = players[oldIndex];
+      const oldPlayer = players[oldIndex];
+      if (!oldPlayer) return;
+      if (oldPlayer.chatGroup != "") {
+        const player = oldPlayer;
         const chatId = player.chatGroup;
         this._store.commit("session/removeGroupChatMember", { chatId, player });
       }
       this._store.commit("players/update", {
-        player: players[oldIndex],
+        player: oldPlayer,
         property: "id",
         value: "",
       });
@@ -1522,30 +1554,30 @@ export class LiveSession {
       //   property: "image",
       //   value: ""
       // });
-      if (players[oldIndex].isTalking === true) {
+      if (oldPlayer.isTalking === true) {
         this._store.commit("players/update", {
-          player: players[oldIndex],
+          player: oldPlayer,
           property: "isTalking",
           value: false,
         });
       }
-      if (players[oldIndex].isWraith === true) {
+      if (oldPlayer.isWraith === true) {
         this._store.commit("players/update", {
-          player: players[oldIndex],
+          player: oldPlayer,
           property: "isWraith",
           value: false,
         });
       }
-      if (players[oldIndex].isUsingWraith === true) {
+      if (oldPlayer.isUsingWraith === true) {
         this._store.commit("players/update", {
-          player: players[oldIndex],
+          player: oldPlayer,
           property: "isUsingWraith",
           value: false,
         });
       }
-      if (players[oldIndex].isAllowRole === false) {
+      if (oldPlayer.isAllowRole === false) {
         this._store.commit("players/update", {
-          player: players[oldIndex],
+          player: oldPlayer,
           property: "isAllowRole",
           value: true,
         });
@@ -1579,7 +1611,9 @@ export class LiveSession {
    */
   _createChatHistory([index]: LegacyClaimPayload): void {
     if (index < 0) return;
-    const playerId = this._store.state.players.players[index].id;
+    const player = this._store.state.players.players[index];
+    if (!player) return;
+    const playerId = player.id;
     if (playerId === "") return;
     if (this._chat.histories.some((history) => history.id === playerId)) return;
     if (this._isSpectator && this._store.state.session.playerId != playerId)
@@ -1593,7 +1627,7 @@ export class LiveSession {
    */
   distributeRoles() {
     if (this._isSpectator) return;
-    const message = {};
+    const message: Record<string, [string, unknown]> = {};
     this._store.state.players.players.forEach((player, index) => {
       if (player.id && player.role) {
         message[player.id] = [
@@ -1613,7 +1647,7 @@ export class LiveSession {
    */
   distributeTypes() {
     if (this._isSpectator) return;
-    const message = {};
+    const message: Record<string, [string, unknown]> = {};
     this._store.state.players.players.forEach((player, index) => {
       if (player.id && player.role) {
         message[player.id] = [
