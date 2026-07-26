@@ -19,6 +19,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint:baseline
+      - run: npm run lint:styles
       - run: npm run check:runtime-sources
       - run: npm run check:type-suppressions
       - run: npm run typecheck

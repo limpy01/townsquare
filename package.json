@@ -26,13 +26,14 @@
     "lint": "eslint .",
     "lint-ci": "eslint . --max-warnings=0",
     "lint:baseline": "node scripts/check-lint-baseline.cjs",
+    "lint:styles": "node scripts/check-stylelint-baseline.cjs",
     "format": "prettier --write .",
     "format:check": "node scripts/check-format-baseline.cjs",
     "check:runtime-sources": "node scripts/check-runtime-source-extensions.cjs",
     "check:type-suppressions": "node scripts/check-type-suppressions.cjs",
     "report:assets": "node scripts/report-asset-references.cjs",
     "test:integration": "npm run test:server",
-    "check": "npm run format:check && npm run lint:baseline && npm run check:runtime-sources && npm run check:type-suppressions && npm run typecheck && npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:visual && npm run build"
+    "check": "npm run format:check && npm run lint:baseline && npm run lint:styles && npm run check:runtime-sources && npm run check:type-suppressions && npm run typecheck && npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:visual && npm run build"
   },
   "main": "App.vue",
   "dependencies": {
@@ -72,6 +73,9 @@
     "jsdom": "^29.0.1",
     "msw": "^2.15.0",
     "prettier": "^3.0.3",
+    "postcss-html": "^1.8.1",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard-scss": "^17.0.0",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.65.0",
     "vite": "^8.1.5",
