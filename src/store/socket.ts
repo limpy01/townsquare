@@ -29,6 +29,7 @@ import { useLegacyOptionsStore } from "../stores/legacy-options";
 import type { UseOldOrder, UseOldRole } from "../stores/legacy-options";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
+import type { Nomination } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
 import { useRoleActivityStore } from "../stores/role-activity";
 import { useProfileStore } from "../stores/profile";
@@ -52,8 +53,8 @@ type LegacyRuntimePlayer = {
   id: string;
   image: string;
   role: { id?: string; team?: string };
-  reminders: Array<{ role?: string }>;
-  stReminders: unknown[];
+  reminders: Array<{ role?: string | undefined }>;
+  stReminders: Array<{ role?: string | undefined }>;
   isDead: boolean;
   isVoteless: boolean;
   isSecretVoteless: boolean;
@@ -141,6 +142,12 @@ type LegacyPingPayload = [
   (string | number | undefined)?,
   unknown?,
 ];
+
+type NominationPayload =
+  | Nomination
+  | { nomination?: Nomination | undefined }
+  | null
+  | undefined;
 
 const isLegacyRuntimeRole = (value: unknown): value is LegacyRuntimeRole =>
   typeof value === "object" &&
@@ -1778,7 +1785,7 @@ export class LiveSession {
       {
         index: number;
         property: "reminder" | "stReminder";
-        value: Array<{ role?: string }>;
+        value: Array<{ role?: string | undefined }>;
       },
     ];
     type GrimoireMessage = {
@@ -1786,12 +1793,9 @@ export class LiveSession {
       reminders?: GrimoireReminderEntry[];
       stReminders?: GrimoireReminderEntry[];
     };
-    const message:
-      | GrimoireMessage
-      | Record<string, ["grimoire", GrimoireMessage]> = { roles: [] };
     if (!role) {
       // not specifying a role
-      const grimoire = message as GrimoireMessage;
+      const grimoire: GrimoireMessage = { roles: [] };
       if (fullGrimoire) {
         grimoire.reminders = [];
       }
@@ -1825,10 +1829,8 @@ export class LiveSession {
       }
     } else {
       // send all roles and reminders when requesting full grimoire (i.e. widow or spy)
-      const directMessage = message as Record<
-        string,
-        ["grimoire", GrimoireMessage]
-      >;
+      const directMessage: Record<string, ["grimoire", GrimoireMessage]> =
+        {};
       this._store.state.players.players.forEach((player) => {
         if (player.id && player.role && player.role.id == role) {
           directMessage[player.id] = ["grimoire", { roles: [], reminders: [] }];
@@ -1883,7 +1885,9 @@ export class LiveSession {
         if (!update || !update.value.length) return;
         const player = this._store.state.players.players[update.index];
         if (!player) return;
-        const value = Array.from(player.reminders);
+        const value: Array<{ role?: string | undefined }> = Array.from(
+          player.reminders,
+        );
         update.value.forEach((reminder) => {
           if (reminder.role === "custom") return;
           value.push(reminder);
@@ -1917,16 +1921,20 @@ export class LiveSession {
    * Payload can be an object with {nomination} property or just the nomination itself, or undefined.
    * @param payload [nominator, nominee]|{nomination}
    */
-  nomination(payload) {
+  nomination(payload: NominationPayload) {
     if (this._isSpectator) return;
-    const nomination = payload ? payload.nomination || payload : payload;
+    const nomination = Array.isArray(payload)
+      ? payload
+      : payload && typeof payload === "object"
+        ? payload.nomination
+        : undefined;
     const players = this._store.state.players.players;
     if (
       !nomination ||
       (players.length > nomination[0] && players.length > nomination[1])
     ) {
       this.setVotingSpeed(this._voting.votingSpeed);
-      this._send("nomination", nomination);
+      this._send("nomination", nomination ?? null);
     }
   }
 
@@ -1980,7 +1988,7 @@ export class LiveSession {
    */
   clearVoteHistory() {
     if (this._isSpectator) return;
-    this._send("clearVoteHistory");
+    this._send("clearVoteHistory", undefined);
   }
 
   /**
@@ -1989,6 +1997,8 @@ export class LiveSession {
    * @param sync Flag whether to sync this vote with others or not
    */
   vote([index]: [number]) {
+    const nomination = this._voting.nomination;
+    if (!nomination) return;
     const player = this._store.state.players.players[index];
     if (!player) return;
     if (
@@ -1996,7 +2006,7 @@ export class LiveSession {
       !this._isSpectator
     ) {
       if (
-        this._store.state.players.players[this._voting.nomination[1]].role
+        this._store.state.players.players[nomination[1]]?.role
           .team === "traveler" ||
         !this._voting.isSecretVote
       ) {
@@ -2131,8 +2141,9 @@ export class LiveSession {
   ]) {
     // do not reveal vote when anonymous voting is in progress, unless it's ST changing that player's vote
     const voter = this._store.state.players.players[index];
-    const nominatedPlayer =
-      this._store.state.players.players[this._voting.nomination[1]];
+    const nomination = this._voting.nomination;
+    if (!nomination) return;
+    const nominatedPlayer = this._store.state.players.players[nomination[1]];
     if (!voter || !nominatedPlayer) return;
     const voteId = voter.id;
     if (
@@ -2148,7 +2159,7 @@ export class LiveSession {
     const playerCount = players.players.length;
     if (!playerCount) return;
     const indexAdjusted =
-      (index - 1 + playerCount - voting.nomination[1]) % playerCount;
+      (index - 1 + playerCount - nomination[1]) % playerCount;
     if (fromST || indexAdjusted >= voting.lockedVote - 1) {
       this._store.commit("session/vote", [index, vote]);
     }
@@ -2160,6 +2171,7 @@ export class LiveSession {
   lockVote() {
     if (this._isSpectator) return;
     const { lockedVote, votes, nomination } = this._voting;
+    if (!nomination) return;
     const { players } = this._store.state.players;
     if (!players.length) return;
     const index = (nomination[1] + lockedVote - 1) % players.length;
@@ -2178,6 +2190,7 @@ export class LiveSession {
 
     if (lock > 1) {
       const { lockedVote, nomination } = this._voting;
+      if (!nomination) return;
       const { players } = this._store.state.players;
       if (!players.length) return;
       const index = (nomination[1] + lockedVote - 1) % players.length;
@@ -2211,7 +2224,7 @@ export class LiveSession {
    * Remove a player. ST only
    * @param payload
    */
-  removePlayer(payload) {
+  removePlayer(payload: number) {
     if (this._isSpectator) return;
     this._send("remove", payload);
   }
