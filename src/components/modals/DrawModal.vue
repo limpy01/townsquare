@@ -97,7 +97,9 @@ function storeRole(role: any) {
   if (Object.keys(displayRole.value).length) displayRole.value = {};
   const index = draw.roles.indexOf(role);
   if (index < 0) return;
-  displayRole.value = draw.roles.splice(index, 1)[0];
+  const [selectedRole] = draw.roles.splice(index, 1);
+  if (!selectedRole) return;
+  displayRole.value = selectedRole;
   drawnRoles.value.push(displayRole.value);
 }
 

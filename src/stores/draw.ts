@@ -1,11 +1,15 @@
 import { defineStore } from "pinia";
 
+export type DrawRole = {
+  id: string;
+} & Record<string, unknown>;
+
 export const useDrawStore = defineStore("draw", {
   state: () => ({
-    roles: [] as any[],
+    roles: [] as DrawRole[],
   }),
   actions: {
-    setRoles(roles: any[]) {
+    setRoles(roles: DrawRole[]) {
       this.roles = [...roles];
     },
     clearRoles() {
