@@ -2192,7 +2192,7 @@ export class LiveSession {
    * Swap two player seats. ST only
    * @param payload
    */
-  swapPlayer(payload) {
+  swapPlayer(payload: [number, number]) {
     if (this._isSpectator) return;
     this._send("swap", payload);
   }
@@ -2201,7 +2201,7 @@ export class LiveSession {
    * Move a player to another seat. ST only
    * @param payload
    */
-  movePlayer(payload) {
+  movePlayer(payload: [number, number]) {
     if (this._isSpectator) return;
     this._send("move", payload);
   }
