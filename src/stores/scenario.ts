@@ -3,6 +3,11 @@ import {
   buildScenarioRoleCatalog,
   getEditionRoles,
   getOtherTravelers,
+  normalizeScenarioCustomRoles,
+} from "@townsquare/domain";
+import type {
+  ScenarioCatalogRole,
+  ScenarioRoleDefaults,
 } from "@townsquare/domain";
 import { parseCustomScript } from "@townsquare/contracts/custom-script";
 import editionJSON from "../editions.json";
@@ -94,7 +99,7 @@ export const useScenarioStore = defineStore("scenario", {
     },
     setCustomRoles(rawRoles: unknown) {
       if (!Array.isArray(rawRoles)) return false;
-      let validRoles: any[];
+      let validRoles: unknown[];
       try {
         // Historical compact array entries are normalized below. Object-shaped
         // input is untrusted custom-script data and must cross the shared schema.
@@ -110,47 +115,13 @@ export const useScenarioStore = defineStore("scenario", {
           keyof typeof legacyOptions.useOldRole
         >
       ).filter((key) => legacyOptions.useOldRole[key] === true);
-      const roles = validRoles.map((role) =>
-        oldRoles.includes(role.id) ? { ...role, id: role.id + "old1" } : role,
+      const processedRoles = normalizeScenarioCustomRoles(
+        validRoles,
+        oldRoles,
+        customRoleDefaults as unknown as ScenarioRoleDefaults,
+        rolesJSONbyId as unknown as ReadonlyMap<string, ScenarioCatalogRole>,
+        this.roles as ReadonlyMap<string, ScenarioCatalogRole>,
       );
-      const processedRoles = roles
-        .map((role: any) => {
-          if (!role[0]) return role;
-          const customKeys: any = Object.keys(customRoleDefaults);
-          const mappedRole: Record<string, any> = {};
-          for (const prop in role) {
-            if (customKeys[prop]) mappedRole[customKeys[prop]] = role[prop];
-          }
-          return mappedRole;
-        })
-        .map((role: any) => ({ ...role, id: clean(role.id) }))
-        .map(
-          (role: any) =>
-            rolesJSONbyId.get(role.id) ||
-            this.roles.get(role.id) ||
-            Object.assign({}, customRoleDefaults, role),
-        )
-        .map((role: any) => {
-          if (rolesJSONbyId.get(role.id)) return role;
-          role.imageAlt =
-            (
-              {
-                townsfolk: "good",
-                outsider: "outsider",
-                minion: "minion",
-                demon: "evil",
-                fabled: /^bootlegger\d+$/.test(role.id)
-                  ? "bootlegger"
-                  : "fabled",
-                loric: /^bootlegger\d+$/.test(role.id) ? "bootlegger" : "loric",
-              } as Record<string, string>
-            )[role.team] || "custom";
-          role.firstNight = Math.abs(role.firstNight);
-          role.otherNight = Math.abs(role.otherNight);
-          return role;
-        })
-        .filter((role: any) => role.name && role.ability && role.team)
-        .sort((a: any, b: any) => b.team.localeCompare(a.team));
 
       const catalog = buildScenarioRoleCatalog(
         processedRoles,

@@ -5,6 +5,7 @@ import {
   getEditionRoles,
   getNightOrder,
   getOtherTravelers,
+  normalizeScenarioCustomRoles,
 } from "../src/index.js";
 
 describe("countVotes", () => {
@@ -76,6 +77,43 @@ describe("edition role catalog", () => {
       "barista",
       "gunslinger",
     ]);
+  });
+
+  it("normalizes compact roles while preserving known official records", () => {
+    const defaults = {
+      id: "",
+      name: "",
+      ability: "",
+      team: "townsfolk",
+      firstNight: 0,
+      otherNight: 0,
+    };
+    const official = { id: "chef", edition: "tb", team: "townsfolk" };
+    const normalized = normalizeScenarioCustomRoles(
+      [
+        ["custom-role", "Custom", "Ability", "custom", -2, -3, ""],
+        { id: "chef" },
+        { id: "bootlegger1", name: "Boot", ability: "Rule", team: "fabled" },
+        { id: "invalid", name: 1 },
+      ],
+      [],
+      defaults,
+      new Map([[official.id, official]]),
+      new Map(),
+    );
+
+    expect(normalized).toContainEqual(official);
+    expect(normalized).toContainEqual(
+      expect.objectContaining({
+        id: "customrole",
+        firstNight: 2,
+        otherNight: 3,
+        imageAlt: "custom",
+      }),
+    );
+    expect(normalized).toContainEqual(
+      expect.objectContaining({ id: "bootlegger1", imageAlt: "bootlegger" }),
+    );
   });
 });
 

@@ -85,6 +85,90 @@ export function buildScenarioRoleCatalog<TRole extends ScenarioCatalogRole>(
   return { roles, fabled, otherTravelers };
 }
 
+export type ScenarioRoleDefaults = Record<string, unknown> & {
+  id: string;
+  name: string;
+  ability: string;
+  team: string;
+  firstNight: number;
+  otherNight: number;
+};
+
+const customRoleImageAlt: Record<string, string> = {
+  townsfolk: "good",
+  outsider: "outsider",
+  minion: "minion",
+  demon: "evil",
+  fabled: "fabled",
+  loric: "loric",
+};
+
+const cleanRoleId = (id: string) =>
+  id.toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
+
+function asRoleRecord(
+  rawRole: unknown,
+  defaultKeys: readonly string[],
+): Record<string, unknown> | null {
+  if (Array.isArray(rawRole)) {
+    if (!rawRole[0]) return null;
+    return Object.fromEntries(
+      rawRole.flatMap((value, index) =>
+        defaultKeys[index] ? [[defaultKeys[index], value]] : [],
+      ),
+    );
+  }
+  return typeof rawRole === "object" && rawRole !== null
+    ? (rawRole as Record<string, unknown>)
+    : null;
+}
+
+/** Normalize compact and object-form custom roles into scenario-ready records. */
+export function normalizeScenarioCustomRoles(
+  rawRoles: readonly unknown[],
+  oldRoleIds: readonly string[],
+  defaults: ScenarioRoleDefaults,
+  officialRoles: ReadonlyMap<string, ScenarioCatalogRole>,
+  currentRoles: ReadonlyMap<string, ScenarioCatalogRole>,
+): ScenarioCatalogRole[] {
+  const defaultKeys = Object.keys(defaults);
+  return rawRoles
+    .flatMap((rawRole) => {
+      const record = asRoleRecord(rawRole, defaultKeys);
+      if (!record || typeof record.id !== "string") return [];
+      const id = cleanRoleId(
+        oldRoleIds.includes(record.id) ? `${record.id}old1` : record.id,
+      );
+      if (!id) return [];
+      const knownRole = officialRoles.get(id) ?? currentRoles.get(id);
+      if (knownRole) return [knownRole];
+
+      const role: ScenarioRoleDefaults & Record<string, unknown> = {
+        ...defaults,
+        ...record,
+        id,
+      };
+      if (
+        typeof role.name !== "string" ||
+        typeof role.ability !== "string" ||
+        typeof role.team !== "string"
+      )
+        return [];
+
+      const imageAlt = customRoleImageAlt[role.team] ?? "custom";
+      role.imageAlt =
+        role.team === "fabled" && /^bootlegger\d+$/.test(role.id)
+          ? "bootlegger"
+          : role.team === "loric" && /^bootlegger\d+$/.test(role.id)
+          ? "bootlegger"
+          : imageAlt;
+      role.firstNight = Math.abs(Number(role.firstNight) || 0);
+      role.otherNight = Math.abs(Number(role.otherNight) || 0);
+      return [role as ScenarioCatalogRole];
+    })
+    .sort((left, right) => right.team.localeCompare(left.team));
+}
+
 export interface NightOrderRole {
   id?: string;
   firstNight?: number;
