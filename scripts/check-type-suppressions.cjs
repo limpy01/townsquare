@@ -5,7 +5,7 @@ const root = process.cwd();
 const allowed = new Map([
   [
     "src/store/socket.ts",
-    "MIG-011: LiveSession still needs field declarations and legacy runtime boundary types.",
+    "MIG-011: Legacy runtime payload narrowing and transport method signatures remain untyped.",
   ],
 ]);
 

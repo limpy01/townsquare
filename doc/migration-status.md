@@ -138,7 +138,7 @@
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
 - 服务端同样覆盖相同玩家 ID 的重连替换：旧玩家连接以 1012 关闭，新连接可继续向说书人发送 v1 claim 消息，避免 room registry 残留旧 socket。
-- 严格 TypeScript 诊断已确认唯一剩余 `@ts-nocheck` 为 `src/store/socket.ts`（移除后当前有 701 个错误，主要是 LiveSession 实例字段和 legacy runtime 类型边界）；该例外已登记为 MIG-011 并由 CI 限制为唯一允许项，禁止新增匿名抑制，后续按 transport 生命周期和协议 handler 分段移除。
+- 严格 TypeScript 诊断已确认唯一剩余 `@ts-nocheck` 为 `src/store/socket.ts`；MIG-011 已完成 LiveSession 字段和依赖声明，移除抑制后的错误数从 701 降至 323，剩余主要为 legacy runtime payload 收窄和 transport 方法签名。该例外由 CI 限制为唯一允许项，禁止新增匿名抑制，并将按生命周期与协议 handler 分段移除。
 
 ## 本批次约束
 

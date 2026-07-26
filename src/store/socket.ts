@@ -1,5 +1,5 @@
 // @ts-nocheck
-// MIG-011: LiveSession still needs field declarations and legacy runtime boundary types.
+// MIG-011: Legacy runtime payload narrowing and transport method signatures remain untyped.
 // Remove after the transport is split into typed lifecycle and protocol modules.
 import { wsBase } from "../config";
 import { pinia } from "../pinia";
@@ -27,8 +27,43 @@ import {
   encodeSessionMessage,
 } from "./session-socket-protocol";
 
+type LegacyRuntimeState = {
+  players: { players: unknown[] } & Record<string, unknown>;
+  session: { playerId: string; sessionId: string } & Record<string, unknown>;
+} & Record<string, unknown>;
+
+type LegacyRuntimeStore = {
+  state: LegacyRuntimeState;
+  commit(type: string, payload?: unknown): unknown;
+};
+
 export class LiveSession {
-  constructor(store) {
+  private _wss!: string;
+  private _socket!: WebSocket | null;
+  private _isSpectator!: boolean;
+  private _isAlive!: boolean;
+  private _gamestate!: Array<Record<string, unknown>>;
+  private _store!: LegacyRuntimeStore;
+  private _connection!: ReturnType<typeof useSessionConnectionStore>;
+  private _review!: ReturnType<typeof useReviewStore>;
+  private _legacyOptions!: ReturnType<typeof useLegacyOptionsStore>;
+  private _voting!: ReturnType<typeof useVotingStore>;
+  private _settings!: ReturnType<typeof useSessionSettingsStore>;
+  private _roles!: ReturnType<typeof useRoleActivityStore>;
+  private _profile!: ReturnType<typeof useProfileStore>;
+  private _outbox!: ReturnType<typeof useMessageOutboxStore>;
+  private _chat!: ReturnType<typeof useChatStore>;
+  private _pingInterval!: number;
+  private _pingTimer!: ReturnType<typeof setTimeout> | null;
+  private _sendInterval!: number;
+  private _sendTimer!: ReturnType<typeof setTimeout> | null;
+  private _reconnectTimer!: ReturnType<typeof setTimeout> | null;
+  private _hostTimeout!: ReturnType<typeof setTimeout> | null;
+  private _joinTimeout!: ReturnType<typeof setTimeout> | null;
+  private _players!: Record<string, number>;
+  private _pings!: Record<string, number>;
+
+  constructor(store: LegacyRuntimeStore) {
     this._wss = `${wsBase}/ws/`;
     // this._wss = "ws://localhost:8081/"; // uncomment if using local server with NODE_ENV=development
     // this._wss = "ws://192.168.1.2:8081/"; // uncomment if using local server with NODE_ENV=development
