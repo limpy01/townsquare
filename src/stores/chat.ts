@@ -1,5 +1,11 @@
 import { defineStore } from "pinia";
 
+export type ChatGroupPlayer = {
+  id: string;
+  name?: string;
+  [property: string]: unknown;
+};
+
 export const useChatStore = defineStore("chat", {
   state: () => ({
     storytellerUnread: 0,
@@ -8,7 +14,7 @@ export const useChatStore = defineStore("chat", {
       id: string;
       name: string;
       keep: boolean;
-      players: Array<{ id: string; name?: string }>;
+      players: ChatGroupPlayer[];
     }>,
   }),
   actions: {
@@ -18,7 +24,7 @@ export const useChatStore = defineStore("chat", {
       keep = false,
     }: {
       chatId: string;
-      players: any[];
+      players: ChatGroupPlayer[];
       keep?: boolean;
     }) {
       if (this.groups.length >= 20) return [];
@@ -58,7 +64,7 @@ export const useChatStore = defineStore("chat", {
         value: "",
       }));
     },
-    removeGroupMember(chatId: string, player: any) {
+    removeGroupMember(chatId: string, player: ChatGroupPlayer) {
       const group = this.groups.find((item) => item.id === chatId);
       if (!group) return null;
       const index = group.players.findIndex((item) => item.id === player.id);
