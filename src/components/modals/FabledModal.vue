@@ -16,6 +16,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
 import Modal from "./Modal.vue";
 import Token from "../Token.vue";
 import { useModalStore } from "../../stores/modals";
@@ -29,7 +30,7 @@ const scenario = useScenarioStore();
 const windowWidth = ref(window.innerWidth);
 const fabled = computed(() =>
   Array.from(scenario.fabled.values()).filter(
-    (role: any) =>
+    (role: ScenarioCatalogRole) =>
       !players.fabled.some((fable) => fable.id === role.id) ||
       role.id === "deusexfiascoold2",
   ),
@@ -38,7 +39,7 @@ const tokenWidth = computed(() =>
   windowWidth.value * 0.06 >= 80 ? "width: 6vw" : "width: 80px",
 );
 
-function setFabled(role: any) {
+function setFabled(role: ScenarioCatalogRole) {
   const payload = { fabled: role };
   players.setFabled(payload);
   emitLegacyMutation("players/setFabled", payload);

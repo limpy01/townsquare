@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（MIG-030 完整 WS v1 命令边界）
+最后更新：2026-07-26（MIG-031 FabledModal 类型收口）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -60,6 +60,7 @@
 | MIG-028 | 已完成 | 玩家状态转换回归                           | 交换/移动、观众清空角色、未读消息与发言席位验证由 Pinia 单测锁定                         | 保持座位与旅行者规则            |
 | MIG-029 | 已完成 | 服务端 app factory 收口                    | 可注入的服务装配从 CLI 入口提取，HTTP/WS/CLI 集成测试继续通过                            | 保持启动命令与 TLS 语义         |
 | MIG-030 | 已完成 | 完整 WS v1 命令边界                        | specialized command 亦由统一 contracts predicate 校验，畸形 payload 不进入服务端 handler | 保持旧数组 envelope             |
+| MIG-031 | 已完成 | FabledModal 类型收口                       | 传奇角色列表及选择事件使用共享 scenario catalog 类型，类型检查通过                       | 保持选择与关闭流程              |
 
 ## 迁移历史与当前质量基线
 
@@ -173,6 +174,7 @@
 - MIG-028 补齐 players store 的座位交换/移动、观众清空时旅行者角色保留、未读消息累计和发言席位 ID 验证；高频玩家状态转换现在由 8 个独立单测覆盖。
 - MIG-029 将服务端可注入的 `createTownSquareServer` 装配提取至 `server/src/app`，CLI 入口只保留版权信息、TLS 环境读取和 listen。服务端测试直接依赖工厂模块，13 个 HTTP/WS/CLI 集成测试、类型检查与前端构建均通过。
 - MIG-030 将 `direct`、`request`、`setTalking` 与 `uploadFile` 从“调用方额外校验”纳入 contracts 的统一 `isLegacyClientPayload` predicate；嵌套未知 command、错误请求、错误座位值和残缺上传均由契约回归拒绝，服务端保留同一层防御校验。
+- MIG-031 将 FabledModal 的目录过滤和选择事件从 `any` 收敛到 domain 的 `ScenarioCatalogRole`，保持现有 Pinia 更新与关闭弹窗语义。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
