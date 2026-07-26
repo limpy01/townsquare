@@ -130,6 +130,7 @@
 - Playwright 已覆盖真实创建房间并进入说书人魔典的链路，验证昵称、房间号、座位初始化和本地测试后端的 WebSocket host 授权可以协同完成。
 - 所有前端动态角色与剧本图片现在均经 Vite 的 `import.meta.glob` 资源映射解析，移除了 Webpack `require` 运行时依赖；房主进入魔典时会正确显示剧本图片。
 - 创建房间自动复制链接在浏览器拒绝剪贴板权限时会安全忽略该非关键操作，不再产生未处理 Promise rejection；Playwright 覆盖了拒绝权限的房主流程。
+- Vitest 覆盖率报告已作为独立命令和 CI artifact 接入；当前先如实报告 Vitest 可审计的 TypeScript 运行模块，组件覆盖将随 Vue Test Utils 的实际挂载测试单独纳入，待补齐高风险模块测试后再按迁移计划分层设置门槛。
 
 ## 本批次约束
 

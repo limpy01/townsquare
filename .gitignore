@@ -9,4 +9,5 @@ dist
 blob-report
 playwright-report
 test-results
+coverage
 packages/*/dist
