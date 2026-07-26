@@ -360,7 +360,41 @@ import { useSessionIdentityStore } from "../stores/session-identity";
 import { getNightOrder } from "@townsquare/domain";
 import { emitLegacyMutation } from "../store/legacy-effects";
 
-const props = defineProps<{ player: any }>();
+type PlayerRole = Record<string, unknown> & {
+  id?: string;
+  team?: string;
+  firstNightReminder?: string;
+  otherNightReminder?: string;
+};
+
+type PlayerReminder = Record<string, unknown> & {
+  role: string;
+  name?: string;
+  image?: string;
+  imageAlt?: string;
+};
+
+type PlayerView = Record<string, unknown> & {
+  id: string;
+  name: string;
+  image: string;
+  role: PlayerRole;
+  reminders: PlayerReminder[];
+  stReminders: PlayerReminder[];
+  isDead: boolean;
+  isVoteless: boolean;
+  isSecretVoteless: boolean;
+  isAllowRole: boolean;
+  isWraith: boolean;
+  isUsingWraith: boolean;
+  isTalking: boolean;
+  votes: number;
+  newMessages: number;
+  pronouns: string;
+  chatGroup: string;
+};
+
+const props = defineProps<{ player: PlayerView }>();
 type PlayerTrigger =
   | ["openReminderModal"]
   | ["openRoleModal"]
@@ -546,7 +580,7 @@ async function changeName() {
   if (Array.isArray(input)) updatePlayer("name", input[0], true);
 }
 
-function removeReminder(reminder: any) {
+function removeReminder(reminder: PlayerReminder) {
   if (review.isReview && session.isSpectator) return;
   const updatedReminders = [...props.player.reminders];
   updatedReminders.splice(props.player.reminders.indexOf(reminder), 1);
@@ -622,20 +656,22 @@ function emitPlayerAction(
   if (player === undefined) emit("trigger", [action]);
   else emit("trigger", [action, player]);
 }
-const swapPlayer = (player?: any) => emitPlayerAction("swapPlayer", player);
-const movePlayer = (player?: any) => emitPlayerAction("movePlayer", player);
-const nominatePlayer = (player?: any) =>
+const swapPlayer = (player?: PlayerView) =>
+  emitPlayerAction("swapPlayer", player);
+const movePlayer = (player?: PlayerView) =>
+  emitPlayerAction("movePlayer", player);
+const nominatePlayer = (player?: PlayerView) =>
   emitPlayerAction("nominatePlayer", player);
 const cancel = () => emit("trigger", ["cancel"]);
 const claimSeat = () => {
   isMenuOpen.value = false;
   emit("trigger", ["claimSeat"]);
 };
-const setStoryTeller = (_player: any) => {
+const setStoryTeller = (_player: PlayerView) => {
   isMenuOpen.value = false;
   emit("trigger", ["setStoryTeller"]);
 };
-function openChat(player: any) {
+function openChat(player: PlayerView) {
   if (!player.id) return;
   isMenuOpen.value = false;
   emit("trigger", ["openChat"]);
@@ -650,13 +686,13 @@ function vote() {
     emitLegacyMutation("session/voteSync", payload);
   }
 }
-function addVote(player: any) {
+function addVote(player: PlayerView) {
   if (!session.isSpectator) {
     emit("trigger", ["addVote", player]);
     resize();
   }
 }
-function subtractVote(player: any) {
+function subtractVote(player: PlayerView) {
   if (!session.isSpectator) {
     emit("trigger", ["subtractVote", player]);
     resize();
