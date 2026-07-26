@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pinia } from "../pinia";
 import { useLobbyStore } from "../stores/lobby";
+import { useSessionIdentityStore } from "../stores/session-identity";
 import LiveLobby from "./lobby-transport";
 
 class FakeWebSocket {
@@ -33,10 +34,8 @@ describe("lobby transport", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     const lobby = useLobbyStore(pinia);
     lobby.$reset();
-    const transport = new LiveLobby({
-      commit: vi.fn(),
-      state: { session: { playerId: "player-1" } },
-    });
+    useSessionIdentityStore(pinia).setPlayerId("player-1");
+    const transport = new LiveLobby();
 
     transport.connect();
     const socket = FakeWebSocket.instances[0];
@@ -53,10 +52,8 @@ describe("lobby transport", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     const lobby = useLobbyStore(pinia);
     lobby.$reset();
-    const transport = new LiveLobby({
-      commit: vi.fn(),
-      state: { session: { playerId: "player-1" } },
-    });
+    useSessionIdentityStore(pinia).setPlayerId("player-1");
+    const transport = new LiveLobby();
 
     transport.connect();
     const socket = FakeWebSocket.instances[0];

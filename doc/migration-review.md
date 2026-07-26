@@ -156,7 +156,7 @@ Vuex 已经删除，但下列过渡设施仍被大量组件和 transport 使用�
 - `commitGameCommand`；
 - `emitLegacyMutation`。
 
-`legacy-effects.ts`、`mutation-bus.ts` 与全部 `emitLegacyMutation` 调用已删除。App、投票、玩家、头像及全部相关弹窗现在在 Pinia action 后发布明确的游戏事件，持久化与 session transport 是该事件的消费者。`Menu.vue` 已进一步移除全部 `commitGameCommand`/`gameCommands` 调用：房间生命周期、玩家和群聊清理、计时器、分发、剧本选项与复盘均直接调用 Pinia，Web Audio 的权限、分析器与动画帧循环则已独立至 `useMenuAudioDetection`。`TownSquare.vue` 的座位、提名、角色弹窗与玩家票数状态机现已抽到 `useTownSquareSeatActions`，并移除全部 command 调用。`Player.vue` 的状态、闭眼票、亡魂、授权与提醒同步已抽到 `player-state-actions`；`Vote.vue` 的计票时钟、锁票推进、历史、标记和投票限制已抽到 `useVoteController`。四个目标组件已完成命令桥依赖移除与主要高风险行为拆分；MIG-052 仍须处理 runtime store 投影。
+`legacy-effects.ts`、`mutation-bus.ts` 与全部 `emitLegacyMutation` 调用已删除。App、投票、玩家、头像及全部相关弹窗现在在 Pinia action 后发布明确的游戏事件，持久化与 session transport 是该事件的消费者。持久化 hydration 与大厅 transport 已进一步直接消费 Pinia store，不再需要 runtime 投影或字符串命令；`Menu.vue` 已进一步移除全部 `commitGameCommand`/`gameCommands` 调用：房间生命周期、玩家和群聊清理、计时器、分发、剧本选项与复盘均直接调用 Pinia，Web Audio 的权限、分析器与动画帧循环则已独立至 `useMenuAudioDetection`。`TownSquare.vue` 的座位、提名、角色弹窗与玩家票数状态机现已抽到 `useTownSquareSeatActions`，并移除全部 command 调用。`Player.vue` 的状态、闭眼票、亡魂、授权与提醒同步已抽到 `player-state-actions`；`Vote.vue` 的计票时钟、锁票推进、历史、标记和投票限制已抽到 `useVoteController`。剩余的 `legacy-commands.ts` 与 `LegacyRuntimeStore` 投影只由 `socket.ts` 消费；移除它们需要在该高风险 transport 内把全部读取和写入改为明确的 Pinia store/action。
 
 ### 4.4 TypeScript 仍有绕过点
 

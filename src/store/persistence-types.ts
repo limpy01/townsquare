@@ -3,14 +3,6 @@ export type PersistenceStorage = Pick<
   "getItem" | "removeItem" | "setItem"
 >;
 
-export type PersistenceStore = {
-  commit(type: string, payload?: unknown): void;
-  getters?: Record<string, unknown>;
-  state: {
-    roles?: Map<string, unknown>;
-  };
-};
-
 export type PersistenceMutation = {
   type: string;
   payload?: unknown;

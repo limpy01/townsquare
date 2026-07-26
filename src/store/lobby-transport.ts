@@ -2,35 +2,24 @@ import { decodeLegacyEnvelope } from "@townsquare/contracts/legacy-envelope";
 import { wsBase } from "../config";
 import { pinia } from "../pinia";
 import { useLobbyStore } from "../stores/lobby";
-
-type LegacyLobbyStore = {
-  state: {
-    session: {
-      playerId: string;
-    };
-  };
-  commit(type: string, payload?: unknown): void;
-};
+import { useSessionIdentityStore } from "../stores/session-identity";
 
 export default class LiveLobby {
   private _wss = `${wsBase}/lobby/`;
   private _socket: WebSocket | null = null;
-  private _store: LegacyLobbyStore;
   private _lobby = useLobbyStore(pinia);
+  private _session = useSessionIdentityStore(pinia);
   private _pingTimer: ReturnType<typeof setTimeout> | undefined;
   private _reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   private _reconnectInterval: ReturnType<typeof setInterval> | undefined;
   private _pings: Record<string, number> = {};
 
-  constructor(store: LegacyLobbyStore) {
-    this._store = store;
-  }
+  // The optional argument keeps the pre-socket migration boundary source-compatible.
+  constructor(_legacyRuntime?: unknown) {}
 
   private _open() {
     this.disconnect();
-    this._socket = new WebSocket(
-      this._wss + this._store.state.session.playerId,
-    );
+    this._socket = new WebSocket(this._wss + this._session.playerId);
     this._socket.addEventListener("message", this._handleMessage.bind(this));
     this._socket.onopen = () => console.log("Welcome!");
     this._socket.onclose = () => {
@@ -75,7 +64,7 @@ export default class LiveLobby {
   }
 
   connect(): void {
-    if (!this._store.state.session.playerId) {
+    if (!this._session.playerId) {
       let playerId: string | undefined;
       while (
         !playerId ||
@@ -86,7 +75,7 @@ export default class LiveLobby {
       ) {
         playerId = Math.random().toString(36).slice(2);
       }
-      this._store.commit("session/setPlayerId", playerId);
+      this._session.setPlayerId(playerId);
     }
     this._pings = {};
     this._lobby.setPing(0);

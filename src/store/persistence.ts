@@ -2,7 +2,6 @@ import { pinia } from "../pinia";
 import { useChatStore } from "../stores/chat";
 import { gameEvents } from "./game-events";
 import { hydratePersistence } from "./persistence-hydrator";
-import type { PersistenceStore } from "./persistence-types";
 import { createPersistenceWriter } from "./persistence-writer";
 import { migrateTownsquareStorage } from "./storage";
 
@@ -11,12 +10,12 @@ const updatePageTitle = (_isPublic: boolean) => {
 };
 
 /** Browser-only compatibility adapter for the historical flat storage format. */
-export default (store: PersistenceStore) => {
+export default () => {
   if (window.location.pathname !== "/") return;
 
   const storage = window.localStorage;
   migrateTownsquareStorage(storage);
-  hydratePersistence(store, storage);
+  hydratePersistence(storage);
   if (storage.getItem("isGrimoire")) updatePageTitle(false);
 
   return gameEvents.subscribe(

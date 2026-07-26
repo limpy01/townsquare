@@ -9,6 +9,19 @@ import {
   persistedUseOldRoleSchema,
 } from "@townsquare/contracts/local-storage";
 import { rolesJSONbyId } from "./selectors";
+import { pinia } from "../pinia";
+import { useAppMetaStore } from "../stores/app-meta";
+import { useChatStore } from "../stores/chat";
+import { useGrimoireStore } from "../stores/grimoire";
+import { useLegacyOptionsStore } from "../stores/legacy-options";
+import { usePlayersStore } from "../stores/players";
+import { useProfileStore } from "../stores/profile";
+import { useReviewStore } from "../stores/review";
+import { useRoleActivityStore } from "../stores/role-activity";
+import { useScenarioStore } from "../stores/scenario";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import { useSessionSettingsStore } from "../stores/session-settings";
+import { useVotingStore } from "../stores/voting";
 import {
   readStoredArray,
   readStoredJson,
@@ -20,150 +33,189 @@ import {
   readGroupChats,
   readLegacyRoleState,
 } from "./persistence-codecs";
-import type { PersistenceStorage, PersistenceStore } from "./persistence-types";
+import type { PersistenceStorage } from "./persistence-types";
 
-export function hydratePersistence(
-  store: PersistenceStore,
-  storage: PersistenceStorage,
-): void {
+export function hydratePersistence(storage: PersistenceStorage): void {
+  const appMeta = useAppMetaStore(pinia);
+  const chat = useChatStore(pinia);
+  const grimoire = useGrimoireStore(pinia);
+  const legacyOptions = useLegacyOptionsStore(pinia);
+  const players = usePlayersStore(pinia);
+  const profile = useProfileStore(pinia);
+  const review = useReviewStore(pinia);
+  const roles = useRoleActivityStore(pinia);
+  const scenario = useScenarioStore(pinia);
+  const session = useSessionIdentityStore(pinia);
+  const settings = useSessionSettingsStore(pinia);
+  const voting = useVotingStore(pinia);
+  const findRole = (roleId: string) =>
+    scenario.roles.get(roleId) || rolesJSONbyId.get(roleId) || {};
   const lastVersion = storage.getItem("lastVersion");
-  if (lastVersion) store.commit("setLastVersion", lastVersion);
+  if (lastVersion) appMeta.setLastVersion(lastVersion);
   const background = storage.getItem("background");
-  if (background) store.commit("setBackground", background);
-  if (storage.getItem("muted")) store.commit("toggleMuted", true);
-  if (storage.getItem("static")) store.commit("toggleStatic", true);
-  if (storage.getItem("imageOptIn")) store.commit("toggleImageOptIn", true);
+  if (background) grimoire.set("background", background);
+  if (storage.getItem("muted")) grimoire.toggle("isMuted", true);
+  if (storage.getItem("static")) grimoire.toggle("isStatic", true);
+  if (storage.getItem("imageOptIn")) grimoire.toggle("isImageOptIn", true);
   const zoom = storage.getItem("zoom");
-  if (zoom) store.commit("setZoom", parseFloat(zoom));
+  if (zoom) grimoire.set("zoom", parseFloat(zoom));
   const audioThreshold = storage.getItem("audioThreshold");
-  if (audioThreshold) store.commit("setAudioThreshold", audioThreshold);
-  if (storage.getItem("isGrimoire")) store.commit("toggleGrimoire", false);
+  if (audioThreshold) grimoire.set("audioThreshold", Number(audioThreshold));
+  if (storage.getItem("isGrimoire")) grimoire.toggle("isPublic", false);
 
   const useOldOrder = readStoredWithSchema(
     storage,
     "useOldOrder",
     persistedUseOldOrderSchema,
   );
-  if (useOldOrder) store.commit("session/setUseOldOrder", useOldOrder);
+  if (useOldOrder) legacyOptions.setUseOldOrder(useOldOrder);
   const useOldRole = readStoredWithSchema(
     storage,
     "useOldRole",
     persistedUseOldRoleSchema,
   );
-  if (useOldRole) store.commit("session/setUseOldRole", useOldRole);
+  if (useOldRole) legacyOptions.setUseOldRole(useOldRole);
   const isReview = readStoredWithSchema(
     storage,
     "isReview",
     persistedBooleanSchema,
   );
-  if (isReview !== null) store.commit("session/setIsReview", isReview);
+  if (isReview !== null) review.setReview(isReview);
   const selectedEditions = readStoredWithSchema(
     storage,
     "selectedEditions",
     persistedSelectedEditionsSchema,
   );
-  if (selectedEditions) store.commit("setSelectedEditions", selectedEditions);
+  if (selectedEditions) scenario.setSelectedEditions(selectedEditions);
 
   if (storage.getItem("roles") !== null) {
-    store.commit("setCustomRoles", readStoredArray(storage, "roles"));
-    store.commit("setEdition", { id: "custom" });
+    scenario.setCustomRoles(readStoredArray(storage, "roles"));
+    scenario.setEdition({ id: "custom" });
   }
   if (storage.getItem("states"))
-    store.commit("setStates", readStoredArray(storage, "states"));
+    scenario.setStates(readStoredArray(storage, "states"));
   const teamsNames = readStoredWithSchema(
     storage,
     "teamsNames",
     persistedStringRecordSchema,
   );
-  if (teamsNames) store.commit("setTeamsNames", teamsNames);
+  if (teamsNames) scenario.setTeamsNames(teamsNames);
   if (storage.getItem("firstNight"))
-    store.commit("setFirstNight", readStoredArray(storage, "firstNight"));
+    scenario.setFirstNight(readStoredArray(storage, "firstNight"));
   if (storage.getItem("otherNight"))
-    store.commit("setOtherNight", readStoredArray(storage, "otherNight"));
+    scenario.setOtherNight(readStoredArray(storage, "otherNight"));
   if (storage.getItem("edition") !== null)
-    store.commit("setEdition", readStoredRecord(storage, "edition"));
+    scenario.setEdition(readStoredRecord(storage, "edition"));
   if (storage.getItem("bluffs") !== null) {
     readStoredArray(storage, "bluffs").forEach((role, index) => {
       const roleId = typeof role === "string" ? role : "";
-      store.commit("players/setBluff", {
+      players.setBluff({
         index,
-        role: store.state.roles?.get(roleId) || {},
+        role: findRole(roleId),
       });
     });
   }
   if (storage.getItem("fabled") !== null) {
-    store.commit("players/setFabled", {
+    players.setFabled({
       fabled: readStoredArray(storage, "fabled"),
       emptyFabled: true,
     });
   }
   if (storage.getItem("players")) {
-    store.commit(
-      "players/set",
+    players.setPlayers(
       readStoredArray(storage, "players")
         .filter(isRecord)
         .map((player) => {
           const roleId = typeof player.role === "string" ? player.role : "";
           return {
             ...player,
-            role:
-              store.state.roles?.get(roleId) || rolesJSONbyId.get(roleId) || {},
+            role: findRole(roleId),
           };
         }),
     );
   }
 
   const scalarSessions = [
-    ["playerId", "session/setPlayerId"],
-    ["stSecret", "session/setStSecret"],
-    ["playerName", "session/setPlayerName"],
-    ["stId", "session/setStId"],
+    ["playerId", session.setPlayerId.bind(session)],
+    ["stSecret", session.setStSecret.bind(session)],
+    ["playerName", profile.setPlayerName.bind(profile)],
+    ["stId", session.setStId.bind(session)],
   ] as const;
-  scalarSessions.forEach(([key, command]) => {
+  scalarSessions.forEach(([key, set]) => {
     const value = storage.getItem(key);
-    if (value) store.commit(command, value);
+    if (value) set(value);
   });
   const storedClaimedSeat = storage.getItem("claimedSeat");
   if (storedClaimedSeat !== null) {
     const claimedSeat = persistedSeatSchema.safeParse(
       Number(storedClaimedSeat),
     );
-    if (claimedSeat.success)
-      store.commit("session/claimSeat", claimedSeat.data);
+    if (claimedSeat.success) session.claimSeat(claimedSeat.data);
   }
-  const session = readStoredWithSchema(
+  const storedSession = readStoredWithSchema(
     storage,
     "session",
     persistedSessionSchema,
   );
-  if (session) {
-    const [spectator, sessionId] = session;
-    store.commit("session/setSpectator", spectator);
-    store.commit("session/setSessionId", sessionId);
+  if (storedSession) {
+    const [spectator, sessionId] = storedSession;
+    session.setSpectator(spectator);
+    session.setSessionId(sessionId);
   }
   const playerVotes = readStoredWithSchema(
     storage,
     "playerVotes",
     persistedFiniteNumberSchema,
   );
-  if (playerVotes !== null) store.commit("session/setPlayerVotes", playerVotes);
+  if (playerVotes !== null) voting.setPlayerVotes(playerVotes);
   if (storage.getItem("votes")) {
     readStoredArray(storage, "votes")
       .filter(isRecord)
       .forEach((vote) => {
-        store.commit("session/addVotes", vote);
+        if (
+          typeof vote.nominator === "string" &&
+          typeof vote.nominee === "string" &&
+          typeof vote.type === "string" &&
+          typeof vote.mode === "string" &&
+          typeof vote.votes === "number" &&
+          typeof vote.majority === "number" &&
+          Array.isArray(vote.votedPlayers)
+        ) {
+          voting.addVotes({
+            timestamp: new Date(
+              typeof vote.timestamp === "string" ? vote.timestamp : 0,
+            ),
+            nominator: vote.nominator,
+            nominee: vote.nominee,
+            type: vote.type,
+            mode: vote.mode,
+            votes: vote.votes,
+            majority: vote.majority,
+            votedPlayers: vote.votedPlayers.filter(
+              (player): player is string => typeof player === "string",
+            ),
+            save: vote.save === true,
+          });
+        }
       });
   }
   if (storage.getItem("votesSelected")) {
     readStoredArray(storage, "votesSelected").forEach((vote) => {
-      store.commit("session/addVoteSelected", vote);
+      if (!isRecord(vote) || typeof vote.selected !== "boolean") return;
+      const selection = {
+        selected: vote.selected,
+        ...(Array.isArray(vote.players) ? { players: vote.players } : {}),
+        ...(vote.save === true ? { save: true } : {}),
+      };
+      voting.addVoteSelected(selection, {
+        isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
+        isSpectator: session.isSpectator,
+      });
     });
   }
   if (storage.getItem("customBootlegger")) {
-    store.commit(
-      "session/setBootlegger",
-      readStoredJson(storage, "customBootlegger", ""),
-    );
+    const bootlegger = readStoredJson(storage, "customBootlegger", "");
+    if (typeof bootlegger === "string") settings.setBootlegger(bootlegger);
   }
   if (storage.getItem("chatHistory")) {
     readStoredArray(storage, "chatHistory")
@@ -171,32 +223,34 @@ export function hydratePersistence(
       .forEach((player) => {
         if (typeof player.id !== "string" || !Array.isArray(player.chat))
           return;
-        store.commit("session/createChatHistory", player.id);
+        const playerId = player.id;
+        chat.createHistory(playerId);
         player.chat.forEach((message) =>
-          store.commit("session/updateChatReceived", {
+          chat.addReceivedMessage({
             message,
-            playerId: player.id,
+            playerId,
           }),
         );
       });
   }
   if (storage.getItem("groupChats")) {
     readGroupChats(storage).forEach((group) => {
-      store.commit("session/addGroupChat", {
-        chatId: group.id,
-        playerIds: group.playerIds,
-        keep: group.keep,
-      });
+      const groupPlayers = players.players.filter((player) =>
+        group.playerIds.includes(player.id),
+      );
+      chat
+        .addGroup({ chatId: group.id, players: groupPlayers, keep: group.keep })
+        .forEach((change) => players.update(change));
     });
   }
   const avatar = storage.getItem("playerAvatar");
-  if (avatar) store.commit("session/updatePlayerAvatar", avatar);
+  if (avatar) profile.updatePlayerAvatar(avatar);
   const secretVote = readStoredWithSchema(
     storage,
     "secretVote",
     persistedBooleanSchema,
   );
-  if (secretVote !== null) store.commit("session/setSecretVote", secretVote);
+  if (secretVote !== null) voting.setSecretVote(secretVote);
   if (storage.getItem("isRole")) {
     const roleState = readLegacyRoleState(storage);
     const role = Object.keys(roleState)[0];
@@ -204,7 +258,17 @@ export function hydratePersistence(
     const properties = roleState[role];
     if (!properties) return;
     Object.entries(properties).forEach(([property, value]) => {
-      store.commit("session/setIsRole", { role, property, value, st: true });
+      if (
+        role === "wraith" &&
+        (property === "active" ||
+          property === "using" ||
+          property === "st" ||
+          property === "player" ||
+          property === "prob" ||
+          property === "probMax") &&
+        (typeof value === "boolean" || typeof value === "number")
+      )
+        roles.setRole({ role, property, value, st: true });
     });
   }
 }

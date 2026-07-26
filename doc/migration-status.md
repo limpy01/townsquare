@@ -35,13 +35,13 @@
 
 MIG-051 的独立 persistence repository 已完成；transport 与 legacy bridge 的剩余收口仍按下表推进。每个批次完成后更新本表、验收证据和残余风险。
 
-| ID      | 状态   | 目标                                         | 前置条件 | 验收                                                                                                                                                                                                               |
-| ------- | ------ | -------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| MIG-048 | 已完成 | 在 Node 24.18.0 下重建可信基线，并校准账本   | 无       | Node 24.18.0 / npm 11.9.0 下 `npm ci`、类型检查、单元、集成、E2E、视觉与构建均通过                                                                                                                                 |
-| MIG-049 | 进行中 | 为会话 transport 增加 characterization tests | MIG-048  | 已锁定连接、异常/正常关闭、重连、join timeout、timer 与 outbox 顺序；继续补权限和业务消息状态机，保持 v1 协议                                                                                                      |
-| MIG-050 | 进行中 | 拆分 session transport                       | MIG-049  | URL、timing、WebSocket client、reconnect policy、outbox controller 与五个入站领域 handler 已独立且有单测；继续降低 `LiveSession` 职责                                                                              |
-| MIG-051 | 已完成 | 建立独立的 persistence repository            | MIG-050  | 初始化恢复、旧值解析、写入投影与类型边界已独立；`persistence.ts` 缩至 19 行浏览器适配器；旧存档、损坏值、迁移失败、群聊/投票/角色状态回归通过                                                                      |
-| MIG-052 | 进行中 | 删除 legacy command/effect/mutation bridge   | MIG-051  | 已删除 `legacy-effects`、`mutation-bus` 与全部 `emitLegacyMutation` 调用；Menu、TownSquare、Player 与 Vote 均无 command 依赖；座位、玩家状态、投票控制与 Menu Web Audio 已拆为 composable；继续收口 runtime bridge |
+| ID      | 状态   | 目标                                         | 前置条件 | 验收                                                                                                                                                                                                                                                                                          |
+| ------- | ------ | -------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MIG-048 | 已完成 | 在 Node 24.18.0 下重建可信基线，并校准账本   | 无       | Node 24.18.0 / npm 11.9.0 下 `npm ci`、类型检查、单元、集成、E2E、视觉与构建均通过                                                                                                                                                                                                            |
+| MIG-049 | 进行中 | 为会话 transport 增加 characterization tests | MIG-048  | 已锁定连接、异常/正常关闭、重连、join timeout、timer 与 outbox 顺序；继续补权限和业务消息状态机，保持 v1 协议                                                                                                                                                                                 |
+| MIG-050 | 进行中 | 拆分 session transport                       | MIG-049  | URL、timing、WebSocket client、reconnect policy、outbox controller 与五个入站领域 handler 已独立且有单测；继续降低 `LiveSession` 职责                                                                                                                                                         |
+| MIG-051 | 已完成 | 建立独立的 persistence repository            | MIG-050  | 初始化恢复、旧值解析、写入投影与类型边界已独立；`persistence.ts` 缩至 19 行浏览器适配器；旧存档、损坏值、迁移失败、群聊/投票/角色状态回归通过                                                                                                                                                 |
+| MIG-052 | 进行中 | 删除 legacy command/effect/mutation bridge   | MIG-051  | 已删除 `legacy-effects`、`mutation-bus` 与全部 `emitLegacyMutation` 调用；组件、持久化 hydration 与大厅 transport 均直接消费 Pinia；座位、玩家状态、投票控制与 Menu Web Audio 已拆为 composable；`legacy-commands.ts`/runtime projection 现只由 `socket.ts` 消费，下一批在该 transport 内收口 |
 
 ### 当前阻塞与风险
 
@@ -275,7 +275,7 @@ MIG-051 的独立 persistence repository 已完成；transport 与 legacy bridge
 - `socket.ts` 与新 transport adapter 的回归仍需继续扩展，尚未达到 MIG-049 的覆盖率门槛；
 - `src/store/socket.ts` 仍是约 2,664 行的会话 transport，且行覆盖率不足 10%；
 - `src/store/persistence.ts` 已缩为 19 行 browser adapter；其 hydration、codec 与 writer 已独立，并经显式游戏事件通道连接外部副作用，但尚未达到专属覆盖率目标；
-- `legacy-effects`、mutation bus 与 `emitLegacyMutation` 已删除；Menu、TownSquare、Player 与 Vote 已不再依赖 `legacy-commands`，其音频、座位、玩家状态与投票状态机均已独立 composable；runtime store 投影与 transport 仍待迁移；
+- `legacy-effects`、mutation bus 与 `emitLegacyMutation` 已删除；Menu、TownSquare、Player 与 Vote 已不再依赖 `legacy-commands`，持久化 hydration 与大厅 transport 也已改为直接 Pinia；`legacy-commands.ts`/runtime store 投影只剩 `socket.ts` 消费，需在其 2,664 行 transport 中按行为域迁移；
 - Menu、Player 与 TownSquare 仍是约 1,400–1,500 行的展示与交互编排组件，但本批要求的高风险行为域已完成拆分；
 - E2E 尚未覆盖真实玩家加入、认领座位、角色分发、投票、聊天、重连、自定义剧本和旧存档恢复；
 - 视觉回归尚未覆盖玩家视图、主要弹窗和移动端视口；

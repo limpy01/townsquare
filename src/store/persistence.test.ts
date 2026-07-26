@@ -1,5 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
+import { pinia } from "../pinia";
+import { useChatStore } from "../stores/chat";
+import { useLegacyOptionsStore } from "../stores/legacy-options";
+import { useRoleActivityStore } from "../stores/role-activity";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import { useVotingStore } from "../stores/voting";
 import persistence from "./persistence";
 import { gameEvents } from "./game-events";
 
@@ -22,6 +28,14 @@ const createStorage = (initial: Record<string, string> = {}) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("persistence compatibility plugin", () => {
+  beforeEach(() => {
+    useChatStore(pinia).$reset();
+    useLegacyOptionsStore(pinia).$reset();
+    useRoleActivityStore(pinia).$reset();
+    useSessionIdentityStore(pinia).$reset();
+    useVotingStore(pinia).$reset();
+  });
+
   it("restores the version-zero storage fixture without changing its values", () => {
     const fixture = JSON.parse(
       readFileSync(
@@ -34,8 +48,7 @@ describe("persistence compatibility plugin", () => {
     ) as Record<string, string>;
     const localStorage = createStorage(fixture);
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
-    const commit = vi.fn();
-    const unsubscribe = persistence({ commit, getters: {}, state: {} });
+    const unsubscribe = persistence();
 
     unsubscribe?.();
 
@@ -43,10 +56,12 @@ describe("persistence compatibility plugin", () => {
       fixture.playerProfileImage,
     );
     expect(localStorage.getItem("playerProfileImage")).toBeNull();
-    expect(commit).toHaveBeenCalledWith("session/setSessionId", "room1234");
-    expect(commit).toHaveBeenCalledWith("session/claimSeat", 4);
-    expect(commit).toHaveBeenCalledWith("session/setPlayerVotes", 2);
-    expect(commit).toHaveBeenCalledWith("session/setUseOldOrder", {
+    expect(useSessionIdentityStore(pinia)).toMatchObject({
+      sessionId: "room1234",
+      claimedSeat: 4,
+    });
+    expect(useVotingStore(pinia).playerVotes).toBe(2);
+    expect(useLegacyOptionsStore(pinia).useOldOrder).toEqual({
       pithag: true,
       professor: false,
     });
@@ -57,15 +72,12 @@ describe("persistence compatibility plugin", () => {
       session: JSON.stringify([true, "room1234"]),
     });
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
-    const commit = vi.fn();
-    const unsubscribe = persistence({
-      commit,
-      getters: {},
-      state: {},
-    });
+    const unsubscribe = persistence();
 
-    expect(commit).toHaveBeenCalledWith("session/setSpectator", true);
-    expect(commit).toHaveBeenCalledWith("session/setSessionId", "room1234");
+    expect(useSessionIdentityStore(pinia)).toMatchObject({
+      isSpectator: true,
+      sessionId: "room1234",
+    });
 
     gameEvents.publish(
       { type: "session/setSessionId", payload: "nextroom" },
@@ -82,7 +94,7 @@ describe("persistence compatibility plugin", () => {
   it("does not let malformed persisted group chats block a new group", () => {
     const localStorage = createStorage({ groupChats: "{" });
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
-    const unsubscribe = persistence({ commit: vi.fn(), state: {} });
+    const unsubscribe = persistence();
 
     expect(() =>
       gameEvents.publish(
@@ -111,7 +123,7 @@ describe("persistence compatibility plugin", () => {
       ]),
     });
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
-    const unsubscribe = persistence({ commit: vi.fn(), state: {} });
+    const unsubscribe = persistence();
 
     gameEvents.publish(
       {
@@ -138,47 +150,37 @@ describe("persistence compatibility plugin", () => {
       groupChats: JSON.stringify([{ id: "group-a", playerIds: [1] }]),
     });
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
-    const commit = vi.fn();
-    const unsubscribe = persistence({ commit, state: {} });
+    const unsubscribe = persistence();
 
     unsubscribe?.();
 
-    expect(commit).not.toHaveBeenCalledWith(
-      "session/addGroupChat",
-      expect.anything(),
-    );
+    expect(useChatStore(pinia).groups).toEqual([]);
   });
 
   it("drops malformed role-state records without blocking a valid update", () => {
     const localStorage = createStorage({
-      isRole: JSON.stringify({ imp: "not-a-record", chef: { active: true } }),
+      isRole: JSON.stringify({ imp: "not-a-record", wraith: { active: true } }),
     });
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
-    const commit = vi.fn();
-    const unsubscribe = persistence({ commit, state: {} });
+    const unsubscribe = persistence();
 
     gameEvents.publish(
       {
         type: "session/setIsRole",
-        payload: { role: "chef", property: "active", value: false },
+        payload: { role: "wraith", property: "active", value: false },
       },
       {},
     );
 
     unsubscribe?.();
-    expect(commit).toHaveBeenCalledWith("session/setIsRole", {
-      role: "chef",
-      property: "active",
-      value: true,
-      st: true,
-    });
+    expect(useRoleActivityStore(pinia).wraith.active).toBe(true);
     expect(localStorage.getItem("isRole")).toBeNull();
   });
 
   it("serializes only valid player and role records", () => {
     const localStorage = createStorage();
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
-    const unsubscribe = persistence({ commit: vi.fn(), state: {} });
+    const unsubscribe = persistence();
 
     gameEvents.publish(
       { type: "players/setBluff" },

@@ -8,6 +8,6 @@ let initialized = false;
 export const initializeRuntime = () => {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
-  initializePersistence(gameRuntime);
+  initializePersistence();
   initializeSocket(gameRuntime);
 };

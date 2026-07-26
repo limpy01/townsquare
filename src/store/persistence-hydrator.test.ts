@@ -1,4 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { pinia } from "../pinia";
+import { useChatStore } from "../stores/chat";
+import { usePlayersStore } from "../stores/players";
+import { useRoleActivityStore } from "../stores/role-activity";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import { useVotingStore } from "../stores/voting";
 import { hydratePersistence } from "./persistence-hydrator";
 
 const createStorage = (initial: Record<string, string> = {}) => {
@@ -11,10 +17,19 @@ const createStorage = (initial: Record<string, string> = {}) => {
 };
 
 describe("persistence hydrator", () => {
-  it("restores independent session, chat, group, and role-state snapshots", () => {
-    const commit = vi.fn();
+  beforeEach(() => {
+    useChatStore(pinia).$reset();
+    usePlayersStore(pinia).$reset();
+    useRoleActivityStore(pinia).$reset();
+    useSessionIdentityStore(pinia).$reset();
+    useVotingStore(pinia).$reset();
+  });
+
+  it("restores session, chat, group, and role-state snapshots through Pinia actions", () => {
+    const players = usePlayersStore(pinia);
+    players.setPlayers([{ id: "alice" }, { id: "bob" }]);
+
     hydratePersistence(
-      { commit, state: { roles: new Map([["chef", { id: "chef" }]]) } },
       createStorage({
         claimedSeat: "4",
         session: JSON.stringify([true, "room1234"]),
@@ -27,36 +42,27 @@ describe("persistence hydrator", () => {
           { id: "team", playerIds: ["alice", "bob"], keep: true },
           { id: "broken", playerIds: [1] },
         ]),
-        isRole: JSON.stringify({ chef: { active: true } }),
+        isRole: JSON.stringify({ wraith: { active: true } }),
       }),
     );
 
-    expect(commit).toHaveBeenCalledWith("session/claimSeat", 4);
-    expect(commit).toHaveBeenCalledWith("session/setSpectator", true);
-    expect(commit).toHaveBeenCalledWith("session/setSessionId", "room1234");
-    expect(commit).toHaveBeenCalledWith("session/setPlayerVotes", 2);
-    expect(commit).toHaveBeenCalledWith("session/createChatHistory", "alice");
-    expect(commit).toHaveBeenCalledWith("session/updateChatReceived", {
-      playerId: "alice",
-      message: { text: "hello" },
+    expect(useSessionIdentityStore(pinia)).toMatchObject({
+      claimedSeat: 4,
+      isSpectator: true,
+      sessionId: "room1234",
     });
-    expect(commit).toHaveBeenCalledWith("session/addGroupChat", {
-      chatId: "team",
-      playerIds: ["alice", "bob"],
-      keep: true,
-    });
-    expect(commit).toHaveBeenCalledWith("session/setIsRole", {
-      role: "chef",
-      property: "active",
-      value: true,
-      st: true,
-    });
+    expect(useVotingStore(pinia).playerVotes).toBe(2);
+    expect(useChatStore(pinia).histories).toEqual([
+      { id: "alice", chat: [{ text: "hello" }] },
+    ]);
+    expect(useChatStore(pinia).groups).toEqual([
+      expect.objectContaining({ id: "team", keep: true }),
+    ]);
+    expect(useRoleActivityStore(pinia).wraith.active).toBe(true);
   });
 
   it("rejects malformed schema-backed values without blocking valid recovery", () => {
-    const commit = vi.fn();
     hydratePersistence(
-      { commit, state: {} },
       createStorage({
         claimedSeat: "-3",
         session: JSON.stringify(["not-a-boolean", 42]),
@@ -67,26 +73,11 @@ describe("persistence hydrator", () => {
       }),
     );
 
-    expect(commit).toHaveBeenCalledWith("session/setStId", "host-id");
-    expect(commit).not.toHaveBeenCalledWith(
-      "session/claimSeat",
-      expect.anything(),
-    );
-    expect(commit).not.toHaveBeenCalledWith(
-      "session/setSessionId",
-      expect.anything(),
-    );
-    expect(commit).not.toHaveBeenCalledWith(
-      "session/setPlayerVotes",
-      expect.anything(),
-    );
-    expect(commit).not.toHaveBeenCalledWith(
-      "session/setIsReview",
-      expect.anything(),
-    );
-    expect(commit).not.toHaveBeenCalledWith(
-      "session/setSecretVote",
-      expect.anything(),
-    );
+    expect(useSessionIdentityStore(pinia)).toMatchObject({
+      stId: "host-id",
+      claimedSeat: -1,
+      sessionId: "",
+    });
+    expect(useVotingStore(pinia).playerVotes).toBe(1);
   });
 });
