@@ -35,6 +35,9 @@ export default defineConfig({
       "@townsquare/contracts/dynamic-init": fileURLToPath(
         new URL("./packages/contracts/src/dynamic-init.ts", import.meta.url),
       ),
+      "@townsquare/contracts/local-storage": fileURLToPath(
+        new URL("./packages/contracts/src/local-storage.ts", import.meta.url),
+      ),
     },
   },
   build: {

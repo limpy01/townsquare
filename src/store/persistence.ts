@@ -1,4 +1,20 @@
-import { readStoredArray, readStoredJson, readStoredRecord } from "./storage";
+import {
+  migrateTownsquareStorage,
+  readStoredArray,
+  readStoredJson,
+  readStoredRecord,
+  readStoredWithSchema,
+} from "./storage";
+import {
+  persistedBooleanSchema,
+  persistedFiniteNumberSchema,
+  persistedSeatSchema,
+  persistedSelectedEditionsSchema,
+  persistedSessionSchema,
+  persistedStringRecordSchema,
+  persistedUseOldOrderSchema,
+  persistedUseOldRoleSchema,
+} from "@townsquare/contracts/local-storage";
 import { pinia } from "../pinia";
 import { useChatStore } from "../stores/chat";
 import { rolesJSONbyId } from "./selectors";
@@ -66,6 +82,8 @@ export default (store: LegacyPersistenceStore) => {
 
   const localStorage: any = window.localStorage;
 
+  migrateTownsquareStorage(localStorage);
+
   const updatePagetitle = (isPublic: any) =>
     // (document.title = `Blood on the Clocktower ${
     //   isPublic ? "Town Square" : "Grimoire"
@@ -100,30 +118,30 @@ export default (store: LegacyPersistenceStore) => {
     store.commit("toggleGrimoire", false);
     updatePagetitle(false);
   }
-  if (localStorage.getItem("useOldOrder")) {
-    store.commit(
-      "session/setUseOldOrder",
-      readStoredRecord(localStorage, "useOldOrder"),
-    );
-  }
-  if (localStorage.getItem("useOldRole")) {
-    store.commit(
-      "session/setUseOldRole",
-      readStoredRecord(localStorage, "useOldRole"),
-    );
-  }
-  if (localStorage.getItem("isReview")) {
-    store.commit(
-      "session/setIsReview",
-      readStoredJson(localStorage, "isReview", false),
-    );
-  }
-  if (localStorage.getItem("selectedEditions")) {
-    store.commit(
-      "setSelectedEditions",
-      readStoredRecord(localStorage, "selectedEditions"),
-    );
-  }
+  const useOldOrder = readStoredWithSchema(
+    localStorage,
+    "useOldOrder",
+    persistedUseOldOrderSchema,
+  );
+  if (useOldOrder) store.commit("session/setUseOldOrder", useOldOrder);
+  const useOldRole = readStoredWithSchema(
+    localStorage,
+    "useOldRole",
+    persistedUseOldRoleSchema,
+  );
+  if (useOldRole) store.commit("session/setUseOldRole", useOldRole);
+  const isReview = readStoredWithSchema(
+    localStorage,
+    "isReview",
+    persistedBooleanSchema,
+  );
+  if (isReview !== null) store.commit("session/setIsReview", isReview);
+  const selectedEditions = readStoredWithSchema(
+    localStorage,
+    "selectedEditions",
+    persistedSelectedEditionsSchema,
+  );
+  if (selectedEditions) store.commit("setSelectedEditions", selectedEditions);
   if (localStorage.roles !== undefined) {
     store.commit("setCustomRoles", readStoredArray(localStorage, "roles"));
     store.commit("setEdition", { id: "custom" });
@@ -131,9 +149,12 @@ export default (store: LegacyPersistenceStore) => {
   if (localStorage.getItem("states")) {
     store.commit("setStates", readStoredArray(localStorage, "states"));
   }
-  if (localStorage.getItem("teamsNames")) {
-    store.commit("setTeamsNames", readStoredRecord(localStorage, "teamsNames"));
-  }
+  const teamsNames = readStoredWithSchema(
+    localStorage,
+    "teamsNames",
+    persistedStringRecordSchema,
+  );
+  if (teamsNames) store.commit("setTeamsNames", teamsNames);
   if (localStorage.getItem("firstNight")) {
     store.commit("setFirstNight", readStoredArray(localStorage, "firstNight"));
   }
@@ -151,13 +172,6 @@ export default (store: LegacyPersistenceStore) => {
         role: store.state.roles.get(role) || {},
       });
     });
-  }
-  if (localStorage.getItem("playerProfileImage")) {
-    localStorage.setItem(
-      "playerAvatar",
-      localStorage.getItem("playerProfileImage"),
-    );
-    localStorage.removeItem("playerProfileImage");
   }
   if (localStorage.fabled !== undefined) {
     store.commit("players/setFabled", {
@@ -196,26 +210,32 @@ export default (store: LegacyPersistenceStore) => {
   if (localStorage.getItem("stId")) {
     store.commit("session/setStId", localStorage.getItem("stId"));
   }
-  if (localStorage.getItem("claimedSeat")) {
-    store.commit(
-      "session/claimSeat",
-      Number(localStorage.getItem("claimedSeat")),
+  const storedClaimedSeat = localStorage.getItem("claimedSeat");
+  if (storedClaimedSeat !== null) {
+    const claimedSeat = persistedSeatSchema.safeParse(
+      Number(storedClaimedSeat),
     );
-  }
-  if (localStorage.getItem("session")) {
-    const [spectator, sessionId] = readStoredArray(localStorage, "session");
-    if (typeof spectator === "boolean") {
-      store.commit("session/setSpectator", spectator);
-    }
-    if (typeof sessionId === "string") {
-      store.commit("session/setSessionId", sessionId);
+    if (claimedSeat.success) {
+      store.commit("session/claimSeat", claimedSeat.data);
     }
   }
-  if (localStorage.getItem("playerVotes")) {
-    store.commit(
-      "session/setPlayerVotes",
-      readStoredJson(localStorage, "playerVotes", 1),
-    );
+  const session = readStoredWithSchema(
+    localStorage,
+    "session",
+    persistedSessionSchema,
+  );
+  if (session) {
+    const [spectator, sessionId] = session;
+    store.commit("session/setSpectator", spectator);
+    store.commit("session/setSessionId", sessionId);
+  }
+  const playerVotes = readStoredWithSchema(
+    localStorage,
+    "playerVotes",
+    persistedFiniteNumberSchema,
+  );
+  if (playerVotes !== null) {
+    store.commit("session/setPlayerVotes", playerVotes);
   }
   if (localStorage.getItem("votes")) {
     const votes = readStoredArray(localStorage, "votes");
@@ -265,12 +285,12 @@ export default (store: LegacyPersistenceStore) => {
       localStorage.getItem("playerAvatar"),
     );
   }
-  if (localStorage.getItem("secretVote")) {
-    store.commit(
-      "session/setSecretVote",
-      readStoredJson(localStorage, "secretVote", false),
-    );
-  }
+  const secretVote = readStoredWithSchema(
+    localStorage,
+    "secretVote",
+    persistedBooleanSchema,
+  );
+  if (secretVote !== null) store.commit("session/setSecretVote", secretVote);
   if (localStorage.getItem("isRole")) {
     const isRole = readLegacyRoleState(localStorage);
     const role = Object.keys(isRole)[0];

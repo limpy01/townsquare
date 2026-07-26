@@ -37,6 +37,11 @@
       "types": "./dist/dynamic-init.d.ts",
       "require": "./dist/dynamic-init.js",
       "default": "./dist/dynamic-init.js"
+    },
+    "./local-storage": {
+      "types": "./dist/local-storage.d.ts",
+      "require": "./dist/local-storage.js",
+      "default": "./dist/local-storage.js"
     }
   },
   "files": [

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import persistence from "./persistence";
 import { mutationBus } from "./mutation-bus";
 
@@ -21,6 +22,36 @@ const createStorage = (initial: Record<string, string> = {}) => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("persistence compatibility plugin", () => {
+  it("restores the version-zero storage fixture without changing its values", () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        new URL(
+          "../../packages/test-fixtures/storage/legacy-v0.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ) as Record<string, string>;
+    const localStorage = createStorage(fixture);
+    vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
+    const commit = vi.fn();
+    const unsubscribe = persistence({ commit, getters: {}, state: {} });
+
+    unsubscribe?.();
+
+    expect(localStorage.getItem("playerAvatar")).toBe(
+      fixture.playerProfileImage,
+    );
+    expect(localStorage.getItem("playerProfileImage")).toBeNull();
+    expect(commit).toHaveBeenCalledWith("session/setSessionId", "room1234");
+    expect(commit).toHaveBeenCalledWith("session/claimSeat", 4);
+    expect(commit).toHaveBeenCalledWith("session/setPlayerVotes", 2);
+    expect(commit).toHaveBeenCalledWith("session/setUseOldOrder", {
+      pithag: true,
+      professor: false,
+    });
+  });
+
   it("restores the legacy session tuple and persists a changed session ID", () => {
     const localStorage = createStorage({
       session: JSON.stringify([true, "room1234"]),

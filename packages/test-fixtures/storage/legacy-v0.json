@@ -1,0 +1,12 @@
+{
+  "playerProfileImage": "https://example.test/legacy-avatar.webp",
+  "session": "[true,\"room1234\"]",
+  "claimedSeat": "4",
+  "playerVotes": "2",
+  "isReview": "true",
+  "secretVote": "false",
+  "useOldOrder": "{\"pithag\":true,\"professor\":false}",
+  "useOldRole": "{\"balloonist\":false,\"acrobat\":true,\"lilmonsta\":false,\"alchemist\":false,\"lycanthrope\":true}",
+  "selectedEditions": "{\"tb\":true,\"bmr\":false}",
+  "teamsNames": "{\"townsfolk\":\"Town\",\"demon\":\"Demon\"}"
+}

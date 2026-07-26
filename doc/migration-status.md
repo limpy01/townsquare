@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（MIG-012 稳定视觉回归基线）
+最后更新：2026-07-26（MIG-013 版本化浏览器存档迁移）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -42,6 +42,7 @@
 | MIG-009 | 已完成 | Vue 3、Vite 运行时启动                     | typecheck、核心 E2E、视觉回归                                                                  | Vite 环境变量和静态资源保持兼容 |
 | MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除               | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                                           | 保持单窗口模态框与输入流程语义  |
 | MIG-012 | 已完成 | Playwright 视觉基线稳定性                  | 视觉组串行执行、`domcontentloaded` 导航与重复回归通过                                          | 截图、房间号与 v1 协议保持不变  |
+| MIG-013 | 已完成 | 版本化 localStorage 迁移与历史存档 fixture | 旧头像键无损迁移、关键值 schema 校验、v0 fixture 恢复与回归测试                                | 保持原有平铺键和 JSON 值格式    |
 
 ## 迁移历史与当前质量基线
 
@@ -136,6 +137,7 @@
 - `@townsquare/contracts` 已补齐标量 payload、未知入站命令、请求目标与自定义角色规范化失败路径的回归覆盖；CI 现要求 contracts 与 domain 两个共享包均达到 statements/lines ≥95%、branches ≥90%。
 - Playwright 视觉基线已扩展到真实房主魔典的白天与夜晚状态，固定本地测试后端、房间号、座位数和动画，避免后续样式归档只覆盖首页。
 - MIG-012 将共享 Vite 进程、WebSocket 测试后端和固定房间数据的视觉截图归入串行 test group；普通交互 E2E 保持并行。首页导航只等待 `domcontentloaded`，随后仍显式断言 Intro 可见，避免与用户流程无关的浏览器 `load` 事件拖慢或偶发阻塞基线。3 个视觉场景在单 worker 下连续重复 2 次通过。
+- MIG-013 为浏览器 localStorage 引入了独立版本标记和非破坏性迁移：历史 `playerProfileImage` 仅在新头像不存在时复制，写入失败则保留旧键以便重试。session、座位、投票数、旧规则开关、剧本选择、阵营名称与投票隐私等关键恢复值现在先经共享 Zod schema 校验；版本 0 的平铺存档 fixture 锁定了恢复与头像迁移兼容性。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
@@ -174,4 +176,4 @@
 - 禁止：改动游戏规则、UI、网络消息格式、存档格式、角色资源或 Vue 业务组件。
 - 停止条件：任一基线命令失败，或发现改动影响页面/协议行为。
 
-下一批：建立版本化 localStorage schema 和历史存档 fixture，优先收紧 `persistence`、`scenario` 与 `players` 的 `any`；不要在该批混入样式归档或 WebSocket 协议变更。
+下一批：优先收紧 `scenario` 与 `players` 的领域数据类型，并继续按模块拆分前端会话 transport；不要在单个批次混入协议格式变更。

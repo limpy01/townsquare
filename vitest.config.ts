@@ -1,8 +1,16 @@
+import { fileURLToPath, URL } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [vue()],
+  resolve: {
+    alias: {
+      "@townsquare/contracts/local-storage": fileURLToPath(
+        new URL("./packages/contracts/src/local-storage.ts", import.meta.url),
+      ),
+    },
+  },
   test: {
     include: ["packages/*/test/**/*.test.ts", "src/**/*.test.ts"],
     reporters: ["default"],
