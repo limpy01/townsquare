@@ -152,6 +152,7 @@
 - 魔典 contracts schema 已区分角色、玩家提醒与说书人提醒条目；入站处理只读取符合对应条目形状的数组，并跳过不存在的席位，避免不完整直发消息污染本地玩家状态。
 - 伪装与魔典分发的目标参数现有独立 TypeScript 结构，支持全体、角色、座位和 player ID 四种历史路由；座位不在当前玩家列表时不会生成无效直发消息。
 - 已在 numeric player ID 兼容修复后重新运行完整 `npm run check`：格式、lint、运行时源码、唯一 TypeScript 抑制、类型检查、106 个单元、13 个服务端集成、4 个 Chromium E2E 和生产构建全部通过。浏览器流程仍会输出既有的 readonly computed Vue warning，未作为本批改动范围扩展。
+- session transport 的 `leaveSeat` 已不再直接写入只读 runtime projection，而是走 `session/claimSeat` 兼容命令；此路径已有 socket 回归。创建房间流程中的 readonly computed Vue warning 仍存在，已确认并非该离座写入所致，后续将按组件双向绑定单独定位。
 
 ## 本批次约束
 

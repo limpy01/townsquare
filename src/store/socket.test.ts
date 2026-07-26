@@ -160,6 +160,21 @@ describe("session socket message decoder", () => {
 
     expect(sendDirect).not.toHaveBeenCalled();
   });
+
+  it("clears a departed seat through the session command boundary", () => {
+    const commit = vi.fn();
+    const session = new LiveSession({
+      commit,
+      state: {
+        players: { players: [] },
+        session: { playerId: "player-1", sessionId: "", claimedSeat: 2 },
+      },
+    });
+
+    session._updateLeaveSeat();
+
+    expect(commit).toHaveBeenCalledWith("session/claimSeat", -1);
+  });
 });
 
 afterEach(() => vi.useRealTimers());

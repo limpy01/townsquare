@@ -1226,7 +1226,7 @@ export class LiveSession {
   }
 
   _updateLeaveSeat() {
-    this._store.state.session.claimedSeat = -1;
+    this._store.commit("session/claimSeat", -1);
   }
 
   /**
