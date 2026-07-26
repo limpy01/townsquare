@@ -45,8 +45,28 @@ import {
   encodeSessionMessage,
 } from "./session-socket-protocol";
 
+type LegacyRuntimePlayer = {
+  name: string;
+  id: string;
+  image: string;
+  role: { id?: string; team?: string };
+  reminders: Array<{ role?: string }>;
+  stReminders: unknown[];
+  isDead: boolean;
+  isVoteless: boolean;
+  isSecretVoteless: boolean;
+  isAllowRole: boolean;
+  isWraith: boolean;
+  isUsingWraith: boolean;
+  isTalking: boolean;
+  votes: number;
+  pronouns: string;
+  chatGroup: string;
+  [key: string]: unknown;
+};
+
 type LegacyRuntimeState = {
-  players: { players: unknown[] } & Record<string, unknown>;
+  players: { players: LegacyRuntimePlayer[] } & Record<string, unknown>;
   session: { playerId: string; sessionId: string } & Record<string, unknown>;
 } & Record<string, unknown>;
 
