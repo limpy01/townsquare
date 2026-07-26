@@ -5,6 +5,7 @@ import {
   decodeLegacyEnvelope,
   encodeLegacyEnvelope,
   isLegacyClientCommand,
+  isLegacyClientPayload,
   legacyClientCommandSchema,
   legacyDirectPayloadSchema,
   legacyRequestPayloadSchema,
@@ -62,6 +63,14 @@ describe("legacy client command boundary", () => {
       legacyClientCommandSchema.safeParse("runArbitraryCode").success,
     ).toBe(false);
     expect(isLegacyClientCommand("runArbitraryCode")).toBe(false);
+  });
+
+  it("validates known scalar payloads while keeping specialized commands delegated", () => {
+    expect(isLegacyClientPayload("setTimer", 30)).toBe(true);
+    expect(isLegacyClientPayload("setTimer", -1)).toBe(false);
+    expect(isLegacyClientPayload("direct", { player: ["chat", {}] })).toBe(
+      true,
+    );
   });
 
   it("validates the player talking payload", () => {
@@ -157,6 +166,8 @@ describe("legacy session command boundary", () => {
     expect(isLegacySessionPayload("chat", { message: "missing ids" })).toBe(
       false,
     );
+    expect(isLegacySessionPayload("unknown", null)).toBe(false);
+    expect(isLegacySessionPayload("pong", null)).toBe(false);
   });
 });
 
@@ -187,6 +198,13 @@ describe("custom script input", () => {
     await expect(
       fixture("scripts/invalid-script.json").then(parseCustomScript),
     ).rejects.toThrow();
+  });
+
+  it.each([
+    [{ id: "!!!" }],
+    [{ id: "custom", name: "Custom", team: "townsfolk" }],
+  ])("rejects incomplete normalized custom roles %#", (input) => {
+    expect(() => parseCustomScript(input)).toThrow();
   });
 });
 
@@ -225,6 +243,15 @@ describe("HTTP boundary input", () => {
     { playerId: "player-a", uploadContent: "" },
   ])("rejects malformed avatar upload input %#", (input) => {
     expect(() => parseAvatarUpload(input)).toThrow();
+  });
+
+  it("validates host and join request targets", () => {
+    expect(
+      legacyRequestPayloadSchema.parse({ checkAllowHost: ["player-a"] }),
+    ).toEqual({ checkAllowHost: ["player-a"] });
+    expect(
+      legacyRequestPayloadSchema.safeParse({ checkAllowJoin: [1] }).success,
+    ).toBe(false);
   });
 });
 

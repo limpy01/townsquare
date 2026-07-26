@@ -1,6 +1,24 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
+const packageName = process.argv[2];
+const packages = {
+  domain: {
+    label: "@townsquare/domain",
+    minimum: { statements: 95, branches: 90, lines: 95 },
+  },
+  contracts: {
+    label: "@townsquare/contracts",
+    minimum: { statements: 95, branches: 90, lines: 95 },
+  },
+};
+const packageConfig = packages[packageName];
+if (!packageConfig) {
+  throw new Error(
+    `请指定 coverage package：${Object.keys(packages).join("、")}。`,
+  );
+}
+
 const reportPath = path.join(process.cwd(), "coverage", "coverage-final.json");
 if (!fs.existsSync(reportPath)) {
   throw new Error(
@@ -9,13 +27,12 @@ if (!fs.existsSync(reportPath)) {
 }
 
 const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
-const domainMarker = `${path.sep}packages${path.sep}domain${path.sep}src${path.sep}`;
+const domainMarker = `${path.sep}packages${path.sep}${packageName}${path.sep}src${path.sep}`;
 const domainFiles = Object.entries(report).filter(([file]) =>
   file.includes(domainMarker),
 );
-if (!domainFiles.length) {
-  throw new Error("覆盖率报告中没有 @townsquare/domain 源文件。");
-}
+if (!domainFiles.length)
+  throw new Error(`覆盖率报告中没有 ${packageConfig.label} 源文件。`);
 
 const metrics = {
   statements: { covered: 0, total: 0 },
@@ -44,11 +61,12 @@ for (const [, file] of domainFiles) {
   }
 }
 
-const minimum = { statements: 95, branches: 90, lines: 95 };
-const failed = Object.entries(minimum).filter(([name, threshold]) => {
-  const metric = metrics[name];
-  return metric.covered / metric.total < threshold / 100;
-});
+const failed = Object.entries(packageConfig.minimum).filter(
+  ([name, threshold]) => {
+    const metric = metrics[name];
+    return metric.covered / metric.total < threshold / 100;
+  },
+);
 
 if (failed.length) {
   const detail = failed
@@ -59,11 +77,11 @@ if (failed.length) {
       )}% < ${threshold}%`;
     })
     .join(", ");
-  throw new Error(`@townsquare/domain 覆盖率门禁失败：${detail}`);
+  throw new Error(`${packageConfig.label} 覆盖率门禁失败：${detail}`);
 }
 
 console.log(
-  `@townsquare/domain 覆盖率通过：${Object.entries(metrics)
+  `${packageConfig.label} 覆盖率通过：${Object.entries(metrics)
     .map(
       ([name, metric]) =>
         `${name} ${((metric.covered / metric.total) * 100).toFixed(2)}%`,
