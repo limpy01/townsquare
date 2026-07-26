@@ -2346,11 +2346,11 @@ export class LiveSession {
     if (this._isSpectator) return;
 
     const players = this._store.state.players.players;
-    const sendingPlayer = players.filter(
+    const sendingPlayer = players.find(
       (player) => player.id === sendingPlayerId,
     );
-    if (sendingPlayer.length <= 0) return;
-    const chatId = sendingPlayer[0].chatGroup;
+    if (!sendingPlayer) return;
+    const chatId = sendingPlayer.chatGroup;
 
     const wraiths = players.filter(
       (player) =>
