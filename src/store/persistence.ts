@@ -28,6 +28,19 @@ type LegacyPersistenceStore = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const storedRoleId = (role: unknown) =>
+  isRecord(role) && typeof role.id === "string" ? role.id : undefined;
+
+const serializeStoredPlayer = (player: unknown) => {
+  if (!isRecord(player)) return null;
+  const { role, ...storedPlayer } = player;
+  return {
+    ...storedPlayer,
+    // The legacy snapshot stores role IDs instead of full catalog records.
+    role: storedRoleId(role) ?? {},
+  };
+};
+
 type LegacyGroupChat = {
   id: string;
   playerIds: string[];
@@ -394,7 +407,12 @@ export default (store: LegacyPersistenceStore) => {
       case "players/updateBluff":
         localStorage.setItem(
           "bluffs",
-          JSON.stringify(state.players.bluffs.map(({ id }: any) => id)),
+          JSON.stringify(
+            state.players.bluffs.flatMap((role: unknown) => {
+              const id = storedRoleId(role);
+              return id === undefined ? [] : [id];
+            }),
+          ),
         );
         break;
       case "players/setFabled":
@@ -411,11 +429,10 @@ export default (store: LegacyPersistenceStore) => {
           localStorage.setItem(
             "players",
             JSON.stringify(
-              state.players.players.map((player: any) => ({
-                ...player,
-                // simplify the stored data
-                role: player.role.id || {},
-              })),
+              state.players.players.flatMap((player: unknown) => {
+                const storedPlayer = serializeStoredPlayer(player);
+                return storedPlayer ? [storedPlayer] : [];
+              }),
             ),
           );
         } else {
@@ -495,10 +512,10 @@ export default (store: LegacyPersistenceStore) => {
           const votes = readStoredArray(localStorage, "votes");
           const votesSelected = readStoredArray(localStorage, "votesSelected");
           const newVotes = votes.filter(
-            (_: any, index: number) => !payload.includes(index),
+            (_, index: number) => !payload.includes(index),
           );
           const newVotesSelected = votesSelected.filter(
-            (_: any, index: number) => !payload.includes(index),
+            (_, index: number) => !payload.includes(index),
           );
           localStorage.setItem("votes", JSON.stringify(newVotes));
           localStorage.setItem(

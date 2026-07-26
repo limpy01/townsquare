@@ -174,4 +174,37 @@ describe("persistence compatibility plugin", () => {
     });
     expect(localStorage.getItem("isRole")).toBeNull();
   });
+
+  it("serializes only valid player and role records", () => {
+    const localStorage = createStorage();
+    vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
+    const unsubscribe = persistence({ commit: vi.fn(), state: {} });
+
+    mutationBus.emit(
+      { type: "players/setBluff" },
+      { players: { bluffs: [{ id: "imp" }, null, { id: 1 }] } },
+    );
+    mutationBus.emit(
+      { type: "players/update" },
+      {
+        players: {
+          players: [
+            { id: "alice", role: { id: "chef" } },
+            { id: "bob", role: "invalid" },
+            null,
+          ],
+        },
+      },
+    );
+
+    unsubscribe?.();
+
+    expect(localStorage.getItem("bluffs")).toBe(JSON.stringify(["imp"]));
+    expect(localStorage.getItem("players")).toBe(
+      JSON.stringify([
+        { id: "alice", role: "chef" },
+        { id: "bob", role: {} },
+      ]),
+    );
+  });
 });
