@@ -1,4 +1,6 @@
 // @ts-nocheck
+// MIG-011: LiveSession still needs field declarations and legacy runtime boundary types.
+// Remove after the transport is split into typed lifecycle and protocol modules.
 import { wsBase } from "../config";
 import { pinia } from "../pinia";
 import { isLegacySessionPayload } from "@townsquare/contracts/legacy-client-command";

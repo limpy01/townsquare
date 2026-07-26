@@ -20,6 +20,7 @@ jobs:
       - run: npm run format:check
       - run: npm run lint:baseline
       - run: npm run check:runtime-sources
+      - run: npm run check:type-suppressions
       - run: npm run typecheck
       - run: npm run test:unit:coverage
       - run: npm run check:coverage:domain
