@@ -2256,7 +2256,7 @@ export class LiveSession {
    * Remove a group chat. ST only
    * @param playerIds all ids for them to remove group chat.
    */
-  sendRemoveGroupChat({ playerIds }) {
+  sendRemoveGroupChat({ playerIds }: { playerIds?: string[] }) {
     if (this._isSpectator) return;
     if (!playerIds) return;
 
@@ -2276,7 +2276,13 @@ export class LiveSession {
    * @param chatId id of the chat group
    * @param player player within the chat group
    */
-  sendRemoveGroupChatMember({ chatId, player }) {
+  sendRemoveGroupChatMember({
+    chatId,
+    player,
+  }: {
+    chatId: string;
+    player: LegacyRuntimePlayer;
+  }) {
     if (this._isSpectator) return;
 
     this._store.commit("session/addMessageQueue", {
@@ -2289,7 +2295,9 @@ export class LiveSession {
 
     const index = this._chat.groups.findIndex((group) => group.id === chatId);
     if (index === -1) return;
-    this._chat.groups[index].players.forEach((member) => {
+    const group = this._chat.groups[index];
+    if (!group) return;
+    group.players.forEach((member) => {
       if (member.id === player.id) return;
       this._store.commit("session/addMessageQueue", {
         type: "direct",
