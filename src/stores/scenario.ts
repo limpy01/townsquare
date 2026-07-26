@@ -1,5 +1,9 @@
 import { defineStore } from "pinia";
-import { getEditionRoles, getOtherTravelers } from "@townsquare/domain";
+import {
+  buildScenarioRoleCatalog,
+  getEditionRoles,
+  getOtherTravelers,
+} from "@townsquare/domain";
 import { parseCustomScript } from "@townsquare/contracts/custom-script";
 import editionJSON from "../editions.json";
 import rolesJSON from "../roles.json";
@@ -148,34 +152,14 @@ export const useScenarioStore = defineStore("scenario", {
         .filter((role: any) => role.name && role.ability && role.team)
         .sort((a: any, b: any) => b.team.localeCompare(a.team));
 
-      this.roles = new Map(
-        processedRoles
-          .filter(
-            (role: any) => role.team !== "fabled" && role.team !== "loric",
-          )
-          .map((role: any) => {
-            if (role.team === "traveller") role.team = "traveler";
-            return role;
-          })
-          .map((role: any) => [role.id, role]),
+      const catalog = buildScenarioRoleCatalog(
+        processedRoles,
+        rolesJSON,
+        fabledJSON,
       );
-      this.fabled = new Map([
-        ...processedRoles
-          .filter(
-            (role: any) => role.team === "fabled" || role.team === "loric",
-          )
-          .map((role: any) => [role.id, role] as [any, any]),
-        ...fabledJSON.map((role) => [role.id, role] as [any, any]),
-      ]);
-      this.otherTravelers = new Map(
-        rolesJSON
-          .filter(
-            (role) =>
-              role.team === "traveler" &&
-              !roles.some((candidate: any) => candidate.id === role.id),
-          )
-          .map((role) => [role.id, role]),
-      );
+      this.roles = catalog.roles;
+      this.fabled = catalog.fabled;
+      this.otherTravelers = catalog.otherTravelers;
       return true;
     },
     setEdition(edition: any) {

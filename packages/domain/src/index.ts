@@ -47,6 +47,44 @@ export function getOtherTravelers<TRole extends CatalogRole>(
   );
 }
 
+export interface ScenarioCatalogRole extends CatalogRole {
+  [property: string]: unknown;
+}
+
+export interface ScenarioRoleCatalog<TRole extends ScenarioCatalogRole> {
+  roles: Map<string, TRole>;
+  fabled: Map<string, TRole>;
+  otherTravelers: Map<string, TRole>;
+}
+
+/** Build the three role collections consumed by the scenario UI. */
+export function buildScenarioRoleCatalog<TRole extends ScenarioCatalogRole>(
+  customRoles: readonly TRole[],
+  officialRoles: readonly TRole[],
+  officialFabled: readonly TRole[],
+): ScenarioRoleCatalog<TRole> {
+  const roles = new Map(
+    customRoles
+      .filter((role) => role.team !== "fabled" && role.team !== "loric")
+      .map((role) => [
+        role.id,
+        role.team === "traveller" ? { ...role, team: "traveler" } : role,
+      ]),
+  );
+  const fabled = new Map(
+    [...customRoles, ...officialFabled]
+      .filter((role) => role.team === "fabled" || role.team === "loric")
+      .map((role) => [role.id, role]),
+  );
+  const customRoleIds = new Set(customRoles.map((role) => role.id));
+  const otherTravelers = new Map(
+    officialRoles
+      .filter((role) => role.team === "traveler" && !customRoleIds.has(role.id))
+      .map((role) => [role.id, role]),
+  );
+  return { roles, fabled, otherTravelers };
+}
+
 export interface NightOrderRole {
   id?: string;
   firstNight?: number;

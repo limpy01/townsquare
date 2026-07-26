@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   countVotes,
+  buildScenarioRoleCatalog,
   getEditionRoles,
   getNightOrder,
   getOtherTravelers,
@@ -52,6 +53,28 @@ describe("edition role catalog", () => {
   it("finds only travellers absent from the selected edition", () => {
     expect(getOtherTravelers(roles, { id: "tb", roles: ["barista"] })).toEqual([
       roles[3],
+    ]);
+  });
+
+  it("separates custom roles, fabled roles, and available travellers", () => {
+    const catalog = buildScenarioRoleCatalog(
+      [
+        { id: "custom", edition: "custom", team: "townsfolk" },
+        { id: "legacy-traveller", edition: "custom", team: "traveller" },
+        { id: "custom-fabled", edition: "custom", team: "fabled" },
+      ],
+      roles,
+      [{ id: "bootlegger", edition: "custom", team: "fabled" }],
+    );
+
+    expect([...catalog.roles.values()]).toMatchObject([
+      { id: "custom", team: "townsfolk" },
+      { id: "legacy-traveller", team: "traveler" },
+    ]);
+    expect([...catalog.fabled.keys()]).toEqual(["custom-fabled", "bootlegger"]);
+    expect([...catalog.otherTravelers.keys()]).toEqual([
+      "barista",
+      "gunslinger",
     ]);
   });
 });
