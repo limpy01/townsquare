@@ -14,6 +14,7 @@
     "test:server": "node --test server/test/**/*.test.js",
     "test:unit": "vitest run",
     "test:unit:coverage": "vitest run --coverage",
+    "check:coverage:domain": "node scripts/check-domain-coverage.cjs",
     "typecheck": "npm run build --workspace=@townsquare/contracts && npm run build --workspace=@townsquare/domain && tsc -p server/tsconfig.json --noEmit && vue-tsc --noEmit -p tsconfig.web.json",
     "build:packages": "npm run build --workspace=@townsquare/contracts && npm run build --workspace=@townsquare/domain",
     "build:server-types": "npm run build --workspace=@townsquare/contracts && tsc -p server/tsconfig.json",

@@ -47,4 +47,38 @@ describe("getNightOrder", () => {
     expect(order.get(players[1]!)).toEqual({ first: 1, other: 2 });
     expect(order.get(fabled)).toEqual({ first: 3, other: 3 });
   });
+
+  it("keeps entries without an active role at position zero", () => {
+    const unassigned = {};
+    const inactive = { role: { id: "inactive", firstNight: 0 } };
+
+    const order = getNightOrder(
+      [unassigned, inactive],
+      [],
+      ["unused"],
+      ["unused"],
+    );
+
+    expect(order.get(unassigned)).toEqual({ first: 0, other: 0 });
+    expect(order.get(inactive)).toEqual({ first: 0, other: 0 });
+  });
+
+  it("deduplicates matching numeric positions when custom order is unavailable", () => {
+    const first = { id: "first", firstNight: 3, otherNight: 2 };
+    const second = { id: "second", firstNight: 3, otherNight: 2 };
+    const players = [{ role: first }, { role: second }];
+
+    const order = getNightOrder(players, [], [], []);
+
+    expect(order.get(players[0]!)).toEqual({ first: 1, other: 1 });
+    expect(order.get(players[1]!)).toEqual({ first: 1, other: 1 });
+  });
+
+  it("handles an active custom-order role without an id", () => {
+    const anonymous = { role: { firstNight: 1, otherNight: 1 } };
+
+    const order = getNightOrder([anonymous], [], [""], [""]);
+
+    expect(order.get(anonymous)).toEqual({ first: 0, other: 0 });
+  });
 });
