@@ -138,7 +138,8 @@
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
 - 服务端同样覆盖相同玩家 ID 的重连替换：旧玩家连接以 1012 关闭，新连接可继续向说书人发送 v1 claim 消息，避免 room registry 残留旧 socket。
-- 严格 TypeScript 诊断已确认唯一剩余 `@ts-nocheck` 为 `src/store/socket.ts`；MIG-011 已完成 LiveSession 字段、出站 helper 和队列 payload guard 声明，移除抑制后的错误数从 701 降至 293，剩余主要为 legacy runtime payload 收窄和 transport 方法签名。该例外由 CI 限制为唯一允许项，禁止新增匿名抑制，并将按生命周期与协议 handler 分段移除。
+- 严格 TypeScript 诊断已确认唯一剩余 `@ts-nocheck` 为 `src/store/socket.ts`；MIG-011 已完成 LiveSession 字段、出站 helper、队列 payload guard 和连接生命周期声明，移除抑制后的错误数从 701 降至 285，剩余主要为 legacy runtime payload 收窄和 transport 方法签名。该例外由 CI 限制为唯一允许项，禁止新增匿名抑制，并将按生命周期与协议 handler 分段移除。
+- MIG-011 的连接生命周期现已在 transport 边界收窄：会话号仅接受有限的字符串或数字标量，WebSocket close/message 事件、输入弹窗请求和授权回调均有显式类型；非布尔授权与非字符串告警会被安全忽略，避免未校验服务端 payload 污染 Pinia 授权状态或弹窗。
 
 ## 本批次约束
 

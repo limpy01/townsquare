@@ -76,6 +76,42 @@ describe("session socket message decoder", () => {
 
     expect(commit).not.toHaveBeenCalled();
   });
+
+  it("rejects non-scalar session channels before opening a socket", async () => {
+    const commit = vi.fn();
+    const session = new LiveSession({
+      commit,
+      state: {
+        players: { players: [] },
+        session: { playerId: "player-1", sessionId: "" },
+      },
+    });
+    const disconnect = vi.spyOn(session, "disconnect");
+    const alertPopup = vi
+      .spyOn(session, "_alertPopup")
+      .mockResolvedValue(undefined);
+
+    await session.connect({ channel: "12" });
+
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(alertPopup).toHaveBeenCalledWith("无效的房间号！");
+    expect(commit).toHaveBeenCalledWith("session/setSessionId", "");
+  });
+
+  it("ignores malformed inbound alert payloads", async () => {
+    const session = new LiveSession({
+      commit: vi.fn(),
+      state: {
+        players: { players: [] },
+        session: { playerId: "player-1", sessionId: "" },
+      },
+    });
+    const showModal = vi.spyOn(session, "showInputModal");
+
+    await session._alertPopup({ text: "not an alert string" });
+
+    expect(showModal).not.toHaveBeenCalled();
+  });
 });
 
 afterEach(() => vi.useRealTimers());

@@ -7,6 +7,7 @@ import { isLegacySessionPayload } from "@townsquare/contracts/legacy-client-comm
 import type { LegacyFeedback } from "@townsquare/contracts/legacy-envelope";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
+import type { InputModalRequest } from "../stores/input";
 import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useAudioStore } from "../stores/audio";
@@ -120,7 +121,7 @@ export class LiveSession {
    * @param channel
    * @private
    */
-  _open(channel) {
+  _open(channel: string) {
     this.disconnect();
     this._socket = new WebSocket(
       this._wss +
@@ -139,7 +140,7 @@ export class LiveSession {
     }
     this._socket.addEventListener("message", this._handleMessage.bind(this));
     this._socket.onopen = this._onOpen.bind(this);
-    this._socket.onclose = (err) => {
+    this._socket.onclose = (err: CloseEvent) => {
       this._socket = null;
       clearTimeout(this._pingTimer);
       this._pingTimer = null;
@@ -370,7 +371,7 @@ export class LiveSession {
    * Open event handler for socket.
    * @private
    */
-  _onOpen() {
+  _onOpen(): void {
     if (this._isSpectator) {
       this._sendDirect(
         "host",
@@ -403,7 +404,7 @@ export class LiveSession {
    * Send a ping message with player ID and ST flag.
    * @private
    */
-  _ping() {
+  _ping(): void {
     this._handlePing();
     this._send("ping", [
       this._isSpectator
@@ -427,7 +428,7 @@ export class LiveSession {
    * @param data
    * @private
    */
-  _handleMessage({ data }) {
+  _handleMessage({ data }: MessageEvent<unknown>): void {
     const envelope = decodeSessionMessage(data);
     if (!envelope) {
       console.log("unsupported socket message", data);
@@ -450,15 +451,23 @@ export class LiveSession {
    * Set a unique playerId if there isn't one yet.
    * @param channel
    */
-  async connect(channel) {
-    if (!Number(channel) || Number(channel) < 1 || Number(channel) > 10000) {
+  async connect(channel: unknown): Promise<void> {
+    const channelNumber =
+      typeof channel === "string" || typeof channel === "number"
+        ? Number(channel)
+        : Number.NaN;
+    if (
+      !Number.isFinite(channelNumber) ||
+      channelNumber < 1 ||
+      channelNumber > 10000
+    ) {
       this.disconnect();
       this._store.commit("session/setSessionId", "");
       await this._alertPopup("无效的房间号！");
       return;
     }
     if (!this._store.state.session.playerId) {
-      let playerId;
+      let playerId = "";
       // 禁止host、_host和player作为playerId
       while (
         !playerId ||
@@ -472,7 +481,7 @@ export class LiveSession {
       this._store.commit("session/setPlayerId", playerId);
     }
     if (!this._store.state.session.stSecret) {
-      let stSecret;
+      let stSecret = "";
       // 禁止host、_host和player作为playerId
       while (
         !stSecret ||
@@ -494,20 +503,20 @@ export class LiveSession {
     this._pings = {};
     this._connection.setPlayerCount(0);
     this._connection.setPing(0);
-    this._isSpectator = this._store.state.session.isSpectator;
+    this._isSpectator = this._store.state.session.isSpectator === true;
     if (this._store.state.session.claimedSeat >= 0) {
       this._store.commit("session/setTalking", {
         seatNum: this._store.state.session.claimedSeat,
         isTalking: false,
       });
     }
-    this._open(channel);
+    this._open(String(channel));
   }
 
   /**
    * Close the current session, if any.
    */
-  disconnect() {
+  disconnect(): void {
     this._pings = {};
     this._connection.setPlayerCount(0);
     this._connection.setPing(0);
@@ -533,7 +542,8 @@ export class LiveSession {
   /**
    * Alert any messages from the server
    */
-  async _alertPopup(text) {
+  async _alertPopup(text: unknown): Promise<void> {
+    if (typeof text !== "string") return;
     await this.showInputModal({
       inputType: "alert",
       inputModal: "text",
@@ -546,14 +556,14 @@ export class LiveSession {
     return;
   }
 
-  showInputModal(request) {
+  showInputModal(request: InputModalRequest) {
     return showInputModal(request);
   }
 
   /**
    * Send request to server to check if hosting channel is allowed (no existing hosts).
    */
-  async checkAllowHost() {
+  async checkAllowHost(): Promise<void> {
     if (this._connection.isHostAllowed === true) return;
     this._request("checkAllowHost", this._store.state.session.playerId);
     this._hostTimeout = setTimeout(async () => {
@@ -576,7 +586,8 @@ export class LiveSession {
   /**
    * @param allow indicator to if hosting the channel is allowed
    */
-  async _handleAllowHost(allow) {
+  async _handleAllowHost(allow: unknown): Promise<void> {
+    if (typeof allow !== "boolean") return;
     if (this._connection.isHostAllowed === true) return;
     clearInterval(this._hostTimeout);
     this._hostTimeout = null;
@@ -604,7 +615,7 @@ export class LiveSession {
   /**
    * Send request to server to check if joining the channel is allowed (has a host).
    */
-  checkAllowJoin() {
+  checkAllowJoin(): void {
     if (this._connection.isJoinAllowed === true) return;
     this._request("checkAllowJoin", this._store.state.session.playerId);
     this._joinTimeout = setTimeout(async () => {
@@ -627,7 +638,8 @@ export class LiveSession {
   /**
    * @param allow indicator to if joining the session is allowed
    */
-  async _handleAllowJoin(allow) {
+  async _handleAllowJoin(allow: unknown): Promise<void> {
+    if (typeof allow !== "boolean") return;
     if (this._connection.isJoinAllowed === true) return;
     clearInterval(this._joinTimeout);
     this._joinTimeout = null;
