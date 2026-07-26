@@ -120,6 +120,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
 import { iconImage } from "../../assets/images";
 import Modal from "./Modal.vue";
 import { useGrimoireStore } from "../../stores/grimoire";
@@ -134,18 +135,41 @@ const playerState = usePlayersStore();
 const scenario = useScenarioStore();
 const session = useSessionIdentityStore();
 const players = computed(() => playerState.players);
-const fabled = computed(() => playerState.fabled);
-const roles = scenario.roles as Map<string, any>;
-const edition = computed(() => scenario.edition ?? ({} as any));
+type NightRole = ScenarioCatalogRole & {
+  name?: string;
+  image?: string;
+  imageAlt?: string;
+  firstNight?: number;
+  firstNightReminder?: string;
+  otherNight?: number;
+  otherNightReminder?: string;
+};
+type NightEntry = NightRole & {
+  alias?: string;
+  players: typeof playerState.players;
+};
+type EditionDisplay = { name?: string };
+
+const fabled = computed(() => playerState.fabled as NightRole[]);
+const roles = scenario.roles as Map<string, NightRole>;
+const edition = computed(() => scenario.edition as unknown as EditionDisplay);
 const isShowVacant = ref(false);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+const withPlayers = (
+  role: NightRole,
+  rolePlayers: typeof playerState.players = [],
+): NightEntry => ({ ...role, players: rolePlayers });
 
 const setPlayerAnnotations = () => {
   // 打开行动顺序时先给所有座位加上座位号，同时检索是其他类型的token
   players.value.forEach((player, index) => {
     player.index = index;
     let another = "";
-    player.reminders.forEach((reminder: any) => {
-      switch (reminder.name) {
+    player.reminders.forEach((reminder: unknown) => {
+      const name = isRecord(reminder) ? reminder.name : undefined;
+      switch (name) {
         case "是学徒":
           another = another + "（学徒）";
           break;
@@ -181,11 +205,11 @@ const setPlayerAnnotations = () => {
 
 const rolesFirstNight = computed(() => {
   setPlayerAnnotations();
-  const rolesFirstNight: any[] = [];
+  const rolesFirstNight: NightEntry[] = [];
   // add minion / demon infos to night order sheet
   if (players.value.length > 6) {
     rolesFirstNight.push(
-      {
+      withPlayers({
         id: "evil",
         alias: "minioninfo",
         name: "爪牙信息",
@@ -195,8 +219,8 @@ const rolesFirstNight = computed(() => {
         firstNightReminder:
           "如果爪牙多于一位，让他们互相看清彼此。" +
           "展示这是恶魔卡片，指向恶魔。（夜间顺序15）",
-      },
-      {
+      }),
+      withPlayers({
         id: "evil",
         alias: "demoninfo",
         name: "恶魔信息与伪装身份",
@@ -206,7 +230,7 @@ const rolesFirstNight = computed(() => {
         firstNightReminder:
           "展示这些是你的爪牙卡片，并指向每个爪牙。" +
           "展示这些身份不在游戏中卡片，并展示3个不在场的善良身份。（夜间顺序21）",
-      },
+      }),
     );
   }
   roles.forEach((role) => {
@@ -214,19 +238,21 @@ const rolesFirstNight = computed(() => {
     if (role.firstNight && (role.team !== "traveler" || rolePlayers.length)) {
       if (rolePlayers.length > 0 && !rolePlayers[0].id)
         rolePlayers[0].name = "";
-      rolesFirstNight.push(Object.assign({ players: rolePlayers }, role));
+      rolesFirstNight.push(withPlayers(role, rolePlayers));
     }
   });
   fabled.value
     .filter(({ firstNight }) => firstNight)
     .forEach((fabled) => {
-      rolesFirstNight.push(Object.assign({ players: [] }, fabled));
+      rolesFirstNight.push(withPlayers(fabled));
     });
   const rolesList = [...roles.values()];
   const roleIds = [
-    ...rolesList.filter((role) => role.firstNight > 0).map((role) => role.id),
+    ...rolesList
+      .filter((role) => (role.firstNight ?? 0) > 0)
+      .map((role) => role.id),
     ...fabled.value
-      .filter((role) => role.firstNight > 0)
+      .filter((role) => (role.firstNight ?? 0) > 0)
       .map((role) => role.id),
     "dusk",
     "dawn",
@@ -234,48 +260,49 @@ const rolesFirstNight = computed(() => {
     "demoninfo",
   ];
   const customOrder =
-    scenario.firstNight.every((role: any) => roleIds.includes(role)) &&
+    scenario.firstNight.every((role) => roleIds.includes(role)) &&
     roleIds.every((role) => scenario.firstNight.includes(role));
   rolesFirstNight.sort((a, b) => {
     return customOrder
-      ? (scenario.firstNight as any[]).indexOf(a.alias || a.id) -
-          (scenario.firstNight as any[]).indexOf(b.alias || b.id)
-      : a.firstNight - b.firstNight;
+      ? scenario.firstNight.indexOf(a.alias || a.id) -
+          scenario.firstNight.indexOf(b.alias || b.id)
+      : (a.firstNight ?? 0) - (b.firstNight ?? 0);
   });
   return rolesFirstNight;
 });
 const rolesOtherNight = computed(() => {
-  const rolesOtherNight: any[] = [];
+  const rolesOtherNight: NightEntry[] = [];
   roles.forEach((role) => {
     const rolePlayers = players.value.filter((p) => p.role.id === role.id);
     if (role.otherNight && (role.team !== "traveler" || rolePlayers.length)) {
       if (rolePlayers.length > 0 && !rolePlayers[0].id)
         rolePlayers[0].name = "";
-      rolesOtherNight.push(Object.assign({ players: rolePlayers }, role));
+      rolesOtherNight.push(withPlayers(role, rolePlayers));
     }
   });
   fabled.value
     .filter(({ otherNight }) => otherNight)
     .forEach((fabled) => {
-      rolesOtherNight.push(Object.assign({ players: [] }, fabled));
+      rolesOtherNight.push(withPlayers(fabled));
     });
   const rolesList = [...roles.values()];
   const roleIds = [
-    ...rolesList.filter((role) => role.otherNight > 0).map((role) => role.id),
+    ...rolesList
+      .filter((role) => (role.otherNight ?? 0) > 0)
+      .map((role) => role.id),
     ...fabled.value
-      .filter((role) => role.otherNight > 0)
+      .filter((role) => (role.otherNight ?? 0) > 0)
       .map((role) => role.id),
     "dusk",
     "dawn",
   ];
   const customOrder =
-    scenario.otherNight.every((role: any) => roleIds.includes(role)) &&
+    scenario.otherNight.every((role) => roleIds.includes(role)) &&
     roleIds.every((role) => scenario.otherNight.includes(role));
   rolesOtherNight.sort((a, b) => {
     return customOrder
-      ? (scenario.otherNight as any[]).indexOf(a.id) -
-          (scenario.otherNight as any[]).indexOf(b.id)
-      : a.otherNight - b.otherNight;
+      ? scenario.otherNight.indexOf(a.id) - scenario.otherNight.indexOf(b.id)
+      : (a.otherNight ?? 0) - (b.otherNight ?? 0);
   });
   return rolesOtherNight;
 });
