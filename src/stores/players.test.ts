@@ -65,4 +65,61 @@ describe("players store", () => {
 
     expect(players.players).toEqual([{ name: "Bob", role: {} }]);
   });
+
+  it("moves and swaps seats without losing player records", () => {
+    const players = usePlayersStore();
+    players.setPlayers([
+      { id: "a", name: "Alice", role: {} },
+      { id: "b", name: "Bob", role: {} },
+      { id: "c", name: "Carol", role: {} },
+    ]);
+
+    players.move([0, 2]);
+    players.swap([0, 1]);
+
+    expect(players.players.map((player) => player.id)).toEqual(["c", "b", "a"]);
+  });
+
+  it("preserves traveler roles when a spectator clears role details", () => {
+    const players = usePlayersStore();
+    players.setPlayers([
+      {
+        id: "traveler",
+        role: { id: "barista", team: "traveler" },
+        reminders: [{ name: "old" }],
+      },
+      {
+        id: "townsfolk",
+        role: { id: "chef", team: "townsfolk" },
+        reminders: [{ name: "old" }],
+      },
+    ]);
+
+    players.clearRoles(true);
+
+    expect(players.players).toMatchObject([
+      { role: { id: "barista" }, reminders: [] },
+      { role: {}, reminders: [] },
+    ]);
+    expect(players.bluffs).toEqual([]);
+  });
+
+  it("tracks message and talking state only for the matching seat", () => {
+    const players = usePlayersStore();
+    players.setPlayers([
+      { id: "alice", role: {}, newMessages: 0, isTalking: false },
+      { id: "bob", role: {}, newMessages: 0, isTalking: false },
+    ]);
+
+    players.setPlayerMessage({ playerId: "alice", num: 2 });
+    players.setPlayerMessage({ playerId: "alice", num: 1 });
+    players.setPlayerMessage({ playerId: "bob", num: 0 });
+    players.setTalking({ seatNum: 0, playerId: "bob", isTalking: true });
+    players.setTalking({ seatNum: 1, playerId: "bob", isTalking: true });
+
+    expect(players.players).toMatchObject([
+      { id: "alice", newMessages: 3, isTalking: false },
+      { id: "bob", newMessages: 0, isTalking: true },
+    ]);
+  });
 });
