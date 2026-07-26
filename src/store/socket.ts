@@ -1,9 +1,6 @@
 import { wsBase } from "../config";
 import { pinia } from "../pinia";
-import {
-  isLegacySessionPayload,
-  legacySetTalkingPayloadSchema,
-} from "@townsquare/contracts/legacy-client-command";
+import { isLegacySessionPayload } from "@townsquare/contracts/legacy-client-command";
 import type {
   LegacyChatPayload,
   LegacyClaimPayload,
@@ -44,6 +41,19 @@ import {
   decodeSessionMessage,
   encodeSessionMessage,
 } from "./session-socket-protocol";
+import {
+  gameStatePlayerProperties,
+  isAddGroupChatPayload,
+  isChatOutboxPayload,
+  isLegacyRuntimeRole,
+  isSessionOutboundState,
+  isTimerSeconds,
+  parseSetTalkingPayload,
+  type AddGroupChatPayload,
+  type ChatOutboxPayload,
+  type LegacyRuntimeRole,
+  type TargetedDistribution,
+} from "./session-transport-guards";
 
 type LegacyRuntimePlayer = {
   name: string;
@@ -62,12 +72,6 @@ type LegacyRuntimePlayer = {
   votes: number;
   pronouns: string;
   chatGroup: string;
-  [key: string]: unknown;
-};
-
-type LegacyRuntimeRole = {
-  id: string;
-  team?: string;
   [key: string]: unknown;
 };
 
@@ -111,18 +115,6 @@ type LegacyRuntimeStore = {
   commit(type: string, payload?: unknown): unknown;
 };
 
-type ChatOutboxPayload = {
-  message: string;
-  receivingPlayerId: string;
-};
-
-type TargetedDistribution = {
-  all?: boolean | undefined;
-  role?: string | undefined;
-  seatNum?: number | undefined;
-  playerId?: string | undefined;
-};
-
 type PlayerUpdatePayload = {
   player: LegacyRuntimePlayer;
   property: string;
@@ -140,11 +132,6 @@ type GroupChatPlayer = {
   name?: string | undefined;
 };
 
-type AddGroupChatPayload = {
-  chatId: string;
-  players: GroupChatPlayer[];
-};
-
 type LegacyPingPayload = [
   (string | number | boolean)?,
   (string | number | undefined)?,
@@ -156,70 +143,6 @@ type NominationPayload =
   | { nomination?: Nomination | undefined }
   | null
   | undefined;
-
-const isLegacyRuntimeRole = (value: unknown): value is LegacyRuntimeRole =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as Record<string, unknown>).id === "string";
-
-const gameStatePlayerProperties = [
-  "name",
-  "id",
-  "image",
-  "stReminders",
-  "isDead",
-  "isSecretVoteless",
-  "isVoteless",
-  "pronouns",
-  "votes",
-] as const;
-
-function isChatOutboxPayload(value: unknown): value is ChatOutboxPayload {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Record<string, unknown>).message === "string" &&
-    typeof (value as Record<string, unknown>).receivingPlayerId === "string"
-  );
-}
-
-function isAddGroupChatPayload(value: unknown): value is AddGroupChatPayload {
-  if (typeof value !== "object" || value === null) return false;
-  const payload = value as Record<string, unknown>;
-  const players = payload.players;
-  return (
-    typeof payload.chatId === "string" &&
-    Array.isArray(players) &&
-    players.every(
-      (player) =>
-        typeof player === "object" &&
-        player !== null &&
-        typeof (player as Record<string, unknown>).id === "string",
-    )
-  );
-}
-
-function isSessionOutboundState(
-  value: unknown,
-): value is { session: { sessionId: unknown } } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Record<string, unknown>).session === "object" &&
-    (value as Record<string, unknown>).session !== null
-  );
-}
-
-function parseSetTalkingPayload(
-  value: unknown,
-): LegacySetTalkingPayload | null {
-  const parsed = legacySetTalkingPayloadSchema.safeParse(value);
-  return parsed.success ? parsed.data : null;
-}
-
-function isTimerSeconds(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
-}
 
 export class LiveSession {
   private _wss!: string;
