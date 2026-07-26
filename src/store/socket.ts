@@ -2124,15 +2124,22 @@ export class LiveSession {
    * @param vote
    * @param fromST
    */
-  _handleVote([index, vote, fromST]) {
+  _handleVote([index, vote, fromST]: [
+    number,
+    boolean | number | null,
+    boolean,
+  ]) {
     // do not reveal vote when anonymous voting is in progress, unless it's ST changing that player's vote
-    const voteId = this._store.state.players.players[index].id;
+    const voter = this._store.state.players.players[index];
+    const nominatedPlayer =
+      this._store.state.players.players[this._voting.nomination[1]];
+    if (!voter || !nominatedPlayer) return;
+    const voteId = voter.id;
     if (
       this._isSpectator &&
       voteId != this._store.state.session.playerId &&
       this._voting.isSecretVote &&
-      this._store.state.players.players[this._voting.nomination[1]].role.team !=
-        "traveler"
+      nominatedPlayer.role.team != "traveler"
     )
       return;
 
