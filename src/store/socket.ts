@@ -13,6 +13,7 @@ import { useChatStore } from "../stores/chat";
 import { useAudioStore } from "../stores/audio";
 import { useReviewStore } from "../stores/review";
 import { useLegacyOptionsStore } from "../stores/legacy-options";
+import type { UseOldOrder, UseOldRole } from "../stores/legacy-options";
 import { useSessionConnectionStore } from "../stores/session-connection";
 import { useVotingStore } from "../stores/voting";
 import { useSessionSettingsStore } from "../stores/session-settings";
@@ -892,7 +893,7 @@ export class LiveSession {
     this._sendDirect(playerId, "stId", this._store.state.session.playerId);
   }
 
-  _updateStId(data) {
+  _updateStId(data: string): void {
     if (!this._isSpectator) return;
     // this._store.state.session.stId = data;
     this._store.commit("session/setStId", data);
@@ -1281,7 +1282,7 @@ export class LiveSession {
    * Confirmation on receiving the uploaded image.
    * @param image
    */
-  async _avatarReceived(link) {
+  async _avatarReceived(link: string): Promise<void> {
     const playerId = this._store.state.session.playerId;
     const linkId = link.split(".")[0];
     if (playerId != linkId) return;
@@ -1343,7 +1344,7 @@ export class LiveSession {
    * @param playerId
    * @private
    */
-  _handleBye(playerId) {
+  _handleBye(playerId: string): void {
     if (this._isSpectator) return;
     delete this._players[playerId];
     this._connection.setPlayerCount(Object.keys(this._players).length);
@@ -1839,7 +1840,7 @@ export class LiveSession {
     this._send("secretVote", isSecretVote);
   }
 
-  _handleSecretVote(isSecretVote) {
+  _handleSecretVote(isSecretVote: boolean): void {
     if (!this._isSpectator) return;
     this._voting.setSecretVote(isSecretVote);
   }
@@ -1849,7 +1850,7 @@ export class LiveSession {
     this._send("bootlegger", content);
   }
 
-  _handleSetBootlegger(content) {
+  _handleSetBootlegger(content: string): void {
     if (!this._isSpectator) return;
     this._settings.setBootlegger(content);
   }
@@ -1859,7 +1860,7 @@ export class LiveSession {
     this._send("useOldOrder", isUseOldOrder);
   }
 
-  _handleSetUseOldOrder(isUseOldOrder) {
+  _handleSetUseOldOrder(isUseOldOrder: UseOldOrder): void {
     if (!this._isSpectator) return;
     this._legacyOptions.setUseOldOrder(isUseOldOrder);
   }
@@ -1869,7 +1870,7 @@ export class LiveSession {
     this._send("useOldRole", isUseOldRole);
   }
 
-  _handleSetUseOldRole(isUseOldRole) {
+  _handleSetUseOldRole(isUseOldRole: UseOldRole): void {
     if (!this._isSpectator) return;
     this._legacyOptions.setUseOldRole(isUseOldRole);
   }
@@ -1879,7 +1880,7 @@ export class LiveSession {
     this._send("isReview", isReview);
   }
 
-  _handleSetIsReview(isReview) {
+  _handleSetIsReview(isReview: boolean): void {
     if (!this._isSpectator) return;
     this._review.setReview(isReview);
     if (!isReview) {
