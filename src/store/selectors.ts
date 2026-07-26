@@ -1,8 +1,18 @@
 import rolesJSON from "../roles.json";
 
-export const rolesJSONbyId = new Map(rolesJSON.map((role) => [role.id, role]));
+export type LegacyRole = {
+  id: string;
+  isCustom?: boolean;
+  [property: string]: unknown;
+};
 
-export const customRoleDefaults: Record<string, any> = {
+export type StrippedRole = { id: string } | Record<number, unknown>;
+
+export const rolesJSONbyId = new Map<string, LegacyRole>(
+  rolesJSON.map((role) => [role.id, role]),
+);
+
+export const customRoleDefaults: LegacyRole = {
   id: "",
   name: "",
   image: "",
@@ -25,8 +35,10 @@ export const customRoleDefaults: Record<string, any> = {
  * Official roles are represented by their ID; custom roles only include fields
  * that differ from the baseline definition.
  */
-export function getCustomRolesStripped(roles: Iterable<any>) {
-  const customRoles: any[] = [];
+export function getCustomRolesStripped(
+  roles: Iterable<LegacyRole>,
+): StrippedRole[] {
+  const customRoles: StrippedRole[] = [];
   const customKeys = Object.keys(customRoleDefaults);
   const strippedProps = [
     "firstNightReminder",
@@ -40,7 +52,7 @@ export function getCustomRolesStripped(roles: Iterable<any>) {
       continue;
     }
 
-    const strippedRole: Record<number, any> = {};
+    const strippedRole: Record<number, unknown> = {};
     for (const prop in role) {
       if (strippedProps.includes(prop)) continue;
       const value = role[prop];
