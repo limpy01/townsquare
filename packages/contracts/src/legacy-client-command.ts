@@ -86,6 +86,11 @@ const legacySessionStatusSchema = z
     isUsingWraith: z.boolean(),
   })
   .passthrough();
+
+export type LegacySessionStatusPayload = z.infer<
+  typeof legacySessionStatusSchema
+>;
+
 const legacyChatPayloadSchema = z
   .object({
     message: z.string(),
@@ -93,6 +98,8 @@ const legacyChatPayloadSchema = z
     receivingPlayerId: z.string(),
   })
   .passthrough();
+
+export type LegacyChatPayload = z.infer<typeof legacyChatPayloadSchema>;
 const legacyRoleActivityPayloadSchema = z
   .object({
     role: z.string().min(1),

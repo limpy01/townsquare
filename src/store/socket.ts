@@ -7,8 +7,12 @@ import {
   isLegacySessionPayload,
   legacySetTalkingPayloadSchema,
 } from "@townsquare/contracts/legacy-client-command";
+import type {
+  LegacyChatPayload,
+  LegacySessionStatusPayload,
+  LegacySetTalkingPayload,
+} from "@townsquare/contracts/legacy-client-command";
 import type { LegacyFeedback } from "@townsquare/contracts/legacy-envelope";
-import type { LegacySetTalkingPayload } from "@townsquare/contracts/legacy-client-command";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
 import type { InputModalRequest } from "../stores/input";
@@ -2121,13 +2125,16 @@ export class LiveSession {
    * Update group chat.
    * @param payload
    */
-  _handleChat({ message, sendingPlayerId, receivingPlayerId }, feedback) {
+  _handleChat(
+    { message, sendingPlayerId, receivingPlayerId }: LegacyChatPayload,
+    feedback: LegacyFeedback | null | undefined,
+  ): void {
     if (feedback) {
       this._request("deleteMessage", this._store.state.session.playerId, [
         "direct",
         feedback,
       ]);
-      if (!this._outbox.checkUnique(feedback)) return;
+      if (!this._outbox.checkUnique(String(feedback))) return;
     }
     if (
       this._isSpectator &&
@@ -2187,11 +2194,14 @@ export class LiveSession {
     if (rand < prob && wraiths.length > 0) {
       const randIndex = Math.floor(Math.random() * wraiths.length);
       const wraithSpotted = wraiths[randIndex];
+      if (!wraithSpotted) return;
       const indexSpotted = players.findIndex(
         (player) => player.id === wraithSpotted.id,
       );
+      const spottedPlayer = players[indexSpotted];
+      if (!spottedPlayer) return;
       const spottedMessage = `[亡魂][亡魂是（${indexSpotted + 1}号）${
-        players[indexSpotted].name
+        spottedPlayer.name
       }]`;
       this._store.commit("session/updateChatSent", {
         message: spottedMessage,
@@ -2214,7 +2224,8 @@ export class LiveSession {
     const groupChats = this._chat.groups;
     if (groupChats.length === 0) return;
 
-    const group = groupChats.filter((group) => group.id === chatId)[0];
+    const group = groupChats.find((group) => group.id === chatId);
+    if (!group) return;
     const sendPlayers = group.players
       .map((player) => player.id)
       .filter((id) => id != sendingPlayerId);
@@ -2231,13 +2242,16 @@ export class LiveSession {
    * Create a chat group or add new members
    * @param playerIds list of ids to add to the group chat.
    */
-  _handleAddGroupChat(playerIds, feedback = false) {
+  _handleAddGroupChat(
+    playerIds: string[],
+    feedback: LegacyFeedback | null = false,
+  ): void {
     if (feedback) {
       this._request("deleteMessage", this._store.state.session.playerId, [
         "direct",
         feedback,
       ]);
-      if (!this._outbox.checkUnique(feedback)) return;
+      if (!this._outbox.checkUnique(String(feedback))) return;
     }
     if (!this._isSpectator) return;
 
@@ -2252,7 +2266,10 @@ export class LiveSession {
           name: player.name,
         };
       });
-    const sendingPlayerId = this._store.state.session.stId;
+    const sendingPlayerId =
+      typeof this._store.state.session.stId === "string"
+        ? this._store.state.session.stId
+        : "";
     const receivingPlayerId = this._store.state.session.playerId;
 
     if (groupChats.length === 0) {
@@ -2261,7 +2278,9 @@ export class LiveSession {
 
       message = "[群聊中有";
       for (let i = 0; i < names.length; i++) {
-        message += `（${names[i].index + 1}号）${names[i].name}`;
+        const player = names[i];
+        if (!player) continue;
+        message += `（${player.index + 1}号）${player.name}`;
         if (i < names.length - 1) message += "、";
       }
       message += "]";
@@ -2269,7 +2288,9 @@ export class LiveSession {
     } else {
       let message = "[";
       for (let i = 0; i < names.length; i++) {
-        message += `（${names[i].index + 1}号）${names[i].name}`;
+        const player = names[i];
+        if (!player) continue;
+        message += `（${player.index + 1}号）${player.name}`;
         if (i < names.length - 1) message += "、";
       }
       message += "加入群聊！]";
@@ -2279,7 +2300,7 @@ export class LiveSession {
     const chatId =
       groupChats.length === 0
         ? Math.random().toString(36).substr(2)
-        : groupChats[0].id;
+        : groupChats[0]?.id ?? "";
     const players = this._store.state.players.players.filter((player) => {
       return playerIds.includes(player.id);
     });
@@ -2290,26 +2311,30 @@ export class LiveSession {
    * Exit the group chat
    * @param chatId single group chat id to be removed from the list.
    */
-  _handleRemoveGroupChat(feedback = false) {
+  _handleRemoveGroupChat(feedback: LegacyFeedback | null = false): void {
     if (feedback) {
       this._request("deleteMessage", this._store.state.session.playerId, [
         "direct",
         feedback,
       ]);
-      if (!this._outbox.checkUnique(feedback)) return;
+      if (!this._outbox.checkUnique(String(feedback))) return;
     }
     if (!this._isSpectator) return;
 
     const groupChats = this._chat.groups;
     if (groupChats.length === 0) return;
 
-    const sendingPlayerId = this._store.state.session.stId;
+    const sendingPlayerId =
+      typeof this._store.state.session.stId === "string"
+        ? this._store.state.session.stId
+        : "";
     const receivingPlayerId = this._store.state.session.playerId;
 
     const message = "[你已退出群聊！]";
     this._handleChat({ message, sendingPlayerId, receivingPlayerId }, null);
 
-    const chatId = groupChats[0].id;
+    const chatId = groupChats[0]?.id;
+    if (!chatId) return;
     this._store.commit("session/removeGroupChat", { chatId });
   }
 
@@ -2317,32 +2342,39 @@ export class LiveSession {
    * Remove a member (not self) from the group chat
    * @param playerId single id of player to be removed from the group.
    */
-  _handleRemoveGroupChatMember(playerId, feedback = false) {
+  _handleRemoveGroupChatMember(
+    playerId: string,
+    feedback: LegacyFeedback | null = false,
+  ): void {
     if (feedback) {
       this._request("deleteMessage", this._store.state.session.playerId, [
         "direct",
         feedback,
       ]);
-      if (!this._outbox.checkUnique(feedback)) return;
+      if (!this._outbox.checkUnique(String(feedback))) return;
     }
     if (!this._isSpectator) return;
 
     const groupChats = this._chat.groups;
     if (groupChats.length === 0) return;
-    const player = groupChats[0].players.filter((player) => {
+    const group = groupChats[0];
+    if (!group) return;
+    const player = group.players.filter((player) => {
       return player.id === playerId;
     })[0];
-    const index = groupChats[0].players.findIndex(
-      (player2) => player2.id === playerId,
-    );
+    if (!player) return;
+    const index = group.players.findIndex((player2) => player2.id === playerId);
 
-    const sendingPlayerId = this._store.state.session.stId;
+    const sendingPlayerId =
+      typeof this._store.state.session.stId === "string"
+        ? this._store.state.session.stId
+        : "";
     const receivingPlayerId = this._store.state.session.playerId;
 
     const message = `[（${index + 1}号）${player.name}退出群聊！]`;
     this._handleChat({ message, sendingPlayerId, receivingPlayerId }, null);
 
-    const chatId = groupChats[0].id;
+    const chatId = group.id;
     this._store.commit("session/removeGroupChatMember", { chatId, player });
   }
 
@@ -2356,7 +2388,7 @@ export class LiveSession {
     groupChatPlayers,
     isWraith,
     isUsingWraith,
-  }) {
+  }: LegacySessionStatusPayload): void {
     if (!this._isSpectator) return;
     if (this._store.state.session.claimedSeat === -1) return;
 
@@ -2444,7 +2476,7 @@ export class LiveSession {
    */
   stopTimer(_payload: unknown): void {
     if (this._isSpectator) return;
-    this._send("stopTimer", payload);
+    this._send("stopTimer", undefined);
   }
 
   /**
