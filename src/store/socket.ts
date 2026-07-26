@@ -2146,6 +2146,7 @@ export class LiveSession {
     const { players } = this._store.state;
     const voting = this._voting;
     const playerCount = players.players.length;
+    if (!playerCount) return;
     const indexAdjusted =
       (index - 1 + playerCount - voting.nomination[1]) % playerCount;
     if (fromST || indexAdjusted >= voting.lockedVote - 1) {
