@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（MIG-032 DrawModal 座位与类型收口）
+最后更新：2026-07-26（MIG-033 RoleModal 目录类型收口）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -62,6 +62,7 @@
 | MIG-030 | 已完成 | 完整 WS v1 命令边界                        | specialized command 亦由统一 contracts predicate 校验，畸形 payload 不进入服务端 handler | 保持旧数组 envelope             |
 | MIG-031 | 已完成 | FabledModal 类型收口                       | 传奇角色列表及选择事件使用共享 scenario catalog 类型，类型检查通过                       | 保持选择与关闭流程              |
 | MIG-032 | 已完成 | DrawModal 座位与类型收口                   | 抽取角色在连续旅行者后跳至下一非旅行者；角色临时状态不再使用 `any`                       | 保持抽签顺序与分发格式          |
+| MIG-033 | 已完成 | RoleModal 目录类型收口                     | 剧本/旅行者目录与选择 payload 使用共享 catalog 类型，保留清空角色占位项                  | 保持角色、伪装与旅行者选择语义  |
 
 ## 迁移历史与当前质量基线
 
@@ -177,6 +178,7 @@
 - MIG-030 将 `direct`、`request`、`setTalking` 与 `uploadFile` 从“调用方额外校验”纳入 contracts 的统一 `isLegacyClientPayload` predicate；嵌套未知 command、错误请求、错误座位值和残缺上传均由契约回归拒绝，服务端保留同一层防御校验。
 - MIG-031 将 FabledModal 的目录过滤和选择事件从 `any` 收敛到 domain 的 `ScenarioCatalogRole`，保持现有 Pinia 更新与关闭弹窗语义。
 - MIG-032 为 DrawModal 增加连续旅行者座位回归：确认角色后按玩家数组长度继续跳过旅行者，不再读取不存在的数组 `index` 属性。抽取与已抽角色状态使用 `DrawRole`，组件挂载与类型检查通过。
+- MIG-033 将 RoleModal 的剧本目录、补充旅行者目录和角色选择 payload 从 `any` 收敛到 `ScenarioCatalogRole`；清空角色的 UI 占位项改为同一稳定空角色记录，保留原有可见性和提交语义。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。

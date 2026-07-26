@@ -102,6 +102,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
 import Modal from "./Modal.vue";
 import Token from "../Token.vue";
 import { emitLegacyMutation } from "../../store/legacy-effects";
@@ -116,8 +117,9 @@ const playerState = usePlayersStore();
 const scenario = useScenarioStore();
 const session = useSessionIdentityStore();
 const players = computed(() => playerState.players);
-const roles = scenario.roles as Map<string, any>;
-const otherTravelers = scenario.otherTravelers as Map<string, any>;
+const emptyRole: ScenarioCatalogRole = { id: "", name: "", team: "" };
+const roles = scenario.roles;
+const otherTravelers = scenario.otherTravelers;
 const tab = ref("editionRoles");
 const isShowTraveler = ref(false);
 const windowWidth = ref(window.innerWidth);
@@ -130,7 +132,7 @@ const availableRoles = computed(() => {
       playerIndex >= 0 ||
       !players.value.some((player) => player.role.id === role.id),
   );
-  return [...available, {}];
+  return [...available, emptyRole];
 });
 
 const tokenWidth = computed(() =>
@@ -145,7 +147,7 @@ function handleResize() {
   windowHeight.value = window.innerHeight;
 }
 
-function setRole(role: any) {
+function setRole(role: ScenarioCatalogRole) {
   if (playerIndex < 0) {
     const payload = {
       index: playerIndex * -1 - 1,
