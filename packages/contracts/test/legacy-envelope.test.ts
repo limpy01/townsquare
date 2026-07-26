@@ -256,6 +256,22 @@ describe("HTTP boundary input", () => {
 });
 
 describe("game-state import input", () => {
+  it("accepts the historical game-state fixture without stripping extensions", async () => {
+    const gameState = await fixture("game-state/legacy-v1.json");
+
+    expect(parseGameState(gameState)).toMatchObject({
+      edition: { id: "tb" },
+      bluffs: ["chef"],
+      players: [
+        {
+          id: 7,
+          role: "chef",
+          legacyExtension: { seat: 0 },
+        },
+      ],
+    });
+  });
+
   it("provides compatible defaults for optional historical fields", () => {
     expect(parseGameState({})).toMatchObject({
       bluffs: [],

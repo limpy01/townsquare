@@ -1,0 +1,15 @@
+{
+  "edition": { "id": "tb", "roles": ["chef", "imp"] },
+  "roles": [{ "id": "chef" }, { "id": "imp" }],
+  "fabled": [{ "id": "storyteller", "team": "fabled" }],
+  "bluffs": ["chef"],
+  "players": [
+    {
+      "id": 7,
+      "name": "Alice",
+      "role": "chef",
+      "reminders": ["得知"],
+      "legacyExtension": { "seat": 0 }
+    }
+  ]
+}

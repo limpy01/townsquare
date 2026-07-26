@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "files": [
+    "game-state",
     "scripts",
     "storage",
     "ws"

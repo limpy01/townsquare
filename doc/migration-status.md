@@ -34,7 +34,7 @@
 | MIG-001 | 已完成 | 行为、HTTP、存档、WS command 清单          | 兼容性清单；服务端测试与构建                                                                   | 只读基线，不改协议              |
 | MIG-002 | 已完成 | 服务端大粒度测试拆分                       | 11 个独立 HTTP、room、lobby、queue、协议和版本信息测试                                         | 固定 v1 消息语义                |
 | MIG-003 | 已完成 | Playwright E2E 与视觉基线                  | 首页、创建房间、说书人白天/夜晚截图通过；CI 执行 E2E 与视觉回归                                | 固定时间、随机数和视口          |
-| MIG-004 | 进行中 | 剧本与游戏状态 characterization fixtures   | WS/自定义剧本 fixture 与 11 个单元测试                                                         | 兼容历史 JSON 和存档            |
+| MIG-004 | 已完成 | 剧本与游戏状态 characterization fixtures   | WS、自定义剧本、历史 game-state fixture 与契约回归测试                                         | 兼容历史 JSON 和存档            |
 | MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生     | lint 基线、服务端测试、构建                                                                    | 不改变运行时行为                |
 | MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter | 双向 command schema、首批嵌套载荷 schema、envelope decoder 与 HTTP 输入校验；27 个契约测试通过 | 网络继续传输旧三元组            |
 | MIG-007 | 进行中 | `packages/domain` 纯逻辑模块               | 投票统计、夜间顺序严格类型化与表驱动测试；后续补覆盖率门禁                                     | 不导入 Vue/Express              |
@@ -142,6 +142,7 @@
 - MIG-013 为浏览器 localStorage 引入了独立版本标记和非破坏性迁移：历史 `playerProfileImage` 仅在新头像不存在时复制，写入失败则保留旧键以便重试。session、座位、投票数、旧规则开关、剧本选择、阵营名称与投票隐私等关键恢复值现在先经共享 Zod schema 校验；版本 0 的平铺存档 fixture 锁定了恢复与头像迁移兼容性。
 - MIG-014 将服务端部署文档从过期的 `VUE_APP_*` 环境变量改为 Vite 实际使用的 `VITE_API_BASE`/`VITE_WS_BASE`，并明确了发布前质量门、内存房间导致的维护窗口要求、头像持久化备份、观察项和回滚产物。
 - MIG-015 在 contracts 中补齐 Role、Edition、Fabled、Jinx 与 Player 的兼容型共享模型。schema 校验用于识别、阵营、数值和常用字段，同时以 passthrough 保留历史剧本和游戏状态扩展字段；玩家 ID 继续兼容字符串和旧 numeric ID，`contracts` 覆盖率门禁保持通过。
+- MIG-004 已补齐历史 game-state fixture：numeric 玩家 ID、角色 ID 引用、提醒和未知扩展字段均可导入，错误容器仍由契约拒绝；自定义剧本与 WS fixture 共同构成可重复的兼容性基线。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
