@@ -69,7 +69,7 @@
       <ul>
         <li v-for="(jinx, index) in jinxed" :key="index">
           <span
-            v-if="jinx.first"
+            v-if="jinx.first && jinx.second"
             class="icon"
             :style="{
               backgroundImage: `url(${iconImage(
@@ -85,7 +85,7 @@
             }"
           ></span>
           <span
-            v-if="jinx.first"
+            v-if="jinx.first && jinx.second"
             class="icon"
             :style="{
               backgroundImage: `url(${iconImage(
@@ -94,11 +94,13 @@
             }"
           ></span>
           <div class="role">
-            <span v-if="jinx.first" class="name"
+            <span v-if="jinx.first && jinx.second" class="name"
               >{{ jinx.first.name }} & {{ jinx.second.name }}</span
             >
             <span v-else class="name">{{ jinx.name }}</span>
-            <span v-if="jinx.first" class="ability">{{ jinx.reason }}</span>
+            <span v-if="jinx.first && jinx.second" class="ability">{{
+              jinx.reason
+            }}</span>
             <span v-else class="ability">{{ jinx.ability }}</span>
           </div>
         </li>
@@ -117,20 +119,54 @@ import { useGrimoireStore } from "../../stores/grimoire";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
+
+type ReferenceRole = ScenarioCatalogRole & {
+  name?: string;
+  ability?: string;
+  image?: string;
+  imageAlt?: string;
+};
+
+type ReferenceState = Record<string, string>;
+type JinxEntry = {
+  first?: ReferenceRole;
+  second?: ReferenceRole;
+  reason?: string;
+  name?: string;
+  ability?: string;
+};
+
+const jinxNames = ["jinxes", "jinxed", "jinx", "hatred", "hate"];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const asReferenceState = (value: unknown): ReferenceState | null => {
+  if (!isRecord(value)) return null;
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string",
+  );
+  return entries.length ? Object.fromEntries(entries) : null;
+};
 
 const modals = useModalStore();
 const grimoire = useGrimoireStore();
 const playerState = usePlayersStore();
 const scenario = useScenarioStore();
-const roles = scenario.roles as Map<string, any>;
-const jinxes = scenario.jinxes as Map<string, Map<string, string>>;
-const edition = computed(() => scenario.edition ?? ({} as any));
-const states = computed(() => scenario.states as Record<string, string>[]);
-const teamsNames = scenario.teamsNames as Record<string, string>;
+const roles = scenario.roles as Map<string, ReferenceRole>;
+const jinxes = scenario.jinxes;
+const edition = computed(() => scenario.edition);
+const states = computed(() =>
+  scenario.states.flatMap((state) => {
+    const normalized = asReferenceState(state);
+    return normalized ? [normalized] : [];
+  }),
+);
+const teamsNames = scenario.teamsNames;
 
 const jinxed = computed(() => {
-  const result: any[] = [];
-  const jinxNames = ["jinxes", "jinxed", "jinx", "hatred", "hate"];
+  const result: JinxEntry[] = [];
   roles.forEach((role) => {
     if (jinxNames.includes(role.team)) result.push(role);
 
@@ -140,22 +176,27 @@ const jinxed = computed(() => {
     });
 
     const jinxName = Object.keys(role).find((key) => jinxNames.includes(key));
-    if (jinxName) {
-      role[jinxName].forEach((item: any) => {
-        const secondRole = roles.get(
-          item.id.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
-        );
-        if (secondRole) {
-          result.push({ first: role, second: secondRole, reason: item.reason });
-        }
-      });
-    }
+    const entries = jinxName ? role[jinxName] : undefined;
+    if (!Array.isArray(entries)) return;
+    entries.filter(isRecord).forEach((item) => {
+      if (typeof item.id !== "string") return;
+      const secondRole = roles.get(
+        item.id.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
+      );
+      if (secondRole) {
+        result.push({
+          first: role,
+          second: secondRole,
+          ...(typeof item.reason === "string" ? { reason: item.reason } : {}),
+        });
+      }
+    });
   });
   return result;
 });
 
 const rolesGrouped = computed(() => {
-  const grouped: Record<string, any[]> = {};
+  const grouped: Record<string, ReferenceRole[]> = {};
   roles.forEach((role) => (grouped[role.team] ??= []).push(role));
   for (const team of [
     "traveler",
