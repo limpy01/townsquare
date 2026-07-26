@@ -43,10 +43,10 @@ test("forwards host broadcasts and player messages to the storyteller", async (t
   const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
   const player = await openClient(`${wsBase}/ws/42/player-a`);
 
-  host.send(["direct", { "player-a": ["gs", { players: 1 }] }, 101]);
+  host.send(["direct", { "player-a": ["gs", { gamestate: [] }] }, 101]);
   assert.deepEqual(await player.next((message) => message[0] === "gs"), [
     "gs",
-    { players: 1 },
+    { gamestate: [] },
     101,
   ]);
   assert.deepEqual(await host.next((message) => message[0] === "feedback"), [
@@ -54,10 +54,10 @@ test("forwards host broadcasts and player messages to the storyteller", async (t
     101,
   ]);
 
-  host.send(["direct", { "": ["gs", { players: [{ id: 0 }] }] }]);
+  host.send(["direct", { "": ["gs", { gamestate: [{ id: 0 }] }] }]);
   assert.deepEqual(await player.next((message) => message[0] === "gs"), [
     "gs",
-    { players: [{ id: 0 }] },
+    { gamestate: [{ id: 0 }] },
     false,
   ]);
 
@@ -126,6 +126,11 @@ test("rejects malformed nested WebSocket payloads", async (t) => {
     [["pronouns", [0, 1]], /Invalid pronouns payload/],
     [["remove", -1], /Invalid remove payload/],
     [["useOldOrder", { pithag: true }], /Invalid useOldOrder payload/],
+    [["nomination", [0]], /Invalid nomination payload/],
+    [["player", { index: "0", property: "name", value: "Alice" }], /Invalid player payload/],
+    [["firstNight", ["dusk", 1]], /Invalid firstNight payload/],
+    [["teamsNames", { townsfolk: 1 }], /Invalid teamsNames payload/],
+    [["direct", { "player-a": ["gs", { gamestate: {} }] }], /Invalid direct payload/],
   ]) {
     const client = await openClient(
       `${wsBase}/ws/42/${Math.random().toString(36).slice(2)}`,

@@ -6,7 +6,20 @@ test("delivers pending direct messages once and honors deletion feedback", async
   const { wsBase } = await createTestService(t);
   const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
 
-  host.send(["direct", { later: ["chat", { message: "queued" }] }, 202]);
+  host.send([
+    "direct",
+    {
+      later: [
+        "chat",
+        {
+          message: "queued",
+          sendingPlayerId: "host-a",
+          receivingPlayerId: "later",
+        },
+      ],
+    },
+    202,
+  ]);
   assert.deepEqual(await host.next((message) => message[0] === "feedback"), [
     "feedback",
     202,
@@ -15,7 +28,11 @@ test("delivers pending direct messages once and honors deletion feedback", async
   const later = await openClient(`${wsBase}/ws/42/later`);
   assert.deepEqual(await later.next((message) => message[0] === "chat"), [
     "chat",
-    { message: "queued" },
+    {
+      message: "queued",
+      sendingPlayerId: "host-a",
+      receivingPlayerId: "later",
+    },
     202,
   ]);
   later.send(["request", { deleteMessage: ["later", ["direct", 202]] }]);

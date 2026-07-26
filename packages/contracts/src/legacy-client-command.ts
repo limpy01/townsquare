@@ -48,6 +48,72 @@ export const legacyClientCommandSchema = z.enum([
 
 export type LegacyClientCommand = z.infer<typeof legacyClientCommandSchema>;
 
+const legacyRoleSchema = z.object({ id: z.string().min(1) }).passthrough();
+const legacyRoleListSchema = z.array(legacyRoleSchema);
+const legacySeatUpdateSchema = z
+  .object({
+    index: z.number().int().nonnegative(),
+    property: z.string().min(1),
+    value: z.unknown(),
+  })
+  .passthrough();
+const legacyGrimoireEntrySchema = z.tuple([legacySeatUpdateSchema]);
+const legacyGrimoireSchema = z
+  .object({
+    roles: z.array(legacyGrimoireEntrySchema),
+    reminders: z.array(legacyGrimoireEntrySchema).optional(),
+    stReminders: z.array(legacyGrimoireEntrySchema).optional(),
+  })
+  .passthrough();
+const legacyEditionPayloadSchema = z
+  .object({
+    edition: z.object({ id: z.string().min(1) }).passthrough(),
+    roles: legacyRoleListSchema.optional(),
+  })
+  .passthrough();
+const legacyGameStatePlayerSchema = z.object({}).passthrough();
+const legacyGameStatePayloadSchema = z
+  .object({
+    gamestate: z.array(legacyGameStatePlayerSchema),
+    isLightweight: z.boolean().optional(),
+  })
+  .passthrough();
+const legacySessionStatusSchema = z
+  .object({
+    isSecretVoteless: z.boolean(),
+    groupChatPlayers: z.array(z.string()),
+    isWraith: z.boolean(),
+    isUsingWraith: z.boolean(),
+  })
+  .passthrough();
+const legacyChatPayloadSchema = z
+  .object({
+    message: z.string(),
+    sendingPlayerId: z.string(),
+    receivingPlayerId: z.string(),
+  })
+  .passthrough();
+const legacyRoleActivityPayloadSchema = z
+  .object({
+    role: z.string().min(1),
+    property: z.string().min(1),
+    value: z.unknown(),
+    st: z.boolean().optional(),
+  })
+  .passthrough();
+const legacyUsingRolePayloadSchema = z
+  .object({
+    role: z.string().min(1),
+    value: z.unknown(),
+    playerId: z.string().min(1),
+  })
+  .passthrough();
+const legacyNominationPayloadSchema = z.union([
+  z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]),
+  z.null(),
+  z.undefined(),
+]);
+
 /**
  * Scalar v1 broadcast commands whose payloads have remained stable. The
  * remaining commands retain their dedicated compatibility handlers until
@@ -58,6 +124,12 @@ const legacyScalarPayloadSchemas: Partial<
 > = {
   clearVoteHistory: z.union([z.null(), z.undefined()]),
   bootlegger: z.string(),
+  bluff: legacyRoleListSchema,
+  edition: legacyEditionPayloadSchema,
+  fabled: legacyRoleListSchema,
+  firstNight: z.array(z.string()),
+  grimoire: legacyGrimoireSchema,
+  gs: legacyGameStatePayloadSchema,
   isNight: z.boolean(),
   isReview: z.boolean(),
   isVoteHistoryAllowed: z.boolean(),
@@ -79,10 +151,13 @@ const legacyScalarPayloadSchemas: Partial<
     z.number().int().nonnegative(),
     z.number().int().nonnegative(),
   ]),
+  nomination: legacyNominationPayloadSchema,
+  otherNight: z.array(z.string()),
   ping: z.tuple([
     z.union([z.string(), z.number().int().nonnegative()]),
     z.literal("latency"),
   ]),
+  player: legacySeatUpdateSchema,
   pronouns: z.tuple([z.number().int().nonnegative(), z.string()]),
   remove: z.number().int().nonnegative(),
   secretVote: z.boolean(),
@@ -106,6 +181,8 @@ const legacyScalarPayloadSchemas: Partial<
       lycanthrope: z.boolean(),
     })
     .strict(),
+  states: z.array(z.unknown()),
+  teamsNames: z.record(z.string(), z.string()),
   votingSpeed: z.number().finite().positive(),
   vote: z.tuple([
     z.number().int().nonnegative(),
@@ -138,9 +215,82 @@ export type LegacySetTalkingPayload = z.infer<
  * Restrict its inner command to that dispatcher's supported command set so a
  * host cannot use the transport as an arbitrary client-side command channel.
  */
+const legacySessionPayloadSchemas: Partial<
+  Record<z.infer<typeof legacySessionCommandSchema>, z.ZodType>
+> = {
+  addGroupChat: z.array(z.string()),
+  alertPopup: z.string(),
+  allowHost: z.boolean(),
+  allowJoin: z.boolean(),
+  avatarReceived: z.string(),
+  bluff: legacyRoleListSchema,
+  bootlegger: z.string(),
+  bye: z.string(),
+  chat: legacyChatPayloadSchema,
+  claim: z.tuple([
+    z.number().int().min(-1),
+    z.string(),
+    z.string(),
+    z.string().optional(),
+  ]),
+  clearVoteHistory: z.union([z.null(), z.undefined()]),
+  edition: legacyEditionPayloadSchema,
+  fabled: legacyRoleListSchema,
+  feedback: z.union([z.string(), z.number().int().nonnegative()]),
+  firstNight: z.array(z.string()),
+  getGamestate: z.string(),
+  getStId: z.string(),
+  grimoire: legacyGrimoireSchema,
+  gs: legacyGameStatePayloadSchema,
+  isNight: z.boolean(),
+  isReview: z.boolean(),
+  isRole: legacyRoleActivityPayloadSchema,
+  isVoteHistoryAllowed: z.boolean(),
+  isVoteInProgress: z.boolean(),
+  leaveSeat: z.union([z.null(), z.undefined()]),
+  lock: legacyScalarPayloadSchemas.lock!,
+  marked: legacyScalarPayloadSchemas.marked!,
+  move: legacyScalarPayloadSchemas.move!,
+  nomination: legacyNominationPayloadSchema,
+  otherNight: z.array(z.string()),
+  ping: legacyScalarPayloadSchemas.ping!,
+  player: legacySeatUpdateSchema,
+  pronouns: legacyScalarPayloadSchemas.pronouns!,
+  remove: legacyScalarPayloadSchemas.remove!,
+  removeGroupChat: z.union([z.null(), z.undefined()]),
+  removeGroupChatMember: z.string(),
+  secretVote: z.boolean(),
+  setTalking: legacySetTalkingPayloadSchema,
+  setTimer: z.number().finite().nonnegative(),
+  stId: z.string(),
+  startTimer: z.number().finite().nonnegative(),
+  states: z.array(z.unknown()),
+  stopTimer: z.union([z.null(), z.undefined()]),
+  swap: legacyScalarPayloadSchemas.swap!,
+  syncPlayersStatus: legacySessionStatusSchema,
+  teamsNames: z.record(z.string(), z.string()),
+  useOldOrder: legacyScalarPayloadSchemas.useOldOrder!,
+  useOldRole: legacyScalarPayloadSchemas.useOldRole!,
+  usingRole: legacyUsingRolePayloadSchema,
+  vote: legacyScalarPayloadSchemas.vote!,
+  votingSpeed: z.number().finite().positive(),
+};
+
+const legacyDirectMessageSchema = z
+  .tuple([legacySessionCommandSchema, z.unknown()])
+  .superRefine(([command, params], context) => {
+    const schema = legacySessionPayloadSchemas[command];
+    if (!schema || !schema.safeParse(params).success) {
+      context.addIssue({
+        code: "custom",
+        message: `invalid ${command} direct payload`,
+      });
+    }
+  });
+
 export const legacyDirectPayloadSchema = z.record(
   z.string(),
-  z.tuple([legacySessionCommandSchema, z.unknown()]),
+  legacyDirectMessageSchema,
 );
 
 export type LegacyDirectPayload = z.infer<typeof legacyDirectPayloadSchema>;

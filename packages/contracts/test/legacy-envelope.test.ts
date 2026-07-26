@@ -78,12 +78,33 @@ describe("legacy client command boundary", () => {
   it("validates direct, request, and upload payload envelopes", () => {
     expect(
       legacyDirectPayloadSchema.parse({
-        "player-a": ["chat", { message: "hello" }],
+        "player-a": [
+          "chat",
+          {
+            message: "hello",
+            sendingPlayerId: "host",
+            receivingPlayerId: "player-a",
+          },
+        ],
       }),
-    ).toMatchObject({ "player-a": ["chat", { message: "hello" }] });
+    ).toMatchObject({
+      "player-a": [
+        "chat",
+        {
+          message: "hello",
+          sendingPlayerId: "host",
+          receivingPlayerId: "player-a",
+        },
+      ],
+    });
     expect(
       legacyDirectPayloadSchema.safeParse({ "player-a": ["unknown", {}] })
         .success,
+    ).toBe(false);
+    expect(
+      legacyDirectPayloadSchema.safeParse({
+        "player-a": ["gs", { gamestate: {} }],
+      }).success,
     ).toBe(false);
 
     expect(
