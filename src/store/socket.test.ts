@@ -32,6 +32,7 @@ const createStore = (
     },
     grimoire: { isNight: false },
     roles: new Map(),
+    edition: { id: "tb", isOfficial: true },
     states: [],
     teamsNames: {},
     firstNight: [],

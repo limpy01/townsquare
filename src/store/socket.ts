@@ -73,6 +73,17 @@ type LegacyRuntimeRole = {
   [key: string]: unknown;
 };
 
+type LegacyRuntimeEdition = {
+  id: string;
+  isOfficial: boolean;
+  [key: string]: unknown;
+};
+
+type LegacyEditionPayload = {
+  edition: LegacyRuntimeEdition;
+  roles?: LegacyRuntimeRole[];
+};
+
 type LegacyRuntimeState = {
   players: {
     players: LegacyRuntimePlayer[];
@@ -88,7 +99,8 @@ type LegacyRuntimeState = {
     isSpectator: boolean;
   } & Record<string, unknown>;
   grimoire: { isNight: boolean };
-  roles: { get(roleId: string): LegacyRuntimeRole | undefined };
+  roles: Map<string, LegacyRuntimeRole>;
+  edition: LegacyRuntimeEdition;
   states: unknown[];
   teamsNames: Record<string, string>;
   firstNight: unknown[];
@@ -1010,13 +1022,13 @@ export class LiveSession {
    * @param roles
    * @private
    */
-  async _updateEdition({ edition, roles }) {
+  async _updateEdition({ edition, roles }: LegacyEditionPayload) {
     if (!this._isSpectator) return;
     this._store.commit("setEdition", edition);
     if (roles) {
       this._store.commit("setCustomRoles", roles);
       if (this._store.state.roles.size !== roles.length) {
-        const missing = [];
+        const missing: string[] = [];
         roles.forEach(({ id }) => {
           if (!this._store.state.roles.get(id)) {
             missing.push(id);
@@ -1055,7 +1067,7 @@ export class LiveSession {
    * @param states
    * @private
    */
-  _updateStates(states) {
+  _updateStates(states: unknown[]) {
     if (!this._isSpectator) return;
     this._store.commit("setStates", states);
   }
@@ -1075,7 +1087,7 @@ export class LiveSession {
    * @param teamsNames
    * @private
    */
-  _updateTeamsNames(teamsNames) {
+  _updateTeamsNames(teamsNames: Record<string, string>) {
     if (!this._isSpectator) return;
     this._store.commit("setTeamsNames", teamsNames);
   }
@@ -1095,7 +1107,7 @@ export class LiveSession {
    * @param firstNight
    * @private
    */
-  _updateFirstNight(firstNight) {
+  _updateFirstNight(firstNight: string[]) {
     if (!this._isSpectator) return;
     this._store.commit("setFirstNight", firstNight);
   }
@@ -1115,7 +1127,7 @@ export class LiveSession {
    * @param otherNight
    * @private
    */
-  _updateOtherNight(otherNight) {
+  _updateOtherNight(otherNight: string[]) {
     if (!this._isSpectator) return;
     this._store.commit("setOtherNight", otherNight);
   }
@@ -1134,7 +1146,7 @@ export class LiveSession {
    * @param fabled
    * @private
    */
-  _updateFabled(fabled) {
+  _updateFabled(fabled: LegacyRuntimeRole[]) {
     if (!this._isSpectator) return;
     this._store.commit("players/setFabled", {
       fabled,
@@ -1205,7 +1217,15 @@ export class LiveSession {
    * @param value
    * @private
    */
-  _updatePlayer({ index, property, value }) {
+  _updatePlayer({
+    index,
+    property,
+    value,
+  }: {
+    index: number;
+    property: string;
+    value: unknown;
+  }) {
     if (!this._isSpectator) return;
     const player = this._store.state.players.players[index];
     if (!player) return;
@@ -1220,8 +1240,11 @@ export class LiveSession {
         });
       } else {
         // load role, first from session, the global, then fail gracefully
+        const roleId = typeof value === "string" ? value : "";
         const role =
-          this._store.state.roles.get(value) || rolesJSONbyId.get(value) || {};
+          this._store.state.roles.get(roleId) ||
+          rolesJSONbyId.get(roleId) ||
+          {};
         this._store.commit("players/update", {
           player,
           property: "role",
@@ -1249,7 +1272,7 @@ export class LiveSession {
     }
   }
 
-  emptyPlayer({ id }) {
+  emptyPlayer({ id }: { id: string }) {
     if (id === "") return; //必须指定玩家
     this._sendDirect(id, "leaveSeat");
   }
