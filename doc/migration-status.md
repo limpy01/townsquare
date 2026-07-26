@@ -1,7 +1,9 @@
-# 现代化迁移任务账本
+# 现代化迁移状态看板
 
-最后更新：2026-07-26（MIG-047 玩家组件输入收口）
-基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
+最后更新：2026-07-26（迁移复盘校准；最近实现任务为 MIG-047）
+历史基线提交：`e0f1d34`
+本次复盘 HEAD：`5e86627`
+详细复盘：[`migration-review.md`](./migration-review.md)
 
 ## 迁移目标
 
@@ -15,19 +17,42 @@
 
 ## 阶段与依赖
 
-| 阶段                      | 状态   | 退出条件                                        |
-| ------------------------- | ------ | ----------------------------------------------- |
-| 0. 冻结行为基线           | 进行中 | Node、构建、协议、存档和测试基线可重复验证      |
-| 1. workspace 与共享契约   | 进行中 | v1 decoder/encoder、schema、domain 测试稳定     |
-| 2. 服务端 TypeScript 化   | 进行中 | 旧前端与新服务端的 HTTP/WS 集成矩阵通过         |
-| 3. Vue 3 + Vite 兼容启动  | 已完成 | Vite 下旧行为与视觉基线一致                     |
-| 4. 前端 TypeScript 基础层 | 进行中 | transport、持久化、协议和浏览器适配层严格类型化 |
-| 5. Vuex 至 Pinia          | 已完成 | 所有业务 store 独立、可测且存档兼容             |
-| 6. 组件 Composition API   | 已完成 | 所有 SFC 为 Vue TS，compat warning 为零         |
-| 7. 样式与资源治理         | 进行中 | 全局样式归属明确，视觉与性能预算受控            |
-| 8. 清理、部署与收尾       | 进行中 | `npm run check` 全绿，部署与回滚演练完成        |
+| 阶段                      | 状态     | 退出条件                                         |
+| ------------------------- | -------- | ------------------------------------------------ |
+| 0. 冻结行为基线           | 基本完成 | Node、构建、协议、存档和测试基线可重复验证       |
+| 1. workspace 与共享契约   | 基本完成 | v1 decoder/encoder、schema、domain 测试稳定      |
+| 2. 服务端 TypeScript 化   | 进行中   | 旧前端与新服务端的 HTTP/WS 集成矩阵通过          |
+| 3. Vue 3 + Vite 兼容启动  | 已完成   | Vite 下旧行为与视觉基线一致                      |
+| 4. 前端 TypeScript 基础层 | 进行中   | transport、持久化、协议和浏览器适配层严格类型化  |
+| 5. Vuex 至 Pinia          | 基本完成 | Vuex 已删除；legacy command/effect bridge 待清理 |
+| 6. 组件 Composition API   | 进行中   | SFC 语法迁移完成；巨型组件和隐式命令待拆分       |
+| 7. 样式与资源治理         | 进行中   | 全局样式归属明确，视觉与性能预算受控             |
+| 8. 清理、部署与收尾       | 进行中   | `npm run check` 全绿，部署与回滚演练完成         |
 
-## 当前任务
+阶段状态按 `migration-plan.md` 的完整退出条件判断，不再把“文件已改成 TypeScript”或“框架依赖已替换”单独视为阶段完成。MIG-001 至 MIG-047 保留为已验收的历史工作单元，但不代表其所属阶段的全部退出条件均已满足。
+
+## 当前执行队列
+
+当前没有正在实施的代码批次。开始下一项前，应先完成 MIG-048；每个批次完成后更新本表、验收证据和残余风险。
+
+| ID      | 状态   | 目标                                         | 前置条件 | 验收                                                          |
+| ------- | ------ | -------------------------------------------- | -------- | ------------------------------------------------------------- |
+| MIG-048 | 待开始 | 在 Node 24.18.0 下重建可信基线，并校准账本   | 无       | `npm ci && npm run check`；更新测试、覆盖率、包体和阶段证据   |
+| MIG-049 | 待开始 | 为会话 transport 增加 characterization tests | MIG-048  | 覆盖连接、重连、timer、outbox、消息顺序与权限；不改变 v1 协议 |
+| MIG-050 | 待开始 | 拆分 session transport                       | MIG-049  | transport/reconnect/outbox/handler 独立，相关单测和根检查通过 |
+| MIG-051 | 待开始 | 建立独立的 persistence repository            | MIG-050  | 消除 persistence `any` 与 mutation bridge；旧存档兼容测试达标 |
+| MIG-052 | 待开始 | 删除 legacy command/effect/mutation bridge   | MIG-051  | 组件直接调用 Pinia action；旧 bridge 无引用；根检查通过       |
+
+### 当前阻塞与风险
+
+- `socket.ts` 和 `persistence.ts` 是高风险巨型模块，覆盖率不足以支持直接重构；
+- 入口 JS 距预算上限仅约 1.4 KB，新的功能或依赖可能立即导致构建失败；
+- E2E、移动端视觉、旧客户端交叉兼容与生产发布演练尚不足；
+- 是否需要迁入 `apps/web`、`apps/server` workspace 尚未决策，目录重排应在 MIG-048 明确后再进行。
+
+## 已完成工作单元（历史索引）
+
+以下表格是已验收的 MIG-001 至 MIG-047 索引，不是当前待办队列。详细的按时间说明见后文“历史记录”。
 
 | ID      | 状态   | 范围                                       | 验收                                                                                     | 兼容性                           |
 | ------- | ------ | ------------------------------------------ | ---------------------------------------------------------------------------------------- | -------------------------------- |
@@ -78,18 +103,24 @@
 | MIG-046 | 已完成 | 参考表展示数据收口                         | 状态、角色分组和相克条目使用显式显示投影；缺失相克角色安全跳过                           | 保持角色表和相克文案             |
 | MIG-047 | 已完成 | 玩家组件输入收口                           | 玩家、角色和提醒展示使用兼容视图模型；菜单事件参数保留显式类型                           | 保持座位、投票与菜单交互         |
 
-## 迁移历史与当前质量基线
+## 当前验证基线
 
-- Node `v25.3.0`、npm `11.9.0`；此 Node 主版本已结束支持，迁移基线改用 Node `24.18.0` LTS。
-- `npm run test:server` 通过；当前包含 11 个 HTTP、room、lobby、queue、未知 command、嵌套 payload 和版本信息集成测试。
-- `npm run build` 通过；入口产物约为 JS 1.78 MiB、CSS 250 KiB，仍存在资源体积警告。
-- ESLint：0 error、1,961 warning（34 个有告警文件）。在完全格式化前，CI 以此为不可增加的上限。
+- 项目固定 Node `24.18.0` LTS 和 npm `11.9.0`；2026-07-26 的本地完整复盘实际运行于 Node `v25.3.0`，因此仍需在 Node 24 下重新执行正式验收。
+- `npm run test:server` 通过；当前包含 13 个 HTTP、room、lobby、queue、未知 command、嵌套 payload 和版本信息集成测试。
+- `npm run build` 通过；入口 JS 为 1,798,558 bytes / 1,800,000 bytes，入口 CSS 为 249,956 bytes / 260,000 bytes。JS 预算仅余约 1.4 KB，需要优先进行代码拆分。
+- ESLint 当前为 0 error、0 warning；格式基线仍记录 23 个历史文件，Stylelint 仍记录 628 条历史告警。
+- Vitest 当前为 42 个测试文件、142 个测试；全局覆盖率为 statements 35.67%、branches 29.37%、functions 54.74%、lines 37.16%。contracts/domain 已达到高覆盖率门禁，但 session transport 和 persistence 覆盖明显不足。
 - 当前前端为 Vue 3 + Vite + Pinia；服务端为 TypeScript、Express 5 与 `ws`。历史 Vuex/Vue CLI 记录仅用于说明迁移路径。
 - Playwright `1.61.1`：首页与创建房间流程可在 Chromium 中验证；`test:visual:update` 是唯一可写截图基线的命令，`test:visual` 仅比较。Chromium CI 作业会执行交互与视觉回归，失败时保留 Playwright 报告和追踪产物。
-- MIG-009 已将开发、构建与 E2E 启动链切换到 Vue 3、Vite 和 Vuex 4；`VITE_API_BASE`/`VITE_WS_BASE` 保持原有后端连接行为，Vue 3 移除的 filter、`$set` 与销毁钩子均已替换。未覆盖视觉基线；经定位，右上角折叠菜单在 Vue 3 下的变换栅格化最多相差 678 像素（小于目标视口的 0.1%），视觉测试以 800 像素的紧阈值继续防回归。
+- MIG-009 已将开发、构建与 E2E 启动链切换到 Vue 3 和 Vite；后续 MIG-010 已完成 Pinia 替换并移除 Vuex。`VITE_API_BASE`/`VITE_WS_BASE` 保持原有后端连接行为，Vue 3 移除的 filter、`$set` 与销毁钩子均已替换。当前视觉测试以 800 像素阈值覆盖首页、创建房间弹窗以及说书人白天/夜晚状态。
 - `MIG-LAW-001` 已补齐：服务端常规启动和 `--version` 均输出版权与 GPL 许可证告知；帮助菜单新增“法律与署名”入口，Playwright 覆盖其弹窗、版权和上游来源文本。
 - 服务端入口已移除 `@ts-nocheck`：为连接、房间、待投递消息、原始 WebSocket 数据、TLS 和监听地址建立了 TypeScript 类型，并继续使用 v1 旧数组 envelope decoder。HTTP/avatar 与完整的 lobby、room、离线消息队列 WebSocket 生命周期已分别拆入独立模块；入口现在只负责配置、HTTP 组装、TLS 与 upgrade 绑定。
-- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、111 个单元测试、13 个 HTTP/WS/CLI 集成测试、4 个浏览器流程、3 个视觉回归和生产构建均会执行；CI 同步运行非浏览器质量门、浏览器流程与视觉回归。
+- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、142 个单元/组件测试、13 个 HTTP/WS/CLI 集成测试、4 个浏览器流程、3 个视觉测试和生产构建均会执行；CI 同步运行非浏览器质量门、浏览器流程与视觉回归。
+
+## 历史记录（仅供追溯）
+
+以下内容按迁移发生顺序保留。它记录每个批次当时的事实和判断；当前状态应以前文“阶段与依赖”“当前执行队列”和“当前验证基线”为准。
+
 - 历史批次从独立、低风险的 lobby Vuex 模块开始；其余状态域与 transport 随后已迁至 Pinia/TypeScript，`allowJs` 和 Vuex 均已移除。
 - `Gradients.vue` 与基础 `Modal.vue` 已迁移至 `<script setup lang="ts">`；后续组件会按无状态、单一状态依赖、复杂交互的风险顺序迁移。
 - `lobby` 已成为第一个完全由 Pinia 持有的状态域：Vuex module 已删除，大厅 WebSocket、页面可见性和 UI 读取均直接使用 Pinia，并有单元测试锁定状态和房间生命周期。
@@ -239,10 +270,25 @@
 - 玩家变更、代词、头像、ping、席位和聊天历史 handler 现有显式 payload；数组索引与 direct message 映射均在使用前收窄。旧的 ping 元组仍可带第三个兼容槽位，避免改变历史房间协议。移除 transport 抑制后的严格诊断从 84 降至 64。
 - 伪装与魔典分发目标现与 `exactOptionalPropertyTypes` 兼容；按座位直发会跳过不存在的玩家，魔典入站找不到角色时使用带空 ID 的受类型回退对象，而不改变 v1 payload 的解析或转发格式。重新测量后，移除抑制的严格诊断从 64 降至 57。
 
-## 本批次约束
+## 详细风险清单
 
-- 允许：运行时固定、文档、CI、构建入口卫生和许可证元数据。
-- 禁止：改动游戏规则、UI、网络消息格式、存档格式、角色资源或 Vue 业务组件。
-- 停止条件：任一基线命令失败，或发现改动影响页面/协议行为。
+- Node 24 LTS 下的完整质量门尚需重新验证；
+- `src/store/socket.ts` 仍是约 2,664 行的会话 transport，且行覆盖率不足 10%；
+- `src/store/persistence.ts` 仍是约 664 行的 legacy adapter，存在生产代码 `any`，行覆盖率约 40%；
+- `legacy-commands`、`legacy-effects`、mutation bus 和 runtime store 投影仍被组件与 transport 使用；
+- `Menu.vue`、`Player.vue` 和 `TownSquare.vue` 仍是约 1,400–1,500 行的高职责组件；
+- E2E 尚未覆盖真实玩家加入、认领座位、角色分发、投票、聊天、重连、自定义剧本和旧存档恢复；
+- 视觉回归尚未覆盖玩家视图、主要弹窗和移动端视口；
+- Stylelint 仍有 628 条历史告警，入口 JS 已接近 1.8 MB 预算上限；
+- 服务端限流、payload、origin、graceful shutdown、指标和维护流程尚缺完整验证；
+- 旧客户端交叉兼容、canary、监控、备份和回滚尚无实际演练证据。
 
-下一批：优先收紧 `scenario` 与 `players` 的领域数据类型，并继续按模块拆分前端会话 transport；不要在单个批次混入协议格式变更。
+## 账本维护规则
+
+- 顶部“阶段与依赖”“当前执行队列”和“当前验证基线”是唯一的当前状态来源；
+- 只有验收命令全部通过，任务才能从“待开始/进行中”更新为“已完成”；
+- 每次更新需记录：commit、修改范围、验收命令及结果、协议/存档/样式影响、残余风险和下一项依赖；
+- 历史记录不因后续复盘而改写；发现历史描述与当前状态不同时，在当前看板修正，不回填伪造当时结果；
+- 单个批次不得混入协议格式、存档格式、DOM/CSS 和游戏规则变化；视觉基线不得自动更新。
+
+完整执行顺序与完成判定见 [`migration-review.md`](./migration-review.md)。
