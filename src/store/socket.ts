@@ -34,6 +34,7 @@ import {
   dispatchSessionOutboxMessage,
   type SessionOutboxTransport,
 } from "./session-outbox-dispatcher";
+import { SessionOutboxController } from "./session-outbox-controller";
 import { getCustomRolesStripped, rolesJSONbyId } from "./selectors";
 import { mutationBus } from "./mutation-bus";
 import type { OutboxMessage } from "../stores/message-outbox";
@@ -168,8 +169,7 @@ export class LiveSession {
   private _chat!: ReturnType<typeof useChatStore>;
   private _pingInterval!: number;
   private _pingTimer!: ReturnType<typeof setTimeout> | null;
-  private _sendInterval!: number;
-  private _sendTimer!: ReturnType<typeof setInterval> | null;
+  private _outboxController!: SessionOutboxController;
   private _reconnect!: SessionReconnectPolicy;
   private _hostTimeout!: ReturnType<typeof setTimeout> | null;
   private _joinTimeout!: ReturnType<typeof setTimeout> | null;
@@ -196,8 +196,14 @@ export class LiveSession {
     this._chat = useChatStore(pinia);
     this._pingInterval = sessionTransportTiming.pingIntervalMs;
     this._pingTimer = null;
-    this._sendInterval = sessionTransportTiming.sendQueueIntervalMs;
-    this._sendTimer = null;
+    this._outboxController = new SessionOutboxController({
+      intervalMs: sessionTransportTiming.sendQueueIntervalMs,
+      getQueue: () => this._outbox.queue,
+      transport: this._createOutboxTransport(),
+      onAcknowledged: (message) => this._checkQueue(message),
+      deleteAt: (index) =>
+        this._store.commit("session/deleteMessageQueue", index),
+    });
     this._reconnect = new SessionReconnectPolicy(
       sessionTransportTiming.reconnectDelayMs,
     );
@@ -390,9 +396,8 @@ export class LiveSession {
     }
   }
 
-  _sendQueue() {
-    if (this._outbox.queue.length <= 0) return;
-    const transport: SessionOutboxTransport = {
+  private _createOutboxTransport(): SessionOutboxTransport {
+    return {
       send: (command, params, feedback) =>
         this._send(command, params, feedback),
       sendDirect: (playerId, command, params, feedback) =>
@@ -402,25 +407,22 @@ export class LiveSession {
       uploadFile: (command, playerId, params, feedback) =>
         this._uploadFile(command, playerId, params, feedback),
     };
-    for (const message of this._outbox.queue)
-      dispatchSessionOutboxMessage(message, transport);
+  }
+
+  _sendQueue() {
+    this._outboxController.flush();
   }
 
   _startSendQueue() {
-    this._stopSendQueue();
-    this._sendQueue();
-    this._sendTimer = setInterval(() => {
-      this._sendQueue();
-    }, this._sendInterval);
+    this._outboxController.start();
   }
 
   _stopSendQueue() {
-    if (this._sendTimer !== null) clearInterval(this._sendTimer);
-    this._sendTimer = null;
+    this._outboxController.stop();
   }
 
   getPendingMessageCount() {
-    return this._outbox.queue.length;
+    return this._outboxController.pendingCount;
   }
 
   /**
@@ -428,18 +430,7 @@ export class LiveSession {
    * @param id id for identifying and deleting the query
    */
   _deleteFromQueue(id: unknown): void {
-    if (!Number.isInteger(id)) return;
-    if (this._outbox.queue.length <= 0) return;
-    for (let i = 0; i < this._outbox.queue.length; i++) {
-      const message = this._outbox.queue[i];
-      if (!message) continue;
-      if (message.id === id) {
-        this._checkQueue(message);
-        // this._store.state.session.messageQueue.splice(i,1);
-        this._store.commit("session/deleteMessageQueue", i);
-        break;
-      }
-    }
+    this._outboxController.acknowledge(id);
   }
 
   /**
