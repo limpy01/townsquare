@@ -1771,60 +1771,81 @@ export class LiveSession {
 
     const fullGrimoire = !!all || !!playerId ? false : true;
 
-    const message = {};
+    type GrimoireRoleEntry = [
+      { index: number; property: "role"; value: string | undefined },
+    ];
+    type GrimoireReminderEntry = [
+      {
+        index: number;
+        property: "reminder" | "stReminder";
+        value: Array<{ role?: string }>;
+      },
+    ];
+    type GrimoireMessage = {
+      roles: GrimoireRoleEntry[];
+      reminders?: GrimoireReminderEntry[];
+      stReminders?: GrimoireReminderEntry[];
+    };
+    const message:
+      | GrimoireMessage
+      | Record<string, ["grimoire", GrimoireMessage]> = { roles: [] };
     if (!role) {
       // not specifying a role
-      message.roles = [];
+      const grimoire = message as GrimoireMessage;
       if (fullGrimoire) {
-        message.reminders = [];
+        grimoire.reminders = [];
       }
       if (all) {
-        message.stReminders = [];
+        grimoire.stReminders = [];
       }
       this._store.state.players.players.forEach((player, index) => {
-        message.roles.push([
+        grimoire.roles.push([
           { index, property: "role", value: player.role.id },
         ]);
         if (fullGrimoire) {
-          message.reminders.push([
+          grimoire.reminders?.push([
             { index, property: "reminder", value: player.reminders },
           ]);
         }
         if (all) {
-          message.stReminders.push([
+          grimoire.stReminders?.push([
             { index, property: "stReminder", value: player.stReminders },
           ]);
         }
       });
-      if (Object.keys(message.roles).length) {
-        if (all) this._send("grimoire", message);
-        if (playerId) this._sendDirect(playerId, "grimoire", message);
+      if (grimoire.roles.length) {
+        if (all) this._send("grimoire", grimoire);
+        if (playerId) this._sendDirect(playerId, "grimoire", grimoire);
         if (seatNum) {
           const player = this._store.state.players.players[seatNum - 1];
           if (!player) return;
           playerId = player.id;
-          this._sendDirect(playerId, "grimoire", message);
+          this._sendDirect(playerId, "grimoire", grimoire);
         }
       }
     } else {
       // send all roles and reminders when requesting full grimoire (i.e. widow or spy)
+      const directMessage = message as Record<
+        string,
+        ["grimoire", GrimoireMessage]
+      >;
       this._store.state.players.players.forEach((player) => {
         if (player.id && player.role && player.role.id == role) {
-          message[player.id] = ["grimoire", { roles: [], reminders: [] }];
+          directMessage[player.id] = ["grimoire", { roles: [], reminders: [] }];
           this._store.state.players.players.forEach((player2, index) => {
-            message[player.id][1].roles.push([
+            directMessage[player.id]?.[1].roles.push([
               { index, property: "role", value: player2.role.id },
             ]);
             if (fullGrimoire) {
-              message[player.id][1].reminders.push([
+              directMessage[player.id]?.[1].reminders?.push([
                 { index, property: "reminder", value: player2.reminders },
               ]);
             }
           });
         }
       });
-      if (Object.keys(message).length) {
-        this._send("direct", message);
+      if (Object.keys(directMessage).length) {
+        this._send("direct", directMessage);
       }
     }
 
