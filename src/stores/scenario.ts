@@ -23,14 +23,42 @@ import { useSessionIdentityStore } from "./session-identity";
 
 const clean = (id: string) => id.toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
 
-const getRolesByEdition = (edition: any = editionJSON[0]) =>
-  new Map(getEditionRoles(rolesJSON, edition).map((role) => [role.id, role]));
+type ScenarioEdition = {
+  id: string;
+  roles: string[];
+  isOfficial: boolean;
+  [property: string]: unknown;
+};
 
-const getTravelersNotInEdition = (edition: any = editionJSON[0]) =>
-  new Map(getOtherTravelers(rolesJSON, edition).map((role) => [role.id, role]));
+const roleCatalog = rolesJSON as unknown as ScenarioCatalogRole[];
+const fabledCatalog = fabledJSON as unknown as ScenarioCatalogRole[];
+const editionCatalog = editionJSON as unknown as ScenarioEdition[];
+const defaultEdition = editionCatalog[0]!;
 
-const editionJSONbyId = new Map(
-  editionJSON.map((edition) => [edition.id, edition]),
+const normalizeEdition = (value: unknown): ScenarioEdition | null => {
+  if (typeof value !== "object" || value === null) return null;
+  const edition = value as Record<string, unknown>;
+  if (typeof edition.id !== "string") return null;
+  return {
+    ...edition,
+    id: edition.id,
+    isOfficial: edition.isOfficial === true,
+    roles: Array.isArray(edition.roles)
+      ? edition.roles.filter((role): role is string => typeof role === "string")
+      : [],
+  };
+};
+
+const getRolesByEdition = (edition: ScenarioEdition = defaultEdition) =>
+  new Map(getEditionRoles(roleCatalog, edition).map((role) => [role.id, role]));
+
+const getTravelersNotInEdition = (edition: ScenarioEdition = defaultEdition) =>
+  new Map(
+    getOtherTravelers(roleCatalog, edition).map((role) => [role.id, role]),
+  );
+
+const editionJSONbyId = new Map<string, ScenarioEdition>(
+  editionCatalog.map((edition) => [edition.id, edition]),
 );
 
 const jinxes = new Map(
@@ -41,12 +69,12 @@ const jinxes = new Map(
 );
 
 type ScenarioState = {
-  edition: any;
+  edition: ScenarioEdition;
   selectedEditions: Record<string, boolean>;
-  roles: Map<any, any>;
-  otherTravelers: Map<any, any>;
-  fabled: Map<any, any>;
-  jinxes: Map<any, any>;
+  roles: Map<string, ScenarioCatalogRole>;
+  otherTravelers: Map<string, ScenarioCatalogRole>;
+  fabled: Map<string, ScenarioCatalogRole>;
+  jinxes: Map<string, Map<string, string>>;
   states: unknown[];
   teamsNames: Record<string, string>;
   firstNight: unknown[];
@@ -55,7 +83,7 @@ type ScenarioState = {
 
 export const useScenarioStore = defineStore("scenario", {
   state: (): ScenarioState => ({
-    edition: editionJSONbyId.get("tb"),
+    edition: editionJSONbyId.get("tb") ?? defaultEdition,
     selectedEditions: {
       tb: true,
       bmr: true,
@@ -66,7 +94,7 @@ export const useScenarioStore = defineStore("scenario", {
     },
     roles: getRolesByEdition(),
     otherTravelers: getTravelersNotInEdition(),
-    fabled: new Map(fabledJSON.map((role) => [role.id, role])),
+    fabled: new Map(fabledCatalog.map((role) => [role.id, role])),
     jinxes,
     states: [] as unknown[],
     teamsNames: {
@@ -125,29 +153,34 @@ export const useScenarioStore = defineStore("scenario", {
 
       const catalog = buildScenarioRoleCatalog(
         processedRoles,
-        rolesJSON,
-        fabledJSON,
+        roleCatalog,
+        fabledCatalog,
       );
       this.roles = catalog.roles;
       this.fabled = catalog.fabled;
       this.otherTravelers = catalog.otherTravelers;
       return true;
     },
-    setEdition(edition: any) {
-      let fabled: any[] | undefined;
-      if (editionJSONbyId.has(edition.id)) {
-        this.edition = editionJSONbyId.get(edition.id);
+    setEdition(value: unknown) {
+      const edition = normalizeEdition(value);
+      if (!edition) return undefined;
+      let fabled: ScenarioCatalogRole[] | undefined;
+      const knownEdition = editionJSONbyId.get(edition.id);
+      if (knownEdition) {
+        this.edition = knownEdition;
         this.roles = getRolesByEdition(this.edition);
         if (this.edition.id === "all") {
           this.roles = new Map(
-            Array.from(this.roles.entries()).filter(
-              ([, role]: any) => this.selectedEditions[role.edition],
+            Array.from(this.roles.entries()).filter(([, role]) =>
+              typeof role.edition === "string"
+                ? this.selectedEditions[role.edition]
+                : false,
             ),
           );
         }
         this.otherTravelers = getTravelersNotInEdition(this.edition);
         fabled = Array.from(this.fabled.values()).filter(
-          (role: any) => role.edition === edition.id,
+          (role) => role.edition === edition.id,
         );
         if (!useSessionIdentityStore(pinia).isSpectator) {
           usePlayersStore(pinia).setFabled({ fabled });
@@ -155,15 +188,16 @@ export const useScenarioStore = defineStore("scenario", {
       } else {
         this.edition = edition;
       }
-      if (this.roles.get("professor")) {
-        this.roles.get("professor").otherNight = useLegacyOptionsStore(pinia)
-          .useOldOrder.professor
+      const professor = this.roles.get("professor");
+      if (professor) {
+        professor.otherNight = useLegacyOptionsStore(pinia).useOldOrder
+          .professor
           ? 79
           : 96;
       }
-      if (this.roles.get("pithag")) {
-        this.roles.get("pithag").otherNight = useLegacyOptionsStore(pinia)
-          .useOldOrder.pithag
+      const pithag = this.roles.get("pithag");
+      if (pithag) {
+        pithag.otherNight = useLegacyOptionsStore(pinia).useOldOrder.pithag
           ? 37
           : 16;
       }

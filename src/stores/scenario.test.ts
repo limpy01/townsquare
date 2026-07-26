@@ -57,4 +57,12 @@ describe("scenario store", () => {
     ).toBe(false);
     expect(scenario.roles).toBe(originalRoles);
   });
+
+  it("ignores an edition without a stable identifier", () => {
+    const scenario = useScenarioStore();
+    const originalEdition = scenario.edition;
+
+    expect(scenario.setEdition({ roles: ["imp"] })).toBeUndefined();
+    expect(scenario.edition).toBe(originalEdition);
+  });
 });
