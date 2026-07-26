@@ -14,6 +14,12 @@ export default defineConfig({
       "@townsquare/contracts/legacy-envelope": fileURLToPath(
         new URL("./packages/contracts/src/legacy-envelope.ts", import.meta.url),
       ),
+      "@townsquare/contracts/legacy-client-command": fileURLToPath(
+        new URL(
+          "./packages/contracts/src/legacy-client-command.ts",
+          import.meta.url,
+        ),
+      ),
       "@townsquare/contracts/legacy-session-command": fileURLToPath(
         new URL(
           "./packages/contracts/src/legacy-session-command.ts",

@@ -276,11 +276,21 @@ const legacySessionPayloadSchemas: Partial<
   votingSpeed: z.number().finite().positive(),
 };
 
+/** Validate v1 server messages before the browser dispatcher mutates state. */
+export function isLegacySessionPayload(
+  command: string,
+  params: unknown,
+): boolean {
+  const parsedCommand = legacySessionCommandSchema.safeParse(command);
+  if (!parsedCommand.success) return false;
+  const schema = legacySessionPayloadSchemas[parsedCommand.data];
+  return Boolean(schema?.safeParse(params).success);
+}
+
 const legacyDirectMessageSchema = z
   .tuple([legacySessionCommandSchema, z.unknown()])
   .superRefine(([command, params], context) => {
-    const schema = legacySessionPayloadSchemas[command];
-    if (!schema || !schema.safeParse(params).success) {
+    if (!isLegacySessionPayload(command, params)) {
       context.addIssue({
         code: "custom",
         message: `invalid ${command} direct payload`,

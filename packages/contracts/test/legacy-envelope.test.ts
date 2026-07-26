@@ -9,6 +9,7 @@ import {
   legacyDirectPayloadSchema,
   legacyRequestPayloadSchema,
   legacySetTalkingPayloadSchema,
+  isLegacySessionPayload,
   isLegacySessionCommand,
   legacySessionCommandSchema,
   legacyUploadFilePayloadSchema,
@@ -144,6 +145,18 @@ describe("legacy session command boundary", () => {
       false,
     );
     expect(isLegacySessionCommand("setRooms")).toBe(false);
+  });
+
+  it("validates server payloads before browser dispatch", () => {
+    expect(
+      isLegacySessionPayload("gs", {
+        gamestate: [{ id: "player-a" }],
+      }),
+    ).toBe(true);
+    expect(isLegacySessionPayload("gs", { gamestate: {} })).toBe(false);
+    expect(isLegacySessionPayload("chat", { message: "missing ids" })).toBe(
+      false,
+    );
   });
 });
 

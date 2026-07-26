@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { wsBase } from "../config";
 import { pinia } from "../pinia";
+import { isLegacySessionPayload } from "@townsquare/contracts/legacy-client-command";
 import LiveLobby from "./lobby-transport";
 import { showInputModal } from "../services/input-modal";
 import { useInteractionStore } from "../stores/interaction";
@@ -366,6 +367,10 @@ export class LiveSession {
     const envelope = decodeSessionMessage(data);
     if (!envelope) {
       console.log("unsupported socket message", data);
+      return;
+    }
+    if (!isLegacySessionPayload(envelope.command, envelope.params)) {
+      console.log("unsupported socket payload", envelope);
       return;
     }
     dispatchSessionInboundMessage(
