@@ -30,6 +30,7 @@
     "format:check": "node scripts/check-format-baseline.cjs",
     "check:runtime-sources": "node scripts/check-runtime-source-extensions.cjs",
     "check:type-suppressions": "node scripts/check-type-suppressions.cjs",
+    "report:assets": "node scripts/report-asset-references.cjs",
     "test:integration": "npm run test:server",
     "check": "npm run format:check && npm run lint:baseline && npm run check:runtime-sources && npm run check:type-suppressions && npm run typecheck && npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:visual && npm run build"
   },

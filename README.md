@@ -49,6 +49,8 @@ npm run test:visual
 
 `npm run check` 会运行格式与 lint 基线、运行时 TypeScript 源码检查、类型检查、单元/服务端集成/E2E 测试以及生产构建；视觉截图只比较基线，更新基线请显式使用 `npm run test:visual:update`。
 
+资源治理可运行 `npm run report:assets`；它会输出由静态引用或 Vite glob 覆盖的资源目录，以及待人工确认的未引用资源，不会删除文件。
+
 ### 自定义剧本支持
 
 任何从[英文剧本工具](https://bloodontheclocktower.com/script)或[中文剧本工具](https://clocktower.gstonegames.com/script_tool/)生成的JSON剧本文件都被支持，可以上传完整JSON文件或从剪切板粘贴。如果你想继续自定义剧本，可以加入以下`"_meta"`对象对剧本整体做出调整。
