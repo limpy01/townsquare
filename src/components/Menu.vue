@@ -587,11 +587,14 @@ import { useSessionSettingsStore } from "../stores/session-settings";
 import { useProfileStore } from "../stores/profile";
 import { useMessageOutboxStore } from "../stores/message-outbox";
 import { useChatStore } from "../stores/chat";
+import { useDistributionStore } from "../stores/distribution";
+import { useModalStore, type ModalName } from "../stores/modals";
 import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
+import { useRoleActivityStore } from "../stores/role-activity";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { commitGameCommand, gameCommands } from "../store/legacy-commands";
+import { emitGameEvent } from "../store/game-events";
 import { clearTownsquareStorage, readStoredArray } from "../store/storage";
 
 const emit = defineEmits<{
@@ -612,6 +615,9 @@ const settings = useSessionSettingsStore();
 const profile = useProfileStore();
 const outbox = useMessageOutboxStore();
 const chat = useChatStore();
+const distribution = useDistributionStore();
+const modals = useModalStore();
+const roleActivity = useRoleActivityStore();
 const interaction = useInteractionStore();
 const audioInputNumber = ref<HTMLInputElement | null>(null);
 const microphoneSetting = ref("free");
@@ -667,20 +673,145 @@ const isHandHeld = computed(() => {
   console.log(deviceType);
   return /mobile|android|touch|webos|iphone|ipod/i.test(deviceType);
 });
-const toggleGrimoire = () => commitGameCommand("toggleGrimoire");
-const toggleMenu = () => commitGameCommand("toggleMenu");
-const toggleImageOptIn = () => commitGameCommand("toggleImageOptIn");
-const toggleForwardEvilInfo = () => commitGameCommand("toggleForwardEvilInfo");
-const toggleMuted = () => commitGameCommand("toggleMuted");
-const toggleNightOrder = () => commitGameCommand("toggleNightOrder");
-const toggleStatic = () => commitGameCommand("toggleStatic");
-const setZoom = (value: number) => commitGameCommand("setZoom", value);
-const toggleModal = (name: string) => commitGameCommand("toggleModal", name);
-const setTalking = (isTalking: boolean) =>
-  commitGameCommand("session/setTalking", {
-    seatNum: session.claimedSeat,
-    isTalking,
+const publish = (type: string, payload?: unknown) =>
+  emitGameEvent(type, payload);
+const toggleGrimoire = () => {
+  grimoire.toggle("isPublic");
+  publish("toggleGrimoire");
+};
+const setGrimoirePublic = (isPublic: boolean) => {
+  grimoire.toggle("isPublic", isPublic);
+  publish("toggleGrimoire", isPublic);
+};
+const toggleMenu = () => grimoire.toggle("isMenuOpen");
+const toggleImageOptIn = () => {
+  grimoire.toggle("isImageOptIn");
+  publish("toggleImageOptIn");
+};
+const toggleForwardEvilInfo = () => grimoire.toggle("isForwardEvilInfo");
+const toggleMuted = () => {
+  grimoire.toggle("isMuted");
+  publish("toggleMuted");
+};
+const toggleNightOrder = () => grimoire.toggle("isNightOrder");
+const toggleStatic = () => {
+  grimoire.toggle("isStatic");
+  publish("toggleStatic");
+};
+const setZoom = (value: number) => {
+  grimoire.set("zoom", value);
+  publish("setZoom", value);
+};
+const toggleModal = (name: ModalName) => modals.toggle(name);
+const setTalking = (isTalking: boolean) => {
+  const payload = { seatNum: session.claimedSeat, isTalking };
+  audio.setTalking(isTalking);
+  playersState.setTalking({ ...payload, playerId: session.playerId });
+  publish("session/setTalking", payload);
+};
+const setAudioThreshold = (value: number) => {
+  grimoire.set("audioThreshold", value);
+  publish("setAudioThreshold", value);
+};
+const setSessionId = (sessionId: string) => {
+  session.setSessionId(sessionId);
+  publish("session/setSessionId", sessionId);
+};
+const setSpectator = (isSpectator: boolean) =>
+  session.setSpectator(isSpectator);
+const claimSeat = (seat: number) => {
+  session.claimSeat(seat);
+  publish("session/claimSeat", seat);
+};
+const setBootlegger = (bootlegger: string) => {
+  settings.setBootlegger(bootlegger);
+  publish("session/setBootlegger", bootlegger);
+};
+const setPlayerVotes = (votes: number) => {
+  voting.setPlayerVotes(votes);
+  publish("session/setPlayerVotes", votes);
+};
+const setSecretVote = (secret: boolean) => {
+  voting.setSecretVote(secret);
+  publish("session/setSecretVote", secret);
+};
+const setReview = (isReview: boolean) => {
+  review.setReview(isReview);
+  publish("session/setIsReview", isReview);
+};
+const setRole = (payload: Parameters<typeof roleActivity.setRole>[0]) => {
+  roleActivity.setRole(payload);
+  publish("session/setIsRole", payload);
+};
+const clearVoteHistory = (indexes: number[] = []) => {
+  voting.clearVoteHistory(indexes);
+  publish("session/clearVoteHistory", indexes);
+};
+const clearPlayersDirect = (emptyFabled = false) => {
+  playersState.clear(emptyFabled);
+  publish("players/clear", emptyFabled);
+};
+const removeGroup = (chatId: string) => {
+  chat.removeGroup(chatId).forEach((change) => playersState.update(change));
+  publish("session/removeGroupChat", { chatId });
+};
+const removeQueuedMessage = (index: number) => {
+  outbox.remove(index);
+  publish("session/deleteMessageQueue", index);
+};
+const setNomination = (payload?: unknown) => {
+  voting.setNomination(payload as never, {
+    isSecretVote: voting.isSecretVote,
+    claimedSeat: session.claimedSeat,
   });
+  publish("session/nomination", payload);
+};
+const addPlayerDirect = (stImage: string | null, stName: string | null) => {
+  const payload = { name: "", stImage, stName };
+  playersState.add(payload.name);
+  if (playersState.fabled.length === 0) playersState.setFabled({ fabled: [] });
+  publish("players/add", payload);
+};
+const setOldOrder = (value: typeof pendingOldOrder.value) => {
+  legacyOptions.setUseOldOrder(value);
+  publish("session/setUseOldOrder", value);
+};
+const setOldRole = (value: typeof pendingOldRole.value) => {
+  legacyOptions.setUseOldRole(value);
+  publish("session/setUseOldRole", value);
+};
+const setEdition = (value: typeof scenario.edition) => {
+  scenario.setEdition(value);
+  publish("setEdition", value);
+};
+const setCustomRoles = (value: unknown[]) => {
+  if (scenario.setCustomRoles(value)) publish("setCustomRoles", value);
+};
+const startTimerDirect = (seconds: number) => {
+  timer.startTimer(seconds);
+  publish("session/startTimer", seconds);
+};
+const stopTimerDirect = () => {
+  timer.stopTimer();
+  publish("session/stopTimer");
+};
+const setDistribution = (
+  kind: "roles" | "types" | "bluffs" | "grimoire",
+  active: boolean,
+  payload?: unknown,
+) => {
+  if (kind === "roles") distribution.setRoles(active);
+  else if (kind === "types") distribution.setTypes(active);
+  else if (kind === "bluffs") distribution.setBluffs(active);
+  else distribution.setGrimoire(active);
+  const type = {
+    roles: "session/distributeRoles",
+    types: "session/distributeTypes",
+    bluffs: "session/distributeBluffs",
+    grimoire: "session/distributeGrimoire",
+  }[kind];
+  publish(type, payload ?? active);
+};
 const initAudio = async () => {
   if (audioContext.value) return;
 
@@ -756,18 +887,18 @@ const stopEditingThreshold = (save: boolean) => {
 };
 const syncAudioThresholdSlider = (save: boolean) => {
   audioThresholdSlider.value = audioThresholdNumber.value;
-  if (save) commitGameCommand("setAudioThreshold", audioThresholdNumber.value);
+  if (save) setAudioThreshold(audioThresholdNumber.value);
 };
 const syncAudioThresholdNumber = (save: boolean) => {
   audioThresholdNumber.value = audioThresholdSlider.value;
-  if (save) commitGameCommand("setAudioThreshold", audioThresholdSlider.value);
+  if (save) setAudioThreshold(audioThresholdSlider.value);
 };
 const addPlayer = (
   stImage: string | null = null,
   stName: string | null = null,
 ) => {
   if (session.isSpectator || playersState.players.length >= 20) return;
-  commitGameCommand("players/add", { name: "", stImage, stName });
+  addPlayerDirect(stImage, stName);
 };
 const confirm = (name: string) =>
   showInputModal({
@@ -778,14 +909,14 @@ const confirm = (name: string) =>
 const randomizeSeatings = async () => {
   if (session.isSpectator || (await confirm("确定要随机分配座位吗？")) !== true)
     return;
-  gameCommands.dispatch("players/randomize");
+  playersState.randomize();
+  publish("players/randomize");
 };
 const clearPlayers = async () => {
   if (session.isSpectator || (await confirm("确定要移除所有座位吗？")) !== true)
     return;
-  if (voting.nomination) commitGameCommand("session/nomination");
-  if (session.sessionId) commitGameCommand("players/clear");
-  else commitGameCommand("players/clear", true);
+  if (voting.nomination) setNomination();
+  clearPlayersDirect(!session.sessionId);
 };
 const clearRoles = async () => {
   if (
@@ -793,7 +924,8 @@ const clearRoles = async () => {
     (await confirm("确定要移除所有玩家角色吗？")) !== true
   )
     return;
-  gameCommands.dispatch("players/clearRoles");
+  playersState.clearRoles(session.isSpectator);
+  publish("players/clearRoles");
 };
 const customiseBootlegger = async () => {
   if (session.isSpectator) return;
@@ -803,11 +935,15 @@ const customiseBootlegger = async () => {
     inputData: { name: ["输入私货商人内容"], length: 1, placeholder: [""] },
   }).catch(() => null);
   if (!Array.isArray(input)) return;
-  commitGameCommand("session/setBootlegger", (input[0] ?? "").trim());
+  setBootlegger((input[0] ?? "").trim());
 };
 const toggleNight = () => {
-  commitGameCommand("toggleNight");
-  if (grimoire.isNight) commitGameCommand("session/setMarkedPlayer", -1);
+  grimoire.toggle("isNight");
+  publish("toggleNight");
+  if (grimoire.isNight) {
+    voting.setMarkedPlayer(-1, { isSecretVote: voting.isSecretVote });
+    publish("session/setMarkedPlayer", -1);
+  }
 };
 const selectEditionsAsk = () => {
   selectingEditions.value = !selectingEditions.value;
@@ -824,7 +960,10 @@ const selectEditionsAsk = () => {
 const selectEditions = (update = false) => {
   nextTick(() => document.getElementById("app")?.focus());
   selectingEditions.value = false;
-  if (update) commitGameCommand("setSelectedEditions", pendingEditions.value);
+  if (update) {
+    scenario.setSelectedEditions(pendingEditions.value);
+    publish("setSelectedEditions", pendingEditions.value);
+  }
 };
 const imageOptIn = async () => {
   const popup = grimoire.isImageOptIn
@@ -852,8 +991,8 @@ const selectOldOrder = (update = false) => {
   focusApp();
   selectingOldOrder.value = false;
   if (!update) return;
-  commitGameCommand("session/setUseOldOrder", pendingOldOrder.value);
-  commitGameCommand("setEdition", scenario.edition);
+  setOldOrder(pendingOldOrder.value);
+  setEdition(scenario.edition);
 };
 const useOldRoleAsk = () => {
   selectingOldOrder.value = false;
@@ -865,10 +1004,10 @@ const selectOldRole = (update = false) => {
   focusApp();
   selectingOldRole.value = false;
   if (!update) return;
-  commitGameCommand("session/setUseOldRole", pendingOldRole.value);
+  setOldRole(pendingOldRole.value);
   if (localStorage.getItem("roles"))
-    commitGameCommand("setCustomRoles", readStoredArray(localStorage, "roles"));
-  commitGameCommand("setEdition", scenario.edition);
+    setCustomRoles(readStoredArray(localStorage, "roles"));
+  setEdition(scenario.edition);
 };
 const setBackground = async () => {
   const input = await showInputModal({
@@ -876,7 +1015,10 @@ const setBackground = async () => {
     inputModal: "input",
     inputData: { name: ["输入自定义背景图URL"], length: 1, placeholder: [""] },
   }).catch(() => null);
-  if (Array.isArray(input)) commitGameCommand("setBackground", input[0]);
+  if (Array.isArray(input)) {
+    grimoire.set("background", input[0] ?? "");
+    publish("setBackground", input[0]);
+  }
 };
 const changeName = async () => {
   const input = await showInputModal({
@@ -884,8 +1026,10 @@ const changeName = async () => {
     inputModal: "input",
     inputData: { name: ["输入玩家昵称"], length: 1, placeholder: [""] },
   }).catch(() => null);
-  if (Array.isArray(input))
-    commitGameCommand("session/setPlayerName", input[0]);
+  if (Array.isArray(input)) {
+    profile.setPlayerName(input[0] ?? "");
+    publish("session/setPlayerName", input[0]);
+  }
 };
 const copySessionUrl = () => {
   const url = window.location.href.split("#")[0];
@@ -922,10 +1066,10 @@ const hostSession = async () => {
   const sessionId = Number(input[0]).toString();
   const numPlayers = Math.min(Number(input[1]), 20);
   if (!sessionId) return;
-  commitGameCommand("session/clearVoteHistory", []);
-  commitGameCommand("session/setSpectator", false);
-  commitGameCommand("session/setSessionId", sessionId);
-  commitGameCommand("players/clear");
+  clearVoteHistory();
+  setSpectator(false);
+  setSessionId(sessionId);
+  clearPlayersDirect();
   for (let index = 0; index < numPlayers; index++) addPlayer();
   copySessionUrl();
 };
@@ -936,29 +1080,26 @@ const leaveSession = async () => {
     inputData: { name: ["确定要离开/解散该房间吗？"] },
   }).catch(() => null);
   if (confirmed !== true) return;
-  commitGameCommand("session/claimSeat", -1);
-  commitGameCommand("session/setSpectator", false);
-  commitGameCommand("session/setSessionId", "");
+  claimSeat(-1);
+  setSpectator(false);
+  setSessionId("");
   connection.setIsHostAllowed(null);
   connection.setIsJoinAllowed(null);
-  if (voting.nomination) commitGameCommand("session/nomination");
-  commitGameCommand("players/clear", true);
-  if (settings.bootlegger) commitGameCommand("session/setBootlegger", "");
-  if (voting.playerVotes > 1) commitGameCommand("session/setPlayerVotes", 1);
-  if (voting.isSecretVote) commitGameCommand("session/setSecretVote", false);
-  if (review.isReview) commitGameCommand("session/setIsReview", false);
+  if (voting.nomination) setNomination();
+  clearPlayersDirect(true);
+  if (settings.bootlegger) setBootlegger("");
+  if (voting.playerVotes > 1) setPlayerVotes(1);
+  if (voting.isSecretVote) setSecretVote(false);
+  if (review.isReview) setReview(false);
   interaction.setChatOpen(false);
-  chat.groups.forEach((group) =>
-    commitGameCommand("session/removeGroupChat", { chatId: group.id }),
-  );
-  while (outbox.queue.length > 0)
-    commitGameCommand("session/deleteMessageQueue", 0);
-  commitGameCommand("session/setIsRole", {
+  chat.groups.forEach((group) => removeGroup(group.id));
+  while (outbox.queue.length > 0) removeQueuedMessage(0);
+  setRole({
     role: "wraith",
     property: "active",
     value: false,
   });
-  commitGameCommand("session/setIsRole", {
+  setRole({
     role: "wraith",
     property: "using",
     value: false,
@@ -981,19 +1122,19 @@ const joinSession = async () => {
   if (!Array.isArray(input)) return;
   const sessionId = Number((input[0] ?? "").split("#").pop()).toString();
   if (!sessionId) return;
-  commitGameCommand("session/clearVoteHistory", []);
-  commitGameCommand("session/setSpectator", true);
-  commitGameCommand("toggleGrimoire", false);
-  commitGameCommand("session/setSessionId", sessionId);
+  clearVoteHistory();
+  setSpectator(true);
+  setGrimoirePublic(false);
+  setSessionId(sessionId);
 };
 const startTimer = (time?: number) => {
   if (session.isSpectator) return;
-  commitGameCommand("session/startTimer", time ?? timer.seconds);
+  startTimerDirect(time ?? timer.seconds);
   timing.value = true;
 };
 const stopTimer = () => {
   if (session.isSpectator) return;
-  commitGameCommand("session/stopTimer");
+  stopTimerDirect();
   timing.value = false;
 };
 const setTimer = async () => {
@@ -1020,23 +1161,20 @@ const distributeRoles = (confirmed: boolean) => {
   void nextTick(focusApp);
   distributing.value = false;
   if (!confirmed || session.isSpectator) return;
-  commitGameCommand("session/distributeRoles", true);
-  setTimeout(() => commitGameCommand("session/distributeRoles", false), 2000);
+  setDistribution("roles", true);
+  setTimeout(() => setDistribution("roles", false), 2000);
   if (!isSendingBluff.value) return;
-  commitGameCommand("session/distributeBluffs", {
+  setDistribution("bluffs", true, {
     val: true,
     role: "demonAll",
   });
-  setTimeout(
-    () => commitGameCommand("session/distributeBluffs", { val: false }),
-    2000,
-  );
+  setTimeout(() => setDistribution("bluffs", false, { val: false }), 2000);
 };
 const distributeTypes = () => {
   distributingTypes.value = false;
   if (session.isSpectator) return;
-  commitGameCommand("session/distributeTypes", true);
-  setTimeout(() => commitGameCommand("session/distributeTypes", false), 2000);
+  setDistribution("types", true);
+  setTimeout(() => setDistribution("types", false), 2000);
 };
 const distributeTypeAsk = async () => {
   distributing.value = false;
@@ -1088,11 +1226,8 @@ const distributeBluffs = async (role: string | null = null, seat = false) => {
     },
   }).catch(() => null);
   if (confirmed !== true || session.isSpectator) return;
-  commitGameCommand("session/distributeBluffs", { val: true, role, seatNum });
-  setTimeout(
-    () => commitGameCommand("session/distributeBluffs", { val: false }),
-    2000,
-  );
+  setDistribution("bluffs", true, { val: true, role, seatNum });
+  setTimeout(() => setDistribution("bluffs", false, { val: false }), 2000);
   distributingBluffs.value = false;
 };
 const distributeGrimoireAsk = () => {
@@ -1124,11 +1259,8 @@ const distributeGrimoire = async (role: string | null = null, seat = false) => {
     inputData: { name: [`确定要发送魔典给${roleText || `${seatNum}号位`}？`] },
   }).catch(() => null);
   if (confirmed !== true || session.isSpectator) return;
-  commitGameCommand("session/distributeGrimoire", { val: true, role, seatNum });
-  setTimeout(
-    () => commitGameCommand("session/distributeGrimoire", { val: false }),
-    2000,
-  );
+  setDistribution("grimoire", true, { val: true, role, seatNum });
+  setTimeout(() => setDistribution("grimoire", false, { val: false }), 2000);
   distributingGrimoire.value = false;
 };
 const toggleIsReview = async () => {
@@ -1142,10 +1274,11 @@ const toggleIsReview = async () => {
       }).catch(() => null);
   if (confirmed === null) return;
   if (!review.isReview && confirmed === true) {
-    commitGameCommand("session/setIsReview", true);
-    gameCommands.dispatch("players/realivePlayers");
+    setReview(true);
+    playersState.realivePlayers();
+    publish("players/realivePlayers");
   } else if (review.isReview) {
-    commitGameCommand("session/setIsReview", false);
+    setReview(false);
   }
 };
 const clearLocalStorage = async () => {
