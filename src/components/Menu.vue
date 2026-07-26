@@ -596,6 +596,7 @@ import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
 import { emitGameEvent } from "../store/game-events";
 import { clearTownsquareStorage, readStoredArray } from "../store/storage";
+import { useMenuAudioDetection } from "../composables/use-menu-audio-detection";
 
 const emit = defineEmits<{
   trigger: [command: ["uploadAvatar"]];
@@ -620,14 +621,9 @@ const modals = useModalStore();
 const roleActivity = useRoleActivityStore();
 const interaction = useInteractionStore();
 const audioInputNumber = ref<HTMLInputElement | null>(null);
-const microphoneSetting = ref("free");
 const audioThresholdNumber = ref(150);
 const audioThresholdSlider = ref(150);
 const isEditingThreshold = ref(false);
-const audioContext = ref<AudioContext | null>(null);
-const audioStream = ref<MediaStream | null>(null);
-const analyser = ref<AnalyserNode | null>(null);
-const audioSource = ref<MediaStreamAudioSourceNode | null>(null);
 const selectingEditions = ref(false);
 const pendingEditions = ref({
   tb: true,
@@ -709,6 +705,12 @@ const setTalking = (isTalking: boolean) => {
   playersState.setTalking({ ...payload, playerId: session.playerId });
   publish("session/setTalking", payload);
 };
+const { microphoneSetting, startListening, stopListening } =
+  useMenuAudioDetection({
+    audio,
+    getAudioThreshold: () => grimoire.audioThreshold,
+    setTalking,
+  });
 const setAudioThreshold = (value: number) => {
   grimoire.set("audioThreshold", value);
   publish("setAudioThreshold", value);
@@ -811,59 +813,6 @@ const setDistribution = (
     grimoire: "session/distributeGrimoire",
   }[kind];
   publish(type, payload ?? active);
-};
-const initAudio = async () => {
-  if (audioContext.value) return;
-
-  const nextContext = new AudioContext();
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const source = nextContext.createMediaStreamSource(stream);
-  const nextAnalyser = nextContext.createAnalyser();
-  nextAnalyser.fftSize = 256;
-  source.connect(nextAnalyser);
-  audioContext.value = nextContext;
-  audioStream.value = stream;
-  audioSource.value = source;
-  analyser.value = nextAnalyser;
-};
-const runAudioDetection = () => {
-  const activeAnalyser = analyser.value;
-  const activeContext = audioContext.value;
-  if (!activeAnalyser || !activeContext) return;
-
-  const dataArray = new Uint8Array(activeAnalyser.frequencyBinCount);
-  const humanVoiceRange = { min: 250, max: 400 };
-  const detectSpeechActivity = () => {
-    if (!analyser.value || !audioContext.value) return;
-    activeAnalyser.getByteFrequencyData(dataArray);
-    const binSize =
-      activeContext.sampleRate / (2 * activeAnalyser.frequencyBinCount);
-    let totalVolume = 0;
-    for (let index = 0; index < activeAnalyser.frequencyBinCount; index++) {
-      const frequency = index * binSize;
-      if (frequency >= humanVoiceRange.min && frequency <= humanVoiceRange.max)
-        totalVolume += dataArray[index] ?? 0;
-    }
-
-    if (totalVolume > grimoire.audioThreshold && !audio.isTalking)
-      setTalking(true);
-    else if (totalVolume <= grimoire.audioThreshold && audio.isTalking)
-      setTalking(false);
-
-    audio.setListeningFrame(requestAnimationFrame(detectSpeechActivity));
-  };
-
-  detectSpeechActivity();
-};
-const startListening = (mode: string) => {
-  if (audio.listeningFrame || mode !== microphoneSetting.value) return;
-  void initAudio().then(runAudioDetection);
-};
-const stopListening = (mode: string) => {
-  if (!audio.listeningFrame || mode !== microphoneSetting.value) return;
-  cancelAnimationFrame(audio.listeningFrame);
-  audio.setListeningFrame(null);
-  setTalking(false);
 };
 const startEditingThreshold = () => {
   isEditingThreshold.value = true;

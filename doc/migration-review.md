@@ -37,7 +37,7 @@ npm run check
 | 检查项                      | 结果                              |
 | --------------------------- | --------------------------------- |
 | TypeScript / Vue TypeScript | 通过                              |
-| Vitest                      | 52 个测试文件、170 个测试通过     |
+| Vitest                      | 53 个测试文件、172 个测试通过     |
 | 服务端集成测试              | 13 个测试通过                     |
 | Chromium E2E                | 4 个流程通过                      |
 | 视觉回归                    | 3 个测试、4 张截图通过            |
@@ -48,7 +48,7 @@ npm run check
 | 生产构建                    | 通过                              |
 | 工作区                      | 干净，无未提交改动                |
 
-本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；当前单元/组件测试共 170 个；上一次完整质量门包含类型检查、169 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
+本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；最新一次完整质量门包含类型检查、172 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
 
 当前构建结果：
 
@@ -156,7 +156,7 @@ Vuex 已经删除，但下列过渡设施仍被大量组件和 transport 使用�
 - `commitGameCommand`；
 - `emitLegacyMutation`。
 
-`legacy-effects.ts`、`mutation-bus.ts` 与全部 `emitLegacyMutation` 调用已删除。App、投票、玩家、头像及全部相关弹窗现在在 Pinia action 后发布明确的游戏事件，持久化与 session transport 是该事件的消费者。`Menu.vue` 已进一步移除全部 `commitGameCommand`/`gameCommands` 调用：房间生命周期、玩家和群聊清理、计时器、分发、剧本选项与复盘均直接调用 Pinia。`TownSquare.vue` 的座位、提名、角色弹窗与玩家票数状态机现已抽到 `useTownSquareSeatActions`，并移除全部 command 调用。`Player.vue` 的状态、闭眼票、亡魂、授权与提醒同步已抽到 `player-state-actions`；`Vote.vue` 的计票时钟、锁票推进、历史、标记和投票限制已抽到 `useVoteController`。下一步只剩 Menu 音频职责与 runtime store 投影收口。
+`legacy-effects.ts`、`mutation-bus.ts` 与全部 `emitLegacyMutation` 调用已删除。App、投票、玩家、头像及全部相关弹窗现在在 Pinia action 后发布明确的游戏事件，持久化与 session transport 是该事件的消费者。`Menu.vue` 已进一步移除全部 `commitGameCommand`/`gameCommands` 调用：房间生命周期、玩家和群聊清理、计时器、分发、剧本选项与复盘均直接调用 Pinia，Web Audio 的权限、分析器与动画帧循环则已独立至 `useMenuAudioDetection`。`TownSquare.vue` 的座位、提名、角色弹窗与玩家票数状态机现已抽到 `useTownSquareSeatActions`，并移除全部 command 调用。`Player.vue` 的状态、闭眼票、亡魂、授权与提醒同步已抽到 `player-state-actions`；`Vote.vue` 的计票时钟、锁票推进、历史、标记和投票限制已抽到 `useVoteController`。四个目标组件已完成命令桥依赖移除与主要高风险行为拆分；MIG-052 仍须处理 runtime store 投影。
 
 ### 4.4 TypeScript 仍有绕过点
 
@@ -168,19 +168,18 @@ Vuex 已经删除，但下列过渡设施仍被大量组件和 transport 使用�
 
 因此阶段 4 的“不允许 `any`”退出条件尚未达到。后续应通过删除遗留桥和建立稳定领域类型解决，不建议简单用宽泛接口掩盖这些问题。
 
-### 4.5 组件完成了语法迁移，但未完成职责拆分
+### 4.5 高风险组件的主要行为域已拆分，仍有界面编排债务
 
 当前主要热点：
 
-| 文件                                        | 约行数 |
-| ------------------------------------------- | -----: |
-| `src/components/Player.vue`                 |  1,491 |
-| `src/components/TownSquare.vue`             |  1,489 |
-| `src/components/Menu.vue`                   |  1,429 |
-| `src/components/Vote.vue`                   |    609 |
-| `src/components/modals/NightOrderModal.vue` |    530 |
+| 文件                            | 已拆出的主要行为域                                    |
+| ------------------------------- | ----------------------------------------------------- |
+| `src/components/Menu.vue`       | `useMenuAudioDetection`；直接 Pinia 游戏/房间控制     |
+| `src/components/TownSquare.vue` | `useTownSquareSeatActions`；座位、换位、移动与提名    |
+| `src/components/Player.vue`     | `player-state-actions`；状态、票、亡魂、授权与提醒    |
+| `src/components/Vote.vue`       | `useVoteController`；计时、锁票、历史、标记与玩家投票 |
 
-这些组件仍直接协调网络命令、多个 store、legacy bridge、浏览器能力、弹窗和复杂业务流程。因此阶段 6 应记录为“Composition API/TS 语法迁移完成，组件职责拆分进行中”。
+四个组件均不再依赖 `legacy-commands`、`gameCommands` 或 `commitGameCommand`，其关键状态机已具备独立单元测试。它们仍然较大，并负责模板、弹窗和展示层编排；`App.vue` 初始化/快捷键以及其余 UI 分域属于后续阶段 6 优化，不阻塞本批“拆分高风险组件”的退出条件。
 
 ### 4.6 测试风险覆盖不均衡
 
@@ -476,10 +475,9 @@ canary、旧客户端交叉兼容、生产观察和回滚流程已有文档，�
 2. 拆分 session transport；
 3. 重构 persistence；
 4. 删除 legacy command/effect bridge；
-5. 拆分 Menu、TownSquare、Player 和 Vote；
-6. 扩展多客户端业务 E2E 与视觉矩阵；
-7. 样式、资源和包体治理；
-8. 服务端运维、兼容、canary 和回滚收尾。
+5. 扩展多客户端业务 E2E 与视觉矩阵；
+6. 样式、资源和包体治理；
+7. 服务端运维、兼容、canary 和回滚收尾。
 
 在前五项完成前，不建议优先进行：
 
