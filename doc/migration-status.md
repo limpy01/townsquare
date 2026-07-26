@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（MIG-026 Modal 样式归档）
+最后更新：2026-07-26（MIG-027 游戏状态导入类型收口）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -56,6 +56,7 @@
 | MIG-024 | 已完成 | Modal 组件交互测试                         | 背景关闭、输入保护与最大化状态由 Vue Test Utils 挂载验证                                       | 保持模态框交互语义              |
 | MIG-025 | 已完成 | 创建房间的 Vue 运行时警告收口              | 真实房主流程断言无 readonly computed warning                                                   | 保持 DOM、房间创建与截图语义    |
 | MIG-026 | 已完成 | 通用 Modal 样式归档                        | 全局滚动条、模态框层与过渡迁入样式层，组件测试、构建与视觉回归通过                             | 保持选择器与层叠顺序            |
+| MIG-027 | 已完成 | 游戏状态导入边界类型收口                  | 共享 game-state schema 解析结果、角色引用和版本字段不再使用 `any`，类型与覆盖率门禁通过        | 保留旧导入 JSON 与角色 ID 兼容  |
 
 ## 迁移历史与当前质量基线
 
@@ -165,6 +166,7 @@
 - MIG-024 为通用 Modal 增加 jsdom 挂载测试，锁定正常背景/关闭按钮关闭、输入表单背景不关闭及最大化类切换，扩大 Vue Test Utils 从 Intro 到复用模态基础设施的覆盖范围。
 - MIG-025 修复 TownSquare 将只读 `bluffs` 计算值误用作模板元素引用的问题：模板引用改为已有的可写 `bluffsElement`。Playwright 在真实创建房间路径捕获并断言该 Vue readonly warning 为零，原有房主流程继续通过。
 - MIG-026 将复用 Modal 的全局滚动条、遮罩、容器、最大化和过渡规则从 SFC 提取到 `styles/modal`；组件仅保留明确样式层入口，生产构建和三项视觉基线保持一致。
+- MIG-027 将 GameStateModal 的导入边界收敛到 contracts 的 `GameState`，以 record guard 处理历史版本状态、角色字符串/对象引用和未知字段；无效或缺失角色继续使用原有空角色回退，133 个单元测试与 contracts/domain 覆盖率门禁通过。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
