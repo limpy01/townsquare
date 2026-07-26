@@ -1958,7 +1958,7 @@ export class LiveSession {
    * Send the voting speed. ST only
    * @param votingSpeed voting speed in seconds, minimum 1
    */
-  setVotingSpeed(votingSpeed) {
+  setVotingSpeed(votingSpeed: number) {
     if (this._isSpectator) return;
     if (votingSpeed) {
       this._send("votingSpeed", votingSpeed);
@@ -1969,7 +1969,7 @@ export class LiveSession {
    * Set which player is on the block. ST only
    * @param playerIndex, player id or -1 for empty
    */
-  setMarked(playerIndex) {
+  setMarked(playerIndex: number) {
     if (this._isSpectator) return;
     if (this._voting.isSecretVote) return;
     this._send("marked", playerIndex);
@@ -1988,8 +1988,9 @@ export class LiveSession {
    * @param index Seat of the player
    * @param sync Flag whether to sync this vote with others or not
    */
-  vote([index]) {
+  vote([index]: [number]) {
     const player = this._store.state.players.players[index];
+    if (!player) return;
     if (
       this._store.state.session.playerId === player.id ||
       !this._isSpectator
@@ -2028,7 +2029,7 @@ export class LiveSession {
   /**
    * Send a status change to whether anonymous votes are in progress. ST to players only
    */
-  setSecretVote(isSecretVote) {
+  setSecretVote(isSecretVote: boolean) {
     if (this._isSpectator) return;
     this._send("secretVote", isSecretVote);
   }
@@ -2038,7 +2039,7 @@ export class LiveSession {
     this._voting.setSecretVote(isSecretVote);
   }
 
-  setBootlegger(content) {
+  setBootlegger(content: string) {
     if (this._isSpectator) return;
     this._send("bootlegger", content);
   }
@@ -2048,7 +2049,7 @@ export class LiveSession {
     this._settings.setBootlegger(content);
   }
 
-  setUseOldOrder(isUseOldOrder) {
+  setUseOldOrder(isUseOldOrder: UseOldOrder) {
     if (this._isSpectator) return;
     this._send("useOldOrder", isUseOldOrder);
   }
@@ -2058,7 +2059,7 @@ export class LiveSession {
     this._legacyOptions.setUseOldOrder(isUseOldOrder);
   }
 
-  setUseOldRole(isUseOldRole) {
+  setUseOldRole(isUseOldRole: UseOldRole) {
     if (this._isSpectator) return;
     this._send("useOldRole", isUseOldRole);
   }
@@ -2068,7 +2069,7 @@ export class LiveSession {
     this._legacyOptions.setUseOldRole(isUseOldRole);
   }
 
-  setIsReview(isReview) {
+  setIsReview(isReview: boolean) {
     if (this._isSpectator) return;
     this._send("isReview", isReview);
   }
@@ -2099,12 +2100,8 @@ export class LiveSession {
       talkingPayload.seatNum >= this._store.state.players.players.length
     )
       return;
-    if (
-      !this._store.state.players.players[talkingPayload.seatNum].id ||
-      this._store.state.players.players[talkingPayload.seatNum].id !=
-        this._store.state.session.playerId
-    )
-      return;
+    const player = this._store.state.players.players[talkingPayload.seatNum];
+    if (!player?.id || player.id != this._store.state.session.playerId) return;
     this._send("setTalking", talkingPayload);
   }
 
@@ -2117,8 +2114,8 @@ export class LiveSession {
       payload.seatNum >= this._store.state.players.players.length
     )
       return;
-    this._store.state.players.players[payload.seatNum].isTalking =
-      payload.isTalking;
+    const player = this._store.state.players.players[payload.seatNum];
+    if (player) player.isTalking = payload.isTalking;
   }
 
   /**
