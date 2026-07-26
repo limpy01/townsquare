@@ -8,7 +8,7 @@
     <ul class="tokens" v-for="(teamRoles, team) in roleSelection" :key="team">
       <li class="count" :class="[team]">
         {{ teamRoles.reduce((a, { selected }) => a + selected, 0) }} /
-        {{ game[nonTravelers - 5][team] }}
+        {{ game[nonTravelers - 5]?.[team] ?? 0 }}
       </li>
       <li
         v-for="role in teamRoles"
@@ -91,6 +91,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
 import Modal from "./Modal.vue";
 import gameJSON from "../../game.json";
 import Token from "../Token.vue";
@@ -109,9 +110,12 @@ const scenario = useScenarioStore();
 const draw = useDrawStore();
 const review = useReviewStore();
 const players = computed(() => playerState.players);
-const roles = scenario.roles as Map<string, any>;
-const roleSelection = ref<Record<string, any[]>>({});
-const game = gameJSON as any[];
+type SelectableRole = ScenarioCatalogRole & { selected: number };
+type GameComposition = Record<string, number>;
+
+const roles = scenario.roles;
+const roleSelection = ref<Record<string, SelectableRole[]>>({});
+const game = gameJSON as unknown as GameComposition[];
 const allowMultiple = ref(false);
 const windowWidth = ref(window.innerWidth);
 const windowHeight = ref(window.innerHeight);
@@ -149,7 +153,7 @@ function selectedAndShuffledRoles() {
     .map(([, role]) => role);
 }
 function selectRandomRoles() {
-  const selection: Record<string, any[]> = {};
+  const selection: Record<string, SelectableRole[]> = {};
   roles.forEach((role) => {
     (selection[role.team] ??= []).push({ ...role, selected: 0 });
   });
@@ -157,10 +161,11 @@ function selectRandomRoles() {
     if (!["townsfolk", "outsider", "minion", "demon"].includes(team))
       delete selection[team];
   const composition = game[Math.max(5, nonTravelers.value) - 5];
-  Object.keys(composition).forEach((team) => {
-    for (let index = 0; index < composition[team]; index++) {
+  Object.keys(composition ?? {}).forEach((team) => {
+    for (let index = 0; index < (composition?.[team] ?? 0); index++) {
       const available = selection[team]?.filter((role) => !role.selected) ?? [];
-      if (available.length) randomElement(available).selected = 1;
+      const selected = randomElement(available);
+      if (selected) selected.selected = 1;
     }
   });
   roleSelection.value = selection;
