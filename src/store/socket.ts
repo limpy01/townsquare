@@ -2377,7 +2377,9 @@ export class LiveSession {
         });
     });
     // 处理暴露
-    const prob = this._roles.wraith.prob;
+    const wraith = this._roles.wraith;
+    if (!wraith) return;
+    const prob = wraith.prob;
     const rand = Math.random();
     if (rand < prob && wraiths.length > 0) {
       const randIndex = Math.floor(Math.random() * wraiths.length);
