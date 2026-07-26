@@ -133,6 +133,7 @@
 - Vitest 覆盖率报告已作为独立命令和 CI artifact 接入；当前先如实报告 Vitest 可审计的 TypeScript 运行模块，组件覆盖将随 Vue Test Utils 的实际挂载测试单独纳入，待补齐高风险模块测试后再按迁移计划分层设置门槛。
 - `@townsquare/domain` 的夜间顺序边界（无角色、无夜间顺序与重复数字顺序）已由表驱动回归覆盖；CI 现要求该纯逻辑包 statements/lines ≥95%、branches ≥90%，作为第一个按模块提升的覆盖率门禁。
 - `@townsquare/contracts` 已补齐标量 payload、未知入站命令、请求目标与自定义角色规范化失败路径的回归覆盖；CI 现要求 contracts 与 domain 两个共享包均达到 statements/lines ≥95%、branches ≥90%。
+- Playwright 视觉基线已扩展到真实房主魔典的白天与夜晚状态，固定本地测试后端、房间号、座位数和动画，避免后续样式归档只覆盖首页。
 
 ## 本批次约束
 

@@ -147,3 +147,32 @@ test("创建房间弹窗视觉基线 @visual", async ({ page }) => {
     maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
   });
 });
+
+test("说书人魔典白天与夜晚视觉基线 @visual", async ({ page }) => {
+  await rejectClipboardWrites(page);
+  await openHome(page);
+  await openCreateRoomDialog(page);
+
+  const roomDialog = page
+    .getByRole("dialog")
+    .filter({ hasText: "请输入房间号" });
+  await roomDialog.locator("#input-1").fill("4242");
+  await roomDialog.locator("#input-2").fill("5");
+  await roomDialog.getByRole("button", { name: "确认", exact: true }).click();
+  await expect(page.locator("#townsquare .player")).toHaveCount(5);
+
+  await expect(page).toHaveScreenshot("storyteller-day.png", {
+    animations: "disabled",
+    caret: "hide",
+    maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
+  });
+
+  await page.locator("#townsquare-app").focus();
+  await page.keyboard.press("s");
+  await expect(page.locator("#townsquare-app")).toHaveClass(/night/);
+  await expect(page).toHaveScreenshot("storyteller-night.png", {
+    animations: "disabled",
+    caret: "hide",
+    maxDiffPixels: MAX_VISUAL_DIFF_PIXELS,
+  });
+});
