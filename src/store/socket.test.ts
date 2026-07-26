@@ -145,6 +145,21 @@ describe("session socket message decoder", () => {
 
     expect(commit).not.toHaveBeenCalled();
   });
+
+  it("rejects non-integer seat claims before sending", () => {
+    const session = new LiveSession({
+      commit: vi.fn(),
+      state: {
+        players: { players: [] },
+        session: { playerId: "player-1", sessionId: "" },
+      },
+    });
+    const sendDirect = vi.spyOn(session, "_sendDirect");
+
+    session.claimSeat("0");
+
+    expect(sendDirect).not.toHaveBeenCalled();
+  });
 });
 
 afterEach(() => vi.useRealTimers());

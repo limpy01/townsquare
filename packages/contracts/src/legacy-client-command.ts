@@ -100,6 +100,15 @@ const legacyChatPayloadSchema = z
   .passthrough();
 
 export type LegacyChatPayload = z.infer<typeof legacyChatPayloadSchema>;
+
+const legacyClaimPayloadSchema = z.tuple([
+  z.number().int().min(-1),
+  z.string(),
+  z.string(),
+  z.string().optional(),
+]);
+
+export type LegacyClaimPayload = z.infer<typeof legacyClaimPayloadSchema>;
 const legacyRoleActivityPayloadSchema = z
   .object({
     role: z.string().min(1),
@@ -243,12 +252,7 @@ const legacySessionPayloadSchemas: Partial<
   bootlegger: z.string(),
   bye: z.string(),
   chat: legacyChatPayloadSchema,
-  claim: z.tuple([
-    z.number().int().min(-1),
-    z.string(),
-    z.string(),
-    z.string().optional(),
-  ]),
+  claim: legacyClaimPayloadSchema,
   clearVoteHistory: z.union([z.null(), z.undefined()]),
   edition: legacyEditionPayloadSchema,
   fabled: legacyRoleListSchema,

@@ -9,6 +9,7 @@ import {
 } from "@townsquare/contracts/legacy-client-command";
 import type {
   LegacyChatPayload,
+  LegacyClaimPayload,
   LegacyRoleActivityPayload,
   LegacySessionStatusPayload,
   LegacySetTalkingPayload,
@@ -1383,8 +1384,10 @@ export class LiveSession {
    * Seats already occupied can't be claimed.
    * @param seat either -1 to vacate or the index of the seat claimed
    */
-  claimSeat(seat) {
+  claimSeat(seat: unknown): void {
     if (!this._isSpectator) return;
+    if (typeof seat !== "number" || !Number.isInteger(seat) || seat < -1)
+      return;
     const players = this._store.state.players.players;
     if (players.length > seat && (seat < 0 || !players[seat].id)) {
       // this._send("claim", [seat, this._store.state.session.playerId, this._profile.playerName, this._profile.playerAvatar]);
@@ -1403,7 +1406,7 @@ export class LiveSession {
    * @param value playerId to add / remove
    * @private
    */
-  _updateSeat([index, value, name, image]) {
+  _updateSeat([index, value, name, image]: LegacyClaimPayload): void {
     // index is the seat number, value is the playerId, name is the playerName
     if (this._isSpectator) return;
     // const property = "id";
@@ -1487,7 +1490,7 @@ export class LiveSession {
    * @param value playerId to add
    * @private
    */
-  _createChatHistory([index]) {
+  _createChatHistory([index]: LegacyClaimPayload): void {
     if (index < 0) return;
     const playerId = this._store.state.players.players[index].id;
     if (playerId === "") return;
