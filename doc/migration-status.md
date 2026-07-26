@@ -138,7 +138,7 @@
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。
 - 服务端同样覆盖相同玩家 ID 的重连替换：旧玩家连接以 1012 关闭，新连接可继续向说书人发送 v1 claim 消息，避免 room registry 残留旧 socket。
-- 严格 TypeScript 诊断已确认唯一剩余 `@ts-nocheck` 为 `src/store/socket.ts`；MIG-011 已完成 LiveSession 字段、出站 helper、队列 payload guard、连接生命周期、稳定标量、聊天/群聊、角色状态与座位 handler 声明；玩家运行时投影、游戏状态、魔典同步与定向分发参数也已收窄。移除抑制后的错误数从 701 降至 64，剩余主要为魔典出站组装和兼容 mutation payload 的收窄。该例外由 CI 限制为唯一允许项，禁止新增匿名抑制，并将按生命周期与协议 handler 分段移除。
+- 严格 TypeScript 诊断已确认唯一剩余 `@ts-nocheck` 为 `src/store/socket.ts`；MIG-011 已完成 LiveSession 字段、出站 helper、队列 payload guard、连接生命周期、稳定标量、聊天/群聊、角色状态与座位 handler 声明；玩家运行时投影、游戏状态、魔典同步与定向分发参数也已收窄。移除抑制后的错误数从 701 降至 57，剩余主要为魔典出站组装和兼容 mutation payload 的收窄。该例外由 CI 限制为唯一允许项，禁止新增匿名抑制，并将按生命周期与协议 handler 分段移除。
 - MIG-011 的连接生命周期现已在 transport 边界收窄：会话号仅接受有限的字符串或数字标量，WebSocket close/message 事件、输入弹窗请求和授权回调均有显式类型；非布尔授权与非字符串告警会被安全忽略，避免未校验服务端 payload 污染 Pinia 授权状态或弹窗。
 - 已由共享 contracts 校验的稳定入站标量命令（说书人标识、头像链接、离开通知、匿名投票、私货商人说明、旧规则选项和复盘状态）现在直接传入精确的 TypeScript handler 参数；不会改变既有 v1 payload 格式。
 - `setTalking`、设置/启动倒计时现在会在 session transport 出站前使用 contracts schema 或有限数值 guard 收窄；畸形 mutation payload 不会写入 WebSocket，已有 fake transport 回归覆盖。
@@ -164,7 +164,7 @@
 - `LiveSession` 的游戏状态出站投影现显式包含魔典、角色表、剧本状态与传奇角色字段；定向群聊同步会排除缺失席位，历史游戏状态扩容会跳过不可读取的数组项。移除 transport 抑制后的严格诊断从 119 降至 103，旧 v1 game-state 和群聊 payload 形状保持不变。
 - 剧本版本、夜间顺序、阵营别名、传奇角色和座位更新 handler 现在拥有显式 payload/运行时投影；自定义剧本仍使用原有紧凑角色列表，缺失角色提示仍按旧逻辑显示。移除 transport 抑制后的严格诊断从 103 降至 84。
 - 玩家变更、代词、头像、ping、席位和聊天历史 handler 现有显式 payload；数组索引与 direct message 映射均在使用前收窄。旧的 ping 元组仍可带第三个兼容槽位，避免改变历史房间协议。移除 transport 抑制后的严格诊断从 84 降至 64。
-- 伪装与魔典分发目标现与 `exactOptionalPropertyTypes` 兼容；按座位直发会跳过不存在的玩家，魔典入站找不到角色时使用带空 ID 的受类型回退对象，而不改变 v1 payload 的解析或转发格式。
+- 伪装与魔典分发目标现与 `exactOptionalPropertyTypes` 兼容；按座位直发会跳过不存在的玩家，魔典入站找不到角色时使用带空 ID 的受类型回退对象，而不改变 v1 payload 的解析或转发格式。重新测量后，移除抑制的严格诊断从 64 降至 57。
 
 ## 本批次约束
 
