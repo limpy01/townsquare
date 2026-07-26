@@ -62,11 +62,7 @@
               backgroundImage: `url(${
                 role.image && grimoire.isImageOptIn
                   ? role.image
-                  : require(
-                      '../../assets/icons/' +
-                        (role.imageAlt || role.id.replace(/old1$/, '')) +
-                        '.png',
-                    )
+                  : iconImage(role.imageAlt || role.id.replace(/old1$/, ''))
               })`,
             }"
           ></span>
@@ -89,11 +85,7 @@
               backgroundImage: `url(${
                 role.image && grimoire.isImageOptIn
                   ? role.image
-                  : require(
-                      '../../assets/icons/' +
-                        (role.imageAlt || role.id.replace(/old1$/, '')) +
-                        '.png',
-                    )
+                  : iconImage(role.imageAlt || role.id.replace(/old1$/, ''))
               })`,
             }"
           ></span>
@@ -128,6 +120,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { iconImage } from "../../assets/images";
 import Modal from "./Modal.vue";
 import { useGrimoireStore } from "../../stores/grimoire";
 import { useModalStore } from "../../stores/modals";

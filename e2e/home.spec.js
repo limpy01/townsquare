@@ -67,6 +67,22 @@ test("创建房间打开房间和人数输入框", async ({ page }) => {
   ).toHaveCount(1);
 });
 
+test("创建房间后进入说书人魔典", async ({ page }) => {
+  await openHome(page);
+  await openCreateRoomDialog(page);
+
+  const roomDialog = page
+    .getByRole("dialog")
+    .filter({ hasText: "请输入房间号" });
+  await roomDialog.locator("#input-1").fill("4242");
+  await roomDialog.locator("#input-2").fill("2");
+  await roomDialog.getByRole("button", { name: "确认", exact: true }).click();
+
+  await expect(page.locator(".intro")).toHaveCount(0);
+  await expect(page.locator("#townsquare .player")).toHaveCount(2);
+  await expect(page.locator("#townsquare .donation")).toBeVisible();
+});
+
 test("帮助菜单提供法律与署名入口", async ({ page }) => {
   await openHome(page);
 

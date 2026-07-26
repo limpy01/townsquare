@@ -18,11 +18,8 @@
             backgroundImage: `url(${
               reminder.image && grimoire.isImageOptIn
                 ? reminder.image
-                : require(
-                    '../../assets/icons/' +
-                      (reminder.imageAlt ||
-                        reminder.role.replace(/old1$/, '')) +
-                      '.png',
+                : iconImage(
+                    reminder.imageAlt || reminder.role.replace(/old1$/, ''),
                   )
             })`,
           }"
@@ -35,6 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { iconImage } from "../../assets/images";
 import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
 import { emitLegacyMutation } from "../../store/legacy-effects";

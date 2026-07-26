@@ -318,11 +318,8 @@
             backgroundImage: `url(${
               reminder.image && grimoire.isImageOptIn
                 ? reminder.image
-                : require(
-                    '../assets/icons/' +
-                      (reminder.imageAlt ||
-                        reminder.role.replace(/old1$/, '')) +
-                      '.png',
+                : iconImage(
+                    reminder.imageAlt || reminder.role.replace(/old1$/, ''),
                   )
             })`,
           }"
@@ -343,6 +340,7 @@
 
 <script setup lang="ts">
 import Token from "./Token.vue";
+import { iconImage } from "../assets/images";
 import {
   computed,
   nextTick,
@@ -402,7 +400,7 @@ const nightOrder = computed(() =>
   ),
 );
 const index = computed(() => players.value.indexOf(props.player));
-const playerVoteCount = computed(() => Number(voting.votes[index.value]));
+const playerVoteCount = computed(() => Number(voting.votes[index.value]) || 1);
 const voteLocked = computed(() => {
   if (!voting.nomination) return false;
   const indexAdjusted =

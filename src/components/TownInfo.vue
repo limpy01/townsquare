@@ -7,7 +7,7 @@
         backgroundImage: `url(${
           edition.logo && grimoire.isImageOptIn
             ? edition.logo
-            : require('../assets/editions/' + edition.id + '.png')
+            : editionImage(edition.id)
         })`,
       }"
     ></li>
@@ -79,6 +79,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { editionImage } from "../assets/images";
 import gameJSON from "../game.json";
 import { useReviewStore } from "../stores/review";
 import { useGrimoireStore } from "../stores/grimoire";

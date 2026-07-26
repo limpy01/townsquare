@@ -8,9 +8,7 @@
           class="edition"
           :class="['edition-' + edition.id]"
           :style="{
-            backgroundImage: `url(${require(
-              '../../assets/editions/' + edition.id + '.png',
-            )})`,
+            backgroundImage: `url(${editionImage(edition.id)})`,
           }"
           :key="edition.id"
           @click="setHomeEdition(edition)"
@@ -21,7 +19,7 @@
           class="edition edition-custom"
           @click="isCustom = true"
           :style="{
-            backgroundImage: `url(${require('../../assets/editions/custom.png')})`,
+            backgroundImage: `url(${editionImage('custom')})`,
           }"
         >
           自定义剧本/角色
@@ -76,6 +74,7 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { editionImage } from "../../assets/images";
 import editionJSON from "../../editions.json";
 import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
