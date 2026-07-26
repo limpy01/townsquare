@@ -1,0 +1,10 @@
+@use "tokens" as *;
+
+:root {
+  --color-team-fabled: #{$fabled};
+  --color-team-townsfolk: #{$townsfolk};
+  --color-team-outsider: #{$outsider};
+  --color-team-minion: #{$minion};
+  --color-team-demon: #{$demon};
+  --color-team-traveler: #{$traveler};
+}

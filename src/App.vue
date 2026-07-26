@@ -289,6 +289,7 @@ onBeforeUnmount(() =>
 <style lang="scss">
 @use "vars" as *;
 @use "media";
+@use "styles/css-variables";
 
 @font-face {
   font-family: "Papyrus";
