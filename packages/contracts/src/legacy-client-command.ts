@@ -255,6 +255,14 @@ export function isLegacyClientPayload(
   command: LegacyClientCommand,
   params: unknown,
 ): boolean {
+  if (command === "direct")
+    return legacyDirectPayloadSchema.safeParse(params).success;
+  if (command === "request")
+    return legacyRequestPayloadSchema.safeParse(params).success;
+  if (command === "setTalking")
+    return legacySetTalkingPayloadSchema.safeParse(params).success;
+  if (command === "uploadFile")
+    return legacyUploadFilePayloadSchema.safeParse(params).success;
   const schema = legacyScalarPayloadSchemas[command];
   return !schema || schema.safeParse(params).success;
 }

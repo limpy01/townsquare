@@ -65,11 +65,11 @@ describe("legacy client command boundary", () => {
     expect(isLegacyClientCommand("runArbitraryCode")).toBe(false);
   });
 
-  it("validates known scalar payloads while keeping specialized commands delegated", () => {
+  it("validates known scalar and specialized command payloads", () => {
     expect(isLegacyClientPayload("setTimer", 30)).toBe(true);
     expect(isLegacyClientPayload("setTimer", -1)).toBe(false);
     expect(isLegacyClientPayload("direct", { player: ["chat", {}] })).toBe(
-      true,
+      false,
     );
   });
 
@@ -137,6 +137,18 @@ describe("legacy client command boundary", () => {
       legacyUploadFilePayloadSchema.safeParse({
         uploadAvatar: ["player-a"],
       }).success,
+    ).toBe(false);
+    expect(
+      isLegacyClientPayload("direct", { "player-a": ["unknown", {}] }),
+    ).toBe(false);
+    expect(isLegacyClientPayload("request", { arbitraryRequest: [] })).toBe(
+      false,
+    );
+    expect(
+      isLegacyClientPayload("setTalking", { seatNum: "0", isTalking: true }),
+    ).toBe(false);
+    expect(
+      isLegacyClientPayload("uploadFile", { uploadAvatar: ["player-a"] }),
     ).toBe(false);
   });
 });
