@@ -46,7 +46,7 @@
         <li
           v-for="index in bluffSize"
           :key="index"
-          @click="openRoleModal(index * -1)"
+          @click="seatActions.openRoleModal(index * -1)"
           :style="isBluffsOpen ? floatingZoom : ''"
         >
           <Token :role="bluffs[index - 1]"></Token>
@@ -65,7 +65,7 @@
           v-for="(role, index) in fabled"
           v-show="index === 0 || isFabledOpen"
           :key="index"
-          @click="removeFabled(index)"
+          @click="seatActions.removeFabled(index)"
           :style="floatingZoom"
         >
           <div v-if="index === 0">
@@ -114,7 +114,7 @@
         :icon="['custom', isRole]"
         size="4x"
         :class="{ 'is-using-wraith': roleActivity.wraith.using }"
-        @click="setUsingWraith()"
+        @click="seatActions.setUsingWraith()"
       />
     </div>
 
@@ -228,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch, type Ref } from "vue";
 import { useInteractionStore } from "../stores/interaction";
 import { useChatStore } from "../stores/chat";
 import { useSessionConnectionStore } from "../stores/session-connection";
@@ -236,13 +236,16 @@ import { useVotingStore } from "../stores/voting";
 import { useRoleActivityStore } from "../stores/role-activity";
 import { getNightOrder } from "@townsquare/domain";
 import { useViewport } from "../composables/use-viewport";
+import { useTownSquareSeatActions } from "../composables/use-town-square-seat-actions";
 import { useProfileStore } from "../stores/profile";
 import { useAppMetaStore } from "../stores/app-meta";
 import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useScenarioStore } from "../stores/scenario";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { commitGameCommand } from "../store/legacy-commands";
+import { useModalStore } from "../stores/modals";
+import { useMessageOutboxStore } from "../stores/message-outbox";
+import { emitGameEvent } from "../store/game-events";
 import Player from "./Player.vue";
 import Token from "./Token.vue";
 import ReminderModal from "./modals/ReminderModal.vue";
@@ -259,16 +262,18 @@ const connection = useSessionConnectionStore();
 const voting = useVotingStore();
 const roleActivity = useRoleActivityStore();
 const profile = useProfileStore();
+const modals = useModalStore();
+const outbox = useMessageOutboxStore();
 const { width: windowWidth, height: windowHeight } = useViewport();
 const countdownAudio = ref<HTMLAudioElement | null>(null);
 const bluffsElement = ref<HTMLElement | null>(null);
 const chatWith = ref<HTMLElement | null>(null);
 const chatContent = ref<HTMLElement | null>(null);
 const messageInput = ref<HTMLInputElement | null>(null);
-const selectedPlayer = ref(0);
-const swap = ref(-1);
-const move = ref(-1);
-const nominate = ref(-1);
+let selectedPlayer: Ref<number>;
+let swap: Ref<number>;
+let move: Ref<number>;
+let nominate: Ref<number>;
 const isChatMin = ref(false);
 const minimising = ref(false);
 const chattingPlayer = ref("");
@@ -347,162 +352,37 @@ const toggleFabled = () => {
 const toggleGroups = () => {
   isShowGroup.value = !isShowGroup.value;
 };
-const setUsingWraith = () => {
-  commitGameCommand("session/setIsRole", {
-    role: "wraith",
-    property: "using",
-    value: !roleActivity.wraith.using,
-  });
-};
-const claimSeat = (playerIndex: number) => {
-  if (!session.isSpectator) return;
-  if (session.playerId === playersState.players[playerIndex].id) {
-    commitGameCommand("session/claimSeat", -1);
-  } else {
-    commitGameCommand("session/claimSeat", playerIndex);
-    commitGameCommand("session/createChatHistory", session.stId);
-  }
-};
-const openReminderModal = (playerIndex: number) => {
-  selectedPlayer.value = playerIndex;
-  commitGameCommand("toggleModal", "reminder");
-};
-const openRoleModal = (playerIndex: number) => {
-  const player = playersState.players[playerIndex];
-  if (session.isSpectator && player?.role.team === "traveler") return;
-  selectedPlayer.value = playerIndex;
-  commitGameCommand("toggleModal", "role");
-};
-const removeFabled = (index: number) => {
-  if (session.isSpectator) {
-    if (index === 0 && session.claimedSeat >= 0) openChat(0);
-    return;
-  }
-  commitGameCommand("players/setFabled", { index });
-};
-const cancel = () => {
-  move.value = -1;
-  swap.value = -1;
-  nominate.value = -1;
-};
-const removePlayer = (playerIndex: number) => {
-  if (session.isSpectator || voting.lockedVote) return;
-  const { nomination } = voting;
-  if (nomination) {
-    if (nomination.includes(playerIndex)) {
-      commitGameCommand("session/nomination");
-    } else if (nomination[0] > playerIndex || nomination[1] > playerIndex) {
-      commitGameCommand("session/setNomination", [
-        nomination[0] > playerIndex ? nomination[0] - 1 : nomination[0],
-        nomination[1] > playerIndex ? nomination[1] - 1 : nomination[1],
-      ]);
-    }
-  }
-  commitGameCommand("players/remove", playerIndex);
-};
-const swapPlayer = (from: number, to?: unknown) => {
-  if (session.isSpectator || voting.lockedVote) return;
-  if (to === undefined) {
-    cancel();
-    swap.value = from;
-    return;
-  }
-
-  const swapTo = playersState.players.indexOf(to);
-  if (voting.nomination) {
-    const updatedNomination = voting.nomination.map((nom) => {
-      if (nom === swap.value) return swapTo;
-      if (nom === swapTo) return swap.value;
-      return nom;
+const publish = (type: string, payload?: unknown) =>
+  emitGameEvent(type, payload);
+const enqueueChat = (payload: {
+  message: string;
+  sendingPlayerId: string;
+  receivingPlayerId: string;
+}) => {
+  if (!session.isSpectator || payload.sendingPlayerId === session.playerId) {
+    outbox.add({
+      type: "direct",
+      playerId: payload.receivingPlayerId,
+      command: "chat",
+      params: payload,
+      id: Date.now(),
     });
-    if (
-      voting.nomination[0] !== updatedNomination[0] ||
-      voting.nomination[1] !== updatedNomination[1]
-    )
-      commitGameCommand("session/setNomination", updatedNomination);
   }
-  commitGameCommand("players/swap", [swap.value, swapTo]);
-  cancel();
-};
-const movePlayer = (from: number, to?: unknown) => {
-  if (session.isSpectator || voting.lockedVote) return;
-  if (to === undefined) {
-    cancel();
-    move.value = from;
-    return;
-  }
-
-  const moveTo = playersState.players.indexOf(to);
-  if (voting.nomination) {
-    const updatedNomination = voting.nomination.map((nom) => {
-      if (nom === move.value) return moveTo;
-      if (nom > move.value && nom <= moveTo) return nom - 1;
-      if (nom < move.value && nom >= moveTo) return nom + 1;
-      return nom;
-    });
-    if (
-      voting.nomination[0] !== updatedNomination[0] ||
-      voting.nomination[1] !== updatedNomination[1]
-    )
-      commitGameCommand("session/setNomination", updatedNomination);
-  }
-  commitGameCommand("players/move", [move.value, moveTo]);
-  cancel();
-};
-const nominatePlayer = (from: number, to?: unknown) => {
-  if (session.isSpectator || voting.lockedVote) return;
-  if (to === undefined) {
-    cancel();
-    if (from !== nominate.value) nominate.value = from;
-    return;
-  }
-
-  commitGameCommand("session/nomination", {
-    nomination: [nominate.value, playersState.players.indexOf(to)],
-  });
-  cancel();
-};
-const updatePlayerVotes = (playerIndex: number, change: 1 | -1) => {
-  if (session.isSpectator) return;
-  const player = playersState.players[playerIndex];
-  const votes = player.votes + change;
-  if (votes < 1) return;
-  commitGameCommand("players/update", {
-    player,
-    property: "votes",
-    value: votes,
-  });
-};
-const addVote = (playerIndex: number) => updatePlayerVotes(playerIndex, 1);
-const subtractVote = (playerIndex: number) =>
-  updatePlayerVotes(playerIndex, -1);
-const setStoryTeller = (playerIndex: number) => {
-  if (session.isSpectator) return;
-  const player = playersState.players[playerIndex];
-  if (player.id && player.id !== "host") return;
-  const updates = player.id
-    ? [
-        ["id", ""],
-        ["name", ""],
-        ["isVoteless", false],
-        ["isDead", false],
-      ]
-    : [
-        ["id", "host"],
-        ["name", "说书人"],
-        ["isVoteless", true],
-        ["isDead", true],
-      ];
-  for (const [property, value] of updates)
-    commitGameCommand("players/update", { player, property, value });
+  publish("session/updateChatSent", payload);
 };
 const clearChatUnread = () => {
-  if (session.isSpectator) chat.clearStorytellerUnread();
-  else
-    commitGameCommand("players/setPlayerMessage", {
+  if (session.isSpectator) {
+    chat.clearStorytellerUnread();
+  } else {
+    playersState.setPlayerMessage({
       playerId: chattingPlayer.value,
       num: 0,
     });
+    publish("players/setPlayerMessage", {
+      playerId: chattingPlayer.value,
+      num: 0,
+    });
+  }
 };
 const checkToBottom = () => {
   if (chatContent.value && chatContent.value.scrollTop >= -20)
@@ -552,6 +432,16 @@ const openChat = (playerIndex: number, maximise = true) => {
   }
   nextTick(scrollToBottom);
 };
+const seatActions = useTownSquareSeatActions({
+  players: playersState,
+  session,
+  voting,
+  chat,
+  modals,
+  roleActivity,
+  openChat: (playerIndex) => openChat(playerIndex),
+});
+({ selectedPlayer, swap, move, nominate } = seatActions);
 const sendChat = () => {
   if (message.value === "") return;
   if (session.isSpectator && session.claimedSeat < 0) return;
@@ -571,7 +461,7 @@ const sendChat = () => {
             ?.players ?? []
         ).map((player) => player.id);
   for (const receivingPlayerId of recipients)
-    commitGameCommand("session/updateChatSent", {
+    enqueueChat({
       message: sentMessage,
       sendingPlayerId,
       receivingPlayerId,
@@ -588,7 +478,7 @@ const sendChat = () => {
         player.id !== chattingPlayer.value &&
         player.chatGroup !== chattingGroup.value
       )
-        commitGameCommand("session/updateChatSent", {
+        enqueueChat({
           message: wraithMessage,
           sendingPlayerId,
           receivingPlayerId: player.id,
@@ -623,29 +513,29 @@ const handleTrigger = (
 ) => {
   switch (action) {
     case "openReminderModal":
-      return openReminderModal(playerIndex);
+      return seatActions.openReminderModal(playerIndex);
     case "openRoleModal":
-      return openRoleModal(playerIndex);
+      return seatActions.openRoleModal(playerIndex);
     case "removePlayer":
-      return removePlayer(playerIndex);
+      return seatActions.removePlayer(playerIndex);
     case "swapPlayer":
-      return swapPlayer(playerIndex, target);
+      return seatActions.swapPlayer(playerIndex, target);
     case "movePlayer":
-      return movePlayer(playerIndex, target);
+      return seatActions.movePlayer(playerIndex, target);
     case "nominatePlayer":
-      return nominatePlayer(playerIndex, target);
+      return seatActions.nominatePlayer(playerIndex, target);
     case "cancel":
-      return cancel();
+      return seatActions.cancel();
     case "claimSeat":
-      return claimSeat(playerIndex);
+      return seatActions.claimSeat(playerIndex);
     case "setStoryTeller":
-      return setStoryTeller(playerIndex);
+      return seatActions.setStoryTeller(playerIndex);
     case "openChat":
       return openChat(playerIndex);
     case "addVote":
-      return addVote(playerIndex);
+      return seatActions.addVote(playerIndex);
     case "subtractVote":
-      return subtractVote(playerIndex);
+      return seatActions.subtractVote(playerIndex);
   }
 };
 
