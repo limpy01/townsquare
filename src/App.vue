@@ -63,7 +63,7 @@ import { useInputStore } from "./stores/input";
 import { useAppMetaStore } from "./stores/app-meta";
 import { showInputModal } from "./services/input-modal";
 import { apiBase } from "./config";
-import { emitLegacyMutation } from "./store/legacy-effects";
+import { emitGameEvent } from "./store/game-events";
 import TownSquare from "./components/TownSquare.vue";
 import TownInfo from "./components/TownInfo.vue";
 import Menu from "./components/Menu.vue";
@@ -109,7 +109,7 @@ async function initialize() {
       // Set initial session state
       session.setSpectator(true);
       grimoire.toggle("isPublic", false);
-      emitLegacyMutation("toggleGrimoire", false);
+      emitGameEvent("toggleGrimoire", false);
 
       let finalName = profile.playerName;
 
@@ -133,13 +133,13 @@ async function initialize() {
       // Now handle the result
       if (finalName) {
         profile.setPlayerName(finalName);
-        emitLegacyMutation("session/setPlayerName", finalName);
+        emitGameEvent("session/setPlayerName", finalName);
         session.setSessionId(sessionId);
-        emitLegacyMutation("session/setSessionId", sessionId);
+        emitGameEvent("session/setSessionId", sessionId);
       } else {
         // User cancelled input, so don't join the session
         session.setSessionId("");
-        emitLegacyMutation("session/setSessionId", "");
+        emitGameEvent("session/setSessionId", "");
       }
     } else if (
       pathname === "/" &&
@@ -195,7 +195,7 @@ function keyup({ key, ctrlKey, metaKey }: KeyboardEvent) {
       break;
     case "g":
       grimoire.toggle("isPublic");
-      emitLegacyMutation("toggleGrimoire");
+      emitGameEvent("toggleGrimoire");
       break;
     // case "a":
     //   this.$refs.menu.addPlayer();

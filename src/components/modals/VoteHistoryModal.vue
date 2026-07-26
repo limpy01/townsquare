@@ -111,7 +111,7 @@ import Modal from "./Modal.vue";
 import { useVotingStore } from "../../stores/voting";
 import { useModalStore } from "../../stores/modals";
 import { useSessionIdentityStore } from "../../stores/session-identity";
-import { emitLegacyMutation } from "../../store/legacy-effects";
+import { emitGameEvent } from "../../store/game-events";
 
 const modals = useModalStore();
 const session = useSessionIdentityStore();
@@ -141,15 +141,12 @@ function clearVoteHistory() {
     .map((isSelected, index) => (isSelected ? index : -1))
     .filter((index) => index >= 0);
   voting.clearVoteHistory(selected);
-  emitLegacyMutation("session/clearVoteHistory", selected);
+  emitGameEvent("session/clearVoteHistory", selected);
 }
 
 function setRecordVoteHistory() {
   voting.setVoteHistoryAllowed(!voting.isVoteHistoryAllowed);
-  emitLegacyMutation(
-    "session/setVoteHistoryAllowed",
-    voting.isVoteHistoryAllowed,
-  );
+  emitGameEvent("session/setVoteHistoryAllowed", voting.isVoteHistoryAllowed);
 }
 </script>
 

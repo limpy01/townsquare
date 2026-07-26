@@ -37,7 +37,7 @@ npm run check
 | 检查项                      | 结果                              |
 | --------------------------- | --------------------------------- |
 | TypeScript / Vue TypeScript | 通过                              |
-| Vitest                      | 49 个测试文件、166 个测试通过     |
+| Vitest                      | 48 个测试文件、165 个测试通过     |
 | 服务端集成测试              | 13 个测试通过                     |
 | Chromium E2E                | 4 个流程通过                      |
 | 视觉回归                    | 3 个测试、4 张截图通过            |
@@ -48,7 +48,7 @@ npm run check
 | 生产构建                    | 通过                              |
 | 工作区                      | 干净，无未提交改动                |
 
-本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；最新一次完整质量门包含类型检查、166 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
+本次复盘最初运行于 Node `v25.3.0`、npm `11.9.0`。仓库现固定为该版本；最新一次完整质量门包含类型检查、165 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
 
 当前构建结果：
 
@@ -145,20 +145,18 @@ npm run check
 
 原约 664 行的 `src/store/persistence.ts` 已收敛为 19 行浏览器装配适配器；初始化恢复、旧值解析、写回投影和兼容类型分别位于 `persistence-hydrator.ts`、`persistence-codecs.ts`、`persistence-writer.ts` 与 `persistence-types.ts`。生产代码不再在该边界使用 `any` 或直接属性访问 localStorage。
 
-新增独立回归覆盖损坏值拒绝、旧头像迁移失败重试、会话/聊天/群聊/角色状态恢复、投票历史、群聊完整生命周期和角色状态清理。页面标题仍由最外层浏览器适配器提供，mutation bus 也暂时只保留在该适配器中，待 MIG-052 将调用方迁至明确 Pinia action/领域事件后删除。该边界尚未建立 95% lines、90% branches 的专属覆盖率门禁。
+新增独立回归覆盖损坏值拒绝、旧头像迁移失败重试、会话/聊天/群聊/角色状态恢复、投票历史、群聊完整生命周期和角色状态清理。页面标题仍由最外层浏览器适配器提供；MIG-052 已将原 mutation bus 替换为显式游戏事件通道。该边界尚未建立 95% lines、90% branches 的专属覆盖率门禁。
 
 ### 4.3 仍存在 legacy 命令体系
 
 Vuex 已经删除，但下列过渡设施仍被大量组件和 transport 使用：
 
 - `legacy-commands.ts`；
-- `legacy-effects.ts`；
-- `mutation-bus.ts`；
 - `LegacyRuntimeStore` 投影；
 - `commitGameCommand`；
 - `emitLegacyMutation`。
 
-这意味着状态容器已经迁到 Pinia，但组件与副作用之间仍使用 Vuex 风格的字符串命令。阶段 5 的技术栈目标已完成，架构退出条件尚未完全满足。
+`legacy-effects.ts`、`mutation-bus.ts` 与全部 `emitLegacyMutation` 调用已删除。App、投票、玩家、头像及全部相关弹窗现在在 Pinia action 后发布明确的游戏事件，持久化与 session transport 是该事件的消费者。仍需删除 `commitGameCommand` 和 runtime store 投影，才能完成整个命令桥收口。
 
 ### 4.4 TypeScript 仍有绕过点
 

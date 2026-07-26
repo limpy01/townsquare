@@ -56,7 +56,7 @@ import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
 import { useSessionIdentityStore } from "../../stores/session-identity";
-import { emitLegacyMutation } from "../../store/legacy-effects";
+import { emitGameEvent } from "../../store/game-events";
 import Modal from "./Modal.vue";
 import Token from "../Token.vue";
 
@@ -125,7 +125,7 @@ function finishDraw() {
       value: selectedRoles[index],
     };
     playerState.update(payload);
-    emitLegacyMutation("players/update", payload);
+    emitGameEvent("players/update", payload);
   }
   close();
 }

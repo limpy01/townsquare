@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import persistence from "./persistence";
-import { mutationBus } from "./mutation-bus";
+import { gameEvents } from "./game-events";
 
 const createStorage = (initial: Record<string, string> = {}) => {
   const entries = new Map(Object.entries(initial));
@@ -67,7 +67,7 @@ describe("persistence compatibility plugin", () => {
     expect(commit).toHaveBeenCalledWith("session/setSpectator", true);
     expect(commit).toHaveBeenCalledWith("session/setSessionId", "room1234");
 
-    mutationBus.emit(
+    gameEvents.publish(
       { type: "session/setSessionId", payload: "nextroom" },
       { session: { isSpectator: false } },
     );
@@ -85,7 +85,7 @@ describe("persistence compatibility plugin", () => {
     const unsubscribe = persistence({ commit: vi.fn(), state: {} });
 
     expect(() =>
-      mutationBus.emit(
+      gameEvents.publish(
         {
           type: "session/addGroupChat",
           payload: {
@@ -113,7 +113,7 @@ describe("persistence compatibility plugin", () => {
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
     const unsubscribe = persistence({ commit: vi.fn(), state: {} });
 
-    mutationBus.emit(
+    gameEvents.publish(
       {
         type: "session/addGroupChat",
         payload: {
@@ -157,7 +157,7 @@ describe("persistence compatibility plugin", () => {
     const commit = vi.fn();
     const unsubscribe = persistence({ commit, state: {} });
 
-    mutationBus.emit(
+    gameEvents.publish(
       {
         type: "session/setIsRole",
         payload: { role: "chef", property: "active", value: false },
@@ -180,11 +180,11 @@ describe("persistence compatibility plugin", () => {
     vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
     const unsubscribe = persistence({ commit: vi.fn(), state: {} });
 
-    mutationBus.emit(
+    gameEvents.publish(
       { type: "players/setBluff" },
       { players: { bluffs: [{ id: "imp" }, null, { id: 1 }] } },
     );
-    mutationBus.emit(
+    gameEvents.publish(
       { type: "players/update" },
       {
         players: {

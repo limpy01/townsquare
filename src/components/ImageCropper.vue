@@ -46,7 +46,7 @@ import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
 import { apiBase } from "../config";
 import { showInputModal } from "../services/input-modal";
-import { emitLegacyMutation } from "../store/legacy-effects";
+import { emitGameEvent } from "../store/game-events";
 import { useProfileStore } from "../stores/profile";
 import { useSessionIdentityStore } from "../stores/session-identity";
 
@@ -147,7 +147,7 @@ async function sendImage() {
         warning.value = "图片上传失败！请重试！";
       } else {
         profile.updatePlayerAvatar(result.avatarUrl);
-        emitLegacyMutation("session/updatePlayerAvatar", result.avatarUrl);
+        emitGameEvent("session/updatePlayerAvatar", result.avatarUrl);
         closeCropping();
         await showInputModal({
           inputType: "alert",

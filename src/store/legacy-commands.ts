@@ -16,10 +16,9 @@ import { useSessionIdentityStore } from "../stores/session-identity";
 import { useSessionSettingsStore } from "../stores/session-settings";
 import { useTimerStore } from "../stores/timer";
 import { useVotingStore } from "../stores/voting";
-import { emitLegacyMutation } from "./legacy-effects";
+import { emitGameEvent } from "./game-events";
 
-const emit = (type: string, payload?: unknown) =>
-  emitLegacyMutation(type, payload);
+const emit = (type: string, payload?: unknown) => emitGameEvent(type, payload);
 
 /**
  * Temporary Options API boundary. It deliberately exposes the former command

@@ -34,7 +34,7 @@ import {
 import type { ScenarioCatalogRole } from "@townsquare/domain";
 import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
-import { emitLegacyMutation } from "../../store/legacy-effects";
+import { emitGameEvent } from "../../store/game-events";
 import { useModalStore } from "../../stores/modals";
 import { type MutablePlayer, usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
@@ -76,32 +76,32 @@ const edition = computed<GameStateEdition>(
 
 function setCustomRoles(roles: unknown) {
   if (!scenario.setCustomRoles(roles)) return false;
-  emitLegacyMutation("setCustomRoles", roles);
+  emitGameEvent("setCustomRoles", roles);
   return true;
 }
 
 function setEdition(value: unknown) {
   const fabled = scenario.setEdition(value);
-  emitLegacyMutation("setEdition", value);
-  if (fabled) emitLegacyMutation("players/setFabled", { fabled });
+  emitGameEvent("setEdition", value);
+  if (fabled) emitGameEvent("players/setFabled", { fabled });
 }
 
 function updatePlayer(player: MutablePlayer, property: string, value: unknown) {
   const payload = { player, property, value };
   playerState.update(payload);
-  emitLegacyMutation("players/update", payload);
+  emitGameEvent("players/update", payload);
 }
 
 function setBluff(index: number, role: unknown) {
   const payload = { index, role };
   playerState.setBluff(payload);
-  emitLegacyMutation("players/setBluff", payload);
+  emitGameEvent("players/setBluff", payload);
 }
 
 function setFabled(fabled: unknown[]) {
   const payload = { fabled };
   playerState.setFabled(payload);
-  emitLegacyMutation("players/setFabled", payload);
+  emitGameEvent("players/setFabled", payload);
 }
 
 const gamestate = computed(() =>
@@ -189,7 +189,7 @@ async function loadGrimoire() {
           typeof edition.demonsName === "string" ? edition.demonsName : "恶魔",
       };
       scenario.setTeamsNames(names);
-      emitLegacyMutation("setTeamsNames", names);
+      emitGameEvent("setTeamsNames", names);
     }
     if (bluffs.length) {
       bluffs.forEach((role, index) => {
@@ -210,7 +210,7 @@ async function loadGrimoire() {
         if (index >= mappedPlayers.length) {
           if (!session.isSpectator) {
             const added = playerState.add("");
-            emitLegacyMutation("players/add", { name: added.name });
+            emitGameEvent("players/add", { name: added.name });
           } else {
             break;
           }
@@ -272,7 +272,7 @@ async function loadState() {
           {},
       }));
       playerState.setPlayers(mapped);
-      emitLegacyMutation("players/set", mapped);
+      emitGameEvent("players/set", mapped);
     }
   } catch (error) {
     await showLoadError(error);

@@ -35,7 +35,7 @@ import { computed } from "vue";
 import { iconImage } from "../../assets/images";
 import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
-import { emitLegacyMutation } from "../../store/legacy-effects";
+import { emitGameEvent } from "../../store/game-events";
 import { useGrimoireStore } from "../../stores/grimoire";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
@@ -150,7 +150,7 @@ async function addReminder(reminder: DisplayReminder) {
     value,
   };
   playerState.update(reminderPayload);
-  emitLegacyMutation("players/update", reminderPayload);
+  emitGameEvent("players/update", reminderPayload);
   const stReminders = value.filter((reminder) => reminder.role !== "custom");
   if (!session.isSpectator && reminder.role != "custom") {
     const storytellerReminderPayload = {
@@ -159,7 +159,7 @@ async function addReminder(reminder: DisplayReminder) {
       value: stReminders,
     };
     playerState.update(storytellerReminderPayload);
-    emitLegacyMutation("players/update", storytellerReminderPayload);
+    emitGameEvent("players/update", storytellerReminderPayload);
   }
 }
 </script>

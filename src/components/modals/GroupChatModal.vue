@@ -95,7 +95,7 @@ import Modal from "./Modal.vue";
 import { useChatStore } from "../../stores/chat";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
-import { emitLegacyMutation } from "../../store/legacy-effects";
+import { emitGameEvent } from "../../store/game-events";
 
 const chat = useChatStore();
 const modals = useModalStore();
@@ -140,9 +140,9 @@ function addGroupChat() {
   const payload = { chatId, players: newGroupMembers };
   chat.addGroup(payload).forEach((update) => {
     playerState.update(update);
-    emitLegacyMutation("players/update", update);
+    emitGameEvent("players/update", update);
   });
-  emitLegacyMutation("session/addGroupChat", payload);
+  emitGameEvent("session/addGroupChat", payload);
   cancelGroupChat();
 }
 
@@ -155,9 +155,9 @@ function removeGroupChat(chatId: string) {
   };
   chat.removeGroup(chatId).forEach((update) => {
     playerState.update(update);
-    emitLegacyMutation("players/update", update);
+    emitGameEvent("players/update", update);
   });
-  emitLegacyMutation("session/removeGroupChat", payload);
+  emitGameEvent("session/removeGroupChat", payload);
 }
 
 function removeGroupChatMember(chatId: string, player: any) {
@@ -173,23 +173,23 @@ function removeGroupChatMember(chatId: string, player: any) {
     };
     chat.removeGroup(chatId).forEach((update) => {
       playerState.update(update);
-      emitLegacyMutation("players/update", update);
+      emitGameEvent("players/update", update);
     });
-    emitLegacyMutation("session/removeGroupChat", payload);
+    emitGameEvent("session/removeGroupChat", payload);
     return;
   }
   const payload = { chatId, player };
   const update = chat.removeGroupMember(chatId, player);
   if (update) {
     playerState.update(update);
-    emitLegacyMutation("players/update", update);
+    emitGameEvent("players/update", update);
   }
-  emitLegacyMutation("session/removeGroupChatMember", payload);
+  emitGameEvent("session/removeGroupChatMember", payload);
 }
 
 function toggleGroupKeep(chatId: string) {
   chat.toggleGroupKeep(chatId);
-  emitLegacyMutation("session/toggleGroupKeep", chatId);
+  emitGameEvent("session/toggleGroupKeep", chatId);
 }
 
 function close() {

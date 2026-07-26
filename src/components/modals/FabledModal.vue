@@ -22,7 +22,7 @@ import Token from "../Token.vue";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
-import { emitLegacyMutation } from "../../store/legacy-effects";
+import { emitGameEvent } from "../../store/game-events";
 
 const modals = useModalStore();
 const players = usePlayersStore();
@@ -42,7 +42,7 @@ const tokenWidth = computed(() =>
 function setFabled(role: ScenarioCatalogRole) {
   const payload = { fabled: role };
   players.setFabled(payload);
-  emitLegacyMutation("players/setFabled", payload);
+  emitGameEvent("players/setFabled", payload);
   modals.toggle("fabled");
 }
 

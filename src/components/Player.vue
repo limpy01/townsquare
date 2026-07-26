@@ -358,7 +358,7 @@ import { usePlayersStore } from "../stores/players";
 import { useGrimoireStore } from "../stores/grimoire";
 import { useSessionIdentityStore } from "../stores/session-identity";
 import { getNightOrder } from "@townsquare/domain";
-import { emitLegacyMutation } from "../store/legacy-effects";
+import { emitGameEvent } from "../store/game-events";
 
 type PlayerRole = Record<string, unknown> & {
   id?: string;
@@ -623,7 +623,7 @@ function updatePlayer(property: string, value: unknown, closeMenu = false) {
     return;
   const payload = { player: props.player, property, value };
   playersState.update(payload);
-  emitLegacyMutation("players/update", payload);
+  emitGameEvent("players/update", payload);
   if (closeMenu) isMenuOpen.value = false;
 }
 
@@ -631,8 +631,8 @@ function emptyPlayer() {
   const payload = { player: props.player, id: props.player.id };
   playersState
     .empty(props.player)
-    .forEach((change) => emitLegacyMutation("players/update", change));
-  emitLegacyMutation("players/empty", payload);
+    .forEach((change) => emitGameEvent("players/update", change));
+  emitGameEvent("players/empty", payload);
 }
 
 async function removePlayer() {
@@ -683,7 +683,7 @@ function vote() {
       Number(voting.votes[index.value]) > 0 ? 0 : 1,
     ];
     voting.vote(payload);
-    emitLegacyMutation("session/voteSync", payload);
+    emitGameEvent("session/voteSync", payload);
   }
 }
 function addVote(player: PlayerView) {

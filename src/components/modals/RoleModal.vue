@@ -105,7 +105,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import type { ScenarioCatalogRole } from "@townsquare/domain";
 import Modal from "./Modal.vue";
 import Token from "../Token.vue";
-import { emitLegacyMutation } from "../../store/legacy-effects";
+import { emitGameEvent } from "../../store/game-events";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
@@ -154,7 +154,7 @@ function setRole(role: ScenarioCatalogRole) {
       role,
     };
     playerState.setBluff(payload);
-    emitLegacyMutation("players/setBluff", payload);
+    emitGameEvent("players/setBluff", payload);
   } else {
     if (session.isSpectator && role.team === "traveler") return;
     const payload = {
@@ -163,7 +163,7 @@ function setRole(role: ScenarioCatalogRole) {
       value: role,
     };
     playerState.update(payload);
-    emitLegacyMutation("players/update", payload);
+    emitGameEvent("players/update", payload);
   }
   tab.value = "editionRoles";
   modals.toggle("role");

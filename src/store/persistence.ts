@@ -1,6 +1,6 @@
 import { pinia } from "../pinia";
 import { useChatStore } from "../stores/chat";
-import { mutationBus } from "./mutation-bus";
+import { gameEvents } from "./game-events";
 import { hydratePersistence } from "./persistence-hydrator";
 import type { PersistenceStore } from "./persistence-types";
 import { createPersistenceWriter } from "./persistence-writer";
@@ -19,7 +19,7 @@ export default (store: PersistenceStore) => {
   hydratePersistence(store, storage);
   if (storage.getItem("isGrimoire")) updatePageTitle(false);
 
-  return mutationBus.subscribe(
+  return gameEvents.subscribe(
     createPersistenceWriter({
       storage,
       getChatHistories: () => useChatStore(pinia).histories,

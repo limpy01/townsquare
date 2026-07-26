@@ -36,7 +36,7 @@ import {
 } from "./session-outbox-dispatcher";
 import { SessionOutboxController } from "./session-outbox-controller";
 import { getCustomRolesStripped, rolesJSONbyId } from "./selectors";
-import { mutationBus } from "./mutation-bus";
+import { gameEvents } from "./game-events";
 import type { OutboxMessage } from "../stores/message-outbox";
 import {
   decodeSessionMessage,
@@ -2649,7 +2649,7 @@ export default (store: LegacyRuntimeStore) => {
   // setup
   const session = new LiveSession(store);
 
-  mutationBus.subscribe((mutation, state) => {
+  gameEvents.subscribe((mutation, state) => {
     if (!isSessionOutboundState(state)) return;
     dispatchSessionMutation(session, mutation, state);
   });

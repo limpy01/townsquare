@@ -78,7 +78,7 @@ import { editionImage } from "../../assets/images";
 import editionJSON from "../../editions.json";
 import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
-import { emitLegacyMutation } from "../../store/legacy-effects";
+import { emitGameEvent } from "../../store/game-events";
 import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
@@ -183,7 +183,7 @@ function installScript(raw: unknown) {
     }),
   );
   if (!scenario.setCustomRoles(roles)) return;
-  emitLegacyMutation("setCustomRoles", roles);
+  emitGameEvent("setCustomRoles", roles);
   applyEdition(Object.assign({}, meta, { id: "custom" }));
   const fabledMap = scenario.fabled;
   const fabled = roles.flatMap((role): ScenarioCatalogRole[] => {
@@ -198,7 +198,7 @@ function installScript(raw: unknown) {
   if (fabled.length) {
     const payload = { fabled };
     players.setFabled(payload);
-    emitLegacyMutation("players/setFabled", payload);
+    emitGameEvent("players/setFabled", payload);
   }
   const states: Record<string, string>[] = [];
   const stateEntries = Array.isArray(meta.state)
@@ -212,7 +212,7 @@ function installScript(raw: unknown) {
     if (name) states.push({ [name]: description });
   });
   scenario.setStates(states);
-  emitLegacyMutation("setStates", states);
+  emitGameEvent("setStates", states);
   const teamsNames = {
     townsfolk: stringValue(meta.townsfolksName, "镇民"),
     outsider: stringValue(meta.outsidersName, "外来者"),
@@ -220,17 +220,17 @@ function installScript(raw: unknown) {
     demon: stringValue(meta.demonsName, "恶魔"),
   };
   scenario.setTeamsNames(teamsNames);
-  emitLegacyMutation("setTeamsNames", teamsNames);
+  emitGameEvent("setTeamsNames", teamsNames);
   const firstNight = stringValues(meta.firstNight).map((role) =>
     role.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
   );
   scenario.setFirstNight(firstNight);
-  emitLegacyMutation("setFirstNight", firstNight);
+  emitGameEvent("setFirstNight", firstNight);
   const otherNight = stringValues(meta.otherNight).map((role) =>
     role.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
   );
   scenario.setOtherNight(otherNight);
-  emitLegacyMutation("setOtherNight", otherNight);
+  emitGameEvent("setOtherNight", otherNight);
   isCustom.value = false;
 }
 async function handleUpload() {
@@ -288,15 +288,15 @@ async function readFromClipboard() {
 function setHomeEdition(edition: ScriptEdition) {
   if (["tb", "bmr", "snv", "luf", "all", "custom_ankot"].includes(edition.id)) {
     scenario.setStates([]);
-    emitLegacyMutation("setStates", []);
+    emitGameEvent("setStates", []);
   }
   applyEdition(edition);
 }
 
 function applyEdition(edition: unknown) {
   const fabled = scenario.setEdition(edition);
-  emitLegacyMutation("setEdition", edition);
-  if (fabled) emitLegacyMutation("players/setFabled", { fabled });
+  emitGameEvent("setEdition", edition);
+  if (fabled) emitGameEvent("players/setFabled", { fabled });
 }
 </script>
 

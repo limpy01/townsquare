@@ -160,7 +160,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useVotingStore } from "../stores/voting";
 import { usePlayersStore } from "../stores/players";
 import { useSessionIdentityStore } from "../stores/session-identity";
-import { emitLegacyMutation } from "../store/legacy-effects";
+import { emitGameEvent } from "../store/game-events";
 
 const voting = useVotingStore();
 const playerState = usePlayersStore();
@@ -246,22 +246,22 @@ function clearVoteTimer() {
 
 function setVoteInProgress(value: boolean) {
   voting.setVoteInProgress(value);
-  emitLegacyMutation("session/setVoteInProgress", value);
+  emitGameEvent("session/setVoteInProgress", value);
 }
 
 function lockVote(value?: number) {
   voting.lockVote(value);
-  emitLegacyMutation("session/lockVote", value);
+  emitGameEvent("session/lockVote", value);
 }
 
 function setVotingSpeedValue(value: number) {
   voting.setVotingSpeed(value);
-  emitLegacyMutation("session/setVotingSpeed", value);
+  emitGameEvent("session/setVotingSpeed", value);
 }
 
 function voteSync(payload: [number, boolean | number]) {
   voting.vote(payload);
-  emitLegacyMutation("session/voteSync", payload);
+  emitGameEvent("session/voteSync", payload);
 }
 
 function advanceVote() {
@@ -314,7 +314,7 @@ function finish() {
   });
   if (entry) {
     voting.addVotes(entry);
-    emitLegacyMutation("session/addVotes", entry);
+    emitGameEvent("session/addVotes", entry);
   }
   const selection = {
     selected: false,
@@ -325,12 +325,12 @@ function finish() {
     isVoteHistoryAllowed: voting.isVoteHistoryAllowed,
     isSpectator: session.isSpectator,
   });
-  emitLegacyMutation("session/addVoteSelected", selection);
+  emitGameEvent("session/addVoteSelected", selection);
   voting.setNomination(undefined, {
     isSecretVote: voting.isSecretVote,
     claimedSeat: session.claimedSeat,
   });
-  emitLegacyMutation("session/nomination");
+  emitGameEvent("session/nomination");
 }
 
 function vote(vote: boolean | number) {
@@ -359,19 +359,19 @@ function setMarked() {
     force: true,
   };
   voting.setMarkedPlayer(payload, { isSecretVote: voting.isSecretVote });
-  emitLegacyMutation("session/setMarkedPlayer", payload);
+  emitGameEvent("session/setMarkedPlayer", payload);
 }
 
 function removeMarked() {
   const payload = { val: -1, force: true };
   voting.setMarkedPlayer(payload, { isSecretVote: voting.isSecretVote });
-  emitLegacyMutation("session/setMarkedPlayer", payload);
+  emitGameEvent("session/setMarkedPlayer", payload);
 }
 
 function setSecretVote() {
   if (session.isSpectator || voting.isVoteInProgress) return;
   voting.setSecretVote(!voting.isSecretVote);
-  emitLegacyMutation("session/setSecretVote", voting.isSecretVote);
+  emitGameEvent("session/setSecretVote", voting.isSecretVote);
 }
 
 watch(
