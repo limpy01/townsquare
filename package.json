@@ -19,7 +19,7 @@
     "test:e2e": "playwright test --project=chromium --grep-invert=@visual",
     "test:visual": "playwright test --project=chromium --grep=@visual",
     "test:visual:update": "playwright test --project=chromium --grep=@visual --update-snapshots",
-    "build": "vite build && node generate-sitemap.js",
+    "build": "vite build && node scripts/check-bundle-budget.cjs && node generate-sitemap.js",
     "lint": "eslint .",
     "lint-ci": "eslint . --max-warnings=0",
     "lint:baseline": "node scripts/check-lint-baseline.cjs",
