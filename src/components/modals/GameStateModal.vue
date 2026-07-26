@@ -36,7 +36,7 @@ import Modal from "./Modal.vue";
 import { showInputModal } from "../../services/input-modal";
 import { emitLegacyMutation } from "../../store/legacy-effects";
 import { useModalStore } from "../../stores/modals";
-import { usePlayersStore } from "../../stores/players";
+import { type MutablePlayer, usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
 import { useSessionIdentityStore } from "../../stores/session-identity";
 import { getCustomRolesStripped, rolesJSONbyId } from "../../store/selectors";
@@ -86,7 +86,7 @@ function setEdition(value: unknown) {
   if (fabled) emitLegacyMutation("players/setFabled", { fabled });
 }
 
-function updatePlayer(player: unknown, property: string, value: unknown) {
+function updatePlayer(player: MutablePlayer, property: string, value: unknown) {
   const payload = { player, property, value };
   playerState.update(payload);
   emitLegacyMutation("players/update", payload);

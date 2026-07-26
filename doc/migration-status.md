@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（MIG-039 Token 组件回归）
+最后更新：2026-07-26（MIG-040 玩家 action 输入收口）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -69,6 +69,7 @@
 | MIG-037 | 已完成 | 群聊成员契约收口                           | 群聊新增、移除和成员更新使用含稳定 ID 的成员类型，store 单测通过                         | 保持群聊持久化字段              |
 | MIG-038 | 已完成 | Token 输入类型收口                         | 角色展示 props 使用兼容型显式字段；可选提醒和图片 ID 安全回退                            | 保持角色图标与展示样式          |
 | MIG-039 | 已完成 | Token 组件回归                             | 缺失可选字段安全渲染、提醒叶片和显式选择事件由 jsdom 挂载验证                            | 保持 token 交互与样式           |
+| MIG-040 | 已完成 | 玩家 action 输入收口                       | setPlayers、update 与 empty 使用 unknown/可变记录；本地票数同步只接受数值                | 保持现有玩家 state 形状         |
 
 ## 迁移历史与当前质量基线
 
@@ -191,6 +192,7 @@
 - MIG-037 为 chat store 建立 `ChatGroupPlayer`：群聊成员必须有稳定字符串 ID，名称与历史扩展字段继续兼容。新增、移除成员以及生成玩家 `chatGroup` 更新的既有行为由现有 store 测试覆盖。
 - MIG-038 将 Token 的角色展示输入从 `Record<string, any>` 改为显式兼容型 `TokenRole`。历史缺失角色 ID、提醒数组或名称均安全回退，动态图标和原有 token 展示语义不变。
 - MIG-039 为 Token 补充 Vue Test Utils 挂载回归：角色可省略展示元数据；提醒数组仍生成对应叶片；点击继续发出 `set-role` 事件。
+- MIG-040 将 players store 的批量设置、属性更新和清空 action 从 `any` 收敛为 `unknown[]` 与 `MutablePlayer`；仅在本地玩家票数为数值时同步 voting store，避免畸形历史 payload 写入计票状态。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。

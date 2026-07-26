@@ -22,6 +22,11 @@ type SetFabledPayload = {
   emptyFabled?: boolean;
 };
 
+export type MutablePlayer = Record<string, unknown> & {
+  id?: string;
+  votes?: number;
+};
+
 const createPlayer = (name = "") => ({
   name,
   id: "",
@@ -57,7 +62,7 @@ export const usePlayersStore = defineStore("players", {
       this.players.push(player);
       return player;
     },
-    setPlayers(players: any[] = []) {
+    setPlayers(players: unknown[] = []) {
       this.players = players;
     },
     clear(emptyFabled = false) {
@@ -116,15 +121,15 @@ export const usePlayersStore = defineStore("players", {
       property,
       value,
     }: {
-      player: any;
+      player: MutablePlayer;
       property: string;
-      value: any;
+      value: unknown;
     }) {
       if (this.players.includes(player)) player[property] = value;
       if (player.id !== useSessionIdentityStore(pinia).playerId) return;
-      if (property === "id") {
+      if (property === "id" && typeof player.votes === "number") {
         useVotingStore(pinia).setPlayerVotes(player.votes);
-      } else if (property === "votes") {
+      } else if (property === "votes" && typeof value === "number") {
         useVotingStore(pinia).setPlayerVotes(value);
       }
     },
@@ -153,7 +158,7 @@ export const usePlayersStore = defineStore("players", {
       if (!player || !player.id || player.id !== playerId) return;
       player.isTalking = isTalking;
     },
-    empty(player: any) {
+    empty(player: MutablePlayer) {
       const changes = [
         ["id", ""],
         ["name", ""],
