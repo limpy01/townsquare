@@ -2160,6 +2160,7 @@ export class LiveSession {
     if (this._isSpectator) return;
     const { lockedVote, votes, nomination } = this._voting;
     const { players } = this._store.state.players;
+    if (!players.length) return;
     const index = (nomination[1] + lockedVote - 1) % players.length;
     this._send("lock", [this._voting.lockedVote, votes[index]]);
   }
@@ -2170,13 +2171,14 @@ export class LiveSession {
    * @param vote
    * @private
    */
-  _handleLock([lock, vote]) {
+  _handleLock([lock, vote]: [number, boolean | number | null]) {
     if (!this._isSpectator) return;
     this._store.commit("session/lockVote", lock);
 
     if (lock > 1) {
       const { lockedVote, nomination } = this._voting;
       const { players } = this._store.state.players;
+      if (!players.length) return;
       const index = (nomination[1] + lockedVote - 1) % players.length;
       // record as not voted when anonymous voting is in progress
       const displayVote = this._voting.isSecretVote ? false : vote;
