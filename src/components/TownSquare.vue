@@ -31,7 +31,7 @@
     <div
       class="bluffs"
       v-if="players.length"
-      ref="bluffs"
+      ref="bluffsElement"
       :class="{ closed: !isBluffsOpen }"
     >
       <h3>

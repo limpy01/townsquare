@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（MIG-024 Modal 组件交互测试）
+最后更新：2026-07-26（MIG-025 只读模板引用修复）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -54,6 +54,7 @@
 | MIG-022 | 已完成 | Scenario 目录类型收口                      | edition、角色目录、旅行者、传奇角色与相克 map 使用显式兼容类型                                 | 无效 edition 不污染现有状态     |
 | MIG-023 | 已完成 | Intro 样式归档                             | 首页欢迎层全局选择器迁入样式层，构建与视觉回归通过                                             | 保持现有首页 DOM 与视觉         |
 | MIG-024 | 已完成 | Modal 组件交互测试                         | 背景关闭、输入保护与最大化状态由 Vue Test Utils 挂载验证                                       | 保持模态框交互语义              |
+| MIG-025 | 已完成 | 创建房间的 Vue 运行时警告收口              | 真实房主流程断言无 readonly computed warning                                                   | 保持 DOM、房间创建与截图语义    |
 
 ## 迁移历史与当前质量基线
 
@@ -161,6 +162,7 @@
 - MIG-022 消除了 scenario store 的 `any`：edition、角色/旅行者/传奇角色目录及相克 map 都拥有显式兼容类型，setEdition 只接受含稳定字符串 ID 的输入并在缺省 `roles`/`isOfficial` 时安全归一化。单元测试覆盖无效 edition 不覆盖当前状态；130 个单元和视觉基线通过。
 - MIG-023 将 Intro 欢迎层的全局 CSS 从 SFC 提取到 `styles/intro`，使组件只保留样式层引用；构建、资源路径与三项视觉基线均通过，入口 JS 仍低于 1.8 MB 预算。
 - MIG-024 为通用 Modal 增加 jsdom 挂载测试，锁定正常背景/关闭按钮关闭、输入表单背景不关闭及最大化类切换，扩大 Vue Test Utils 从 Intro 到复用模态基础设施的覆盖范围。
+- MIG-025 修复 TownSquare 将只读 `bluffs` 计算值误用作模板元素引用的问题：模板引用改为已有的可写 `bluffsElement`。Playwright 在真实创建房间路径捕获并断言该 Vue readonly warning 为零，原有房主流程继续通过。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。

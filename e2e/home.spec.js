@@ -42,6 +42,20 @@ async function rejectClipboardWrites(page) {
   });
 }
 
+async function captureVueWarnings(page) {
+  await page.addInitScript(() => {
+    window.vueWarnings = [];
+    const warn = console.warn;
+    console.warn = (...args) => {
+      const message = args.map(String).join(" ");
+      if (message.includes("Write operation failed: computed value is readonly")) {
+        window.vueWarnings.push({ message, stack: new Error().stack });
+      }
+      warn(...args);
+    };
+  });
+}
+
 async function openCreateRoomDialog(page) {
   const createRoom = page
     .locator(".intro")
@@ -88,6 +102,7 @@ test("创建房间打开房间和人数输入框", async ({ page }) => {
 
 test("创建房间后进入说书人魔典", async ({ page }) => {
   await rejectClipboardWrites(page);
+  await captureVueWarnings(page);
   await openHome(page);
   await openCreateRoomDialog(page);
 
@@ -104,6 +119,7 @@ test("创建房间后进入说书人魔典", async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => window.unhandledRejections))
     .toEqual([]);
+  await expect.poll(() => page.evaluate(() => window.vueWarnings)).toEqual([]);
 });
 
 test("帮助菜单提供法律与署名入口", async ({ page }) => {
