@@ -69,7 +69,15 @@ type LegacyRuntimePlayer = {
 
 type LegacyRuntimeState = {
   players: { players: LegacyRuntimePlayer[] } & Record<string, unknown>;
-  session: { playerId: string; sessionId: string } & Record<string, unknown>;
+  session: {
+    playerId: string;
+    sessionId: string;
+    stSecret: string;
+    stId: string;
+    claimedSeat: number;
+    isListening: boolean;
+    isSpectator: boolean;
+  } & Record<string, unknown>;
 } & Record<string, unknown>;
 
 type LegacyRuntimeStore = {
@@ -124,10 +132,10 @@ function isTimerSeconds(value: unknown): value is number {
 export class LiveSession {
   private _wss!: string;
   private _socket!: WebSocket | null;
-  private _isSpectator!: boolean;
+  _isSpectator!: boolean;
   private _isAlive!: boolean;
   private _gamestate!: Array<Record<string, unknown>>;
-  private _store!: LegacyRuntimeStore;
+  _store!: LegacyRuntimeStore;
   private _connection!: ReturnType<typeof useSessionConnectionStore>;
   private _review!: ReturnType<typeof useReviewStore>;
   private _legacyOptions!: ReturnType<typeof useLegacyOptionsStore>;
@@ -140,7 +148,7 @@ export class LiveSession {
   private _pingInterval!: number;
   private _pingTimer!: ReturnType<typeof setTimeout> | null;
   private _sendInterval!: number;
-  private _sendTimer!: ReturnType<typeof setTimeout> | null;
+  private _sendTimer!: ReturnType<typeof setInterval> | null;
   private _reconnectTimer!: ReturnType<typeof setTimeout> | null;
   private _hostTimeout!: ReturnType<typeof setTimeout> | null;
   private _joinTimeout!: ReturnType<typeof setTimeout> | null;
@@ -206,7 +214,7 @@ export class LiveSession {
     this._socket.onopen = this._onOpen.bind(this);
     this._socket.onclose = (err: CloseEvent) => {
       this._socket = null;
-      clearTimeout(this._pingTimer);
+      if (this._pingTimer !== null) clearTimeout(this._pingTimer);
       this._pingTimer = null;
       if (err.code !== 1000) {
         // connection interrupted, reconnect after 3 seconds
@@ -389,7 +397,7 @@ export class LiveSession {
   }
 
   _stopSendQueue() {
-    clearInterval(this._sendTimer);
+    if (this._sendTimer !== null) clearInterval(this._sendTimer);
     this._sendTimer = null;
   }
 
@@ -406,7 +414,8 @@ export class LiveSession {
     if (this._outbox.queue.length <= 0) return;
     for (let i = 0; i < this._outbox.queue.length; i++) {
       const message = this._outbox.queue[i];
-      if (message?.id === id) {
+      if (!message) continue;
+      if (message.id === id) {
         this._checkQueue(message);
         // this._store.state.session.messageQueue.splice(i,1);
         this._store.commit("session/deleteMessageQueue", i);
@@ -478,7 +487,7 @@ export class LiveSession {
         : Object.keys(this._players).length,
       "latency",
     ]);
-    clearTimeout(this._pingTimer);
+    if (this._pingTimer !== null) clearTimeout(this._pingTimer);
     this._pingTimer = setTimeout(this._ping.bind(this), this._pingInterval);
     // if (this._store.state.session.sessionId &&
     //   !this._isAlive && !this._connection.isReconnecting
@@ -587,13 +596,13 @@ export class LiveSession {
     this._connection.setPlayerCount(0);
     this._connection.setPing(0);
     this._connection.setIsReconnecting(false);
-    clearTimeout(this._pingTimer);
+    if (this._pingTimer !== null) clearTimeout(this._pingTimer);
     this._pingTimer = null;
     this._stopSendQueue();
-    clearTimeout(this._reconnectTimer);
+    if (this._reconnectTimer !== null) clearTimeout(this._reconnectTimer);
     this._reconnectTimer = null;
-    clearTimeout(this._joinTimeout);
-    clearTimeout(this._hostTimeout);
+    if (this._joinTimeout !== null) clearTimeout(this._joinTimeout);
+    if (this._hostTimeout !== null) clearTimeout(this._hostTimeout);
     this._joinTimeout = null;
     this._hostTimeout = null;
     if (this._socket) {
@@ -655,7 +664,7 @@ export class LiveSession {
   async _handleAllowHost(allow: unknown): Promise<void> {
     if (typeof allow !== "boolean") return;
     if (this._connection.isHostAllowed === true) return;
-    clearInterval(this._hostTimeout);
+    if (this._hostTimeout !== null) clearTimeout(this._hostTimeout);
     this._hostTimeout = null;
     this._connection.setIsHostAllowed(allow ? allow : null);
 
@@ -707,7 +716,7 @@ export class LiveSession {
   async _handleAllowJoin(allow: unknown): Promise<void> {
     if (typeof allow !== "boolean") return;
     if (this._connection.isJoinAllowed === true) return;
-    clearInterval(this._joinTimeout);
+    if (this._joinTimeout !== null) clearTimeout(this._joinTimeout);
     this._joinTimeout = null;
     this._connection.setIsJoinAllowed(allow ? allow : null);
 

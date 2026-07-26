@@ -5,6 +5,34 @@ import {
   encodeSessionMessage,
 } from "./session-socket-protocol";
 
+const createStore = (
+  commit = vi.fn(),
+  session: Partial<{
+    playerId: string;
+    sessionId: string;
+    stSecret: string;
+    stId: string;
+    claimedSeat: number;
+    isListening: boolean;
+    isSpectator: boolean;
+  }> = {},
+) => ({
+  commit,
+  state: {
+    players: { players: [] },
+    session: {
+      playerId: "player-1",
+      sessionId: "",
+      stSecret: "",
+      stId: "",
+      claimedSeat: -1,
+      isListening: false,
+      isSpectator: false,
+      ...session,
+    },
+  },
+});
+
 describe("session socket message decoder", () => {
   it("decodes valid legacy envelopes", () => {
     expect(decodeSessionMessage('["ping", ["player-1", "latency"]]')).toEqual({
@@ -29,13 +57,7 @@ describe("session socket message decoder", () => {
 
   it("releases ping and outbound queue timers when disconnected", () => {
     vi.useFakeTimers();
-    const session = new LiveSession({
-      commit: vi.fn(),
-      state: {
-        players: { players: [] },
-        session: { playerId: "player-1", sessionId: "" },
-      },
-    });
+    const session = new LiveSession(createStore());
 
     session._ping();
     session._startSendQueue();
@@ -47,13 +69,7 @@ describe("session socket message decoder", () => {
 
   it("ignores malformed persisted chat messages when clearing the outbox", () => {
     const commit = vi.fn();
-    const session = new LiveSession({
-      commit,
-      state: {
-        players: { players: [] },
-        session: { playerId: "player-1", sessionId: "", stId: "host-a" },
-      },
-    });
+    const session = new LiveSession(createStore(commit, { stId: "host-a" }));
     const checkQueue = (
       session as unknown as {
         _checkQueue(message: {
@@ -79,13 +95,7 @@ describe("session socket message decoder", () => {
 
   it("rejects non-scalar session channels before opening a socket", async () => {
     const commit = vi.fn();
-    const session = new LiveSession({
-      commit,
-      state: {
-        players: { players: [] },
-        session: { playerId: "player-1", sessionId: "" },
-      },
-    });
+    const session = new LiveSession(createStore(commit));
     const disconnect = vi.spyOn(session, "disconnect");
     const alertPopup = vi
       .spyOn(session, "_alertPopup")
@@ -99,13 +109,7 @@ describe("session socket message decoder", () => {
   });
 
   it("ignores malformed inbound alert payloads", async () => {
-    const session = new LiveSession({
-      commit: vi.fn(),
-      state: {
-        players: { players: [] },
-        session: { playerId: "player-1", sessionId: "" },
-      },
-    });
+    const session = new LiveSession(createStore());
     const showModal = vi.spyOn(session, "showInputModal");
 
     await session._alertPopup({ text: "not an alert string" });
@@ -114,13 +118,7 @@ describe("session socket message decoder", () => {
   });
 
   it("rejects malformed talking and timer payloads before sending", () => {
-    const session = new LiveSession({
-      commit: vi.fn(),
-      state: {
-        players: { players: [] },
-        session: { playerId: "player-1", sessionId: "" },
-      },
-    });
+    const session = new LiveSession(createStore());
     const send = vi.spyOn(session, "_send");
     (session as unknown as { _isSpectator: boolean })._isSpectator = false;
 
@@ -133,13 +131,7 @@ describe("session socket message decoder", () => {
 
   it("ignores non-numeric queue acknowledgements", () => {
     const commit = vi.fn();
-    const session = new LiveSession({
-      commit,
-      state: {
-        players: { players: [] },
-        session: { playerId: "player-1", sessionId: "" },
-      },
-    });
+    const session = new LiveSession(createStore(commit));
 
     session._deleteFromQueue("not-a-queue-id");
 
@@ -147,13 +139,7 @@ describe("session socket message decoder", () => {
   });
 
   it("rejects non-integer seat claims before sending", () => {
-    const session = new LiveSession({
-      commit: vi.fn(),
-      state: {
-        players: { players: [] },
-        session: { playerId: "player-1", sessionId: "" },
-      },
-    });
+    const session = new LiveSession(createStore());
     const sendDirect = vi.spyOn(session, "_sendDirect");
 
     session.claimSeat("0");
@@ -163,13 +149,7 @@ describe("session socket message decoder", () => {
 
   it("clears a departed seat through the session command boundary", () => {
     const commit = vi.fn();
-    const session = new LiveSession({
-      commit,
-      state: {
-        players: { players: [] },
-        session: { playerId: "player-1", sessionId: "", claimedSeat: 2 },
-      },
-    });
+    const session = new LiveSession(createStore(commit, { claimedSeat: 2 }));
 
     session._updateLeaveSeat();
 
