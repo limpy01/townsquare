@@ -18,6 +18,8 @@ type LegacyGroupChat = {
   keep: boolean;
 };
 
+type LegacyRoleState = Record<string, Record<string, unknown>>;
+
 const readGroupChats = (storage: Pick<Storage, "getItem">) =>
   readStoredArray(storage, "groupChats").flatMap((group): LegacyGroupChat[] => {
     if (
@@ -47,6 +49,17 @@ const readPlayerIds = (players: unknown) => {
 
   return playerIds.length === players.length ? playerIds : undefined;
 };
+
+const readLegacyRoleState = (
+  storage: Pick<Storage, "getItem">,
+): LegacyRoleState =>
+  Object.entries(readStoredRecord(storage, "isRole")).reduce<LegacyRoleState>(
+    (roleState, [role, state]) => {
+      if (isRecord(state)) roleState[role] = state;
+      return roleState;
+    },
+    {},
+  );
 
 export default (store: LegacyPersistenceStore) => {
   if (window.location.pathname != "/") return;
@@ -259,14 +272,15 @@ export default (store: LegacyPersistenceStore) => {
     );
   }
   if (localStorage.getItem("isRole")) {
-    const isRole = readStoredRecord(localStorage, "isRole");
+    const isRole = readLegacyRoleState(localStorage);
     const role = Object.keys(isRole)[0];
-    if (role && isRecord(isRole[role])) {
-      for (const property in isRole[role]) {
+    const roleState = role ? isRole[role] : undefined;
+    if (roleState) {
+      for (const property in roleState) {
         store.commit("session/setIsRole", {
           role,
           property,
-          value: isRole[role][property],
+          value: roleState[property],
           st: true,
         });
       }
@@ -576,23 +590,27 @@ export default (store: LegacyPersistenceStore) => {
         break;
       case "session/setIsRole":
         {
+          if (!isRecord(payload)) return;
+
           const role = payload.role;
           const property = payload.property;
           const value = payload.value;
+          if (typeof role !== "string" || typeof property !== "string") return;
+
           const stored = localStorage.getItem("isRole") ? true : false;
-          const isRole: Record<string, any> = stored
-            ? readStoredRecord(localStorage, "isRole")
-            : {};
+          const isRole = stored ? readLegacyRoleState(localStorage) : {};
           if (!stored && !!value) {
             // delete when value set to initial, need to pay caution with e.g. []
             isRole[role] = { [property]: value };
-          } else if (isRole[role]) {
+          } else {
+            const roleState = isRole[role];
+            if (!roleState) break;
             if (!value) {
               // delete when value set to initial, need to pay caution with e.g. []
-              delete isRole[role][property];
-              if (Object.keys(isRole[role]).length === 0) delete isRole[role];
+              delete roleState[property];
+              if (Object.keys(roleState).length === 0) delete isRole[role];
             } else {
-              isRole[role][property] = value;
+              roleState[property] = value;
             }
           }
           if (Object.keys(isRole).length === 0) {

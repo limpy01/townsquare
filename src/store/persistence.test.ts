@@ -117,4 +117,30 @@ describe("persistence compatibility plugin", () => {
       expect.anything(),
     );
   });
+
+  it("drops malformed role-state records without blocking a valid update", () => {
+    const localStorage = createStorage({
+      isRole: JSON.stringify({ imp: "not-a-record", chef: { active: true } }),
+    });
+    vi.stubGlobal("window", { location: { pathname: "/" }, localStorage });
+    const commit = vi.fn();
+    const unsubscribe = persistence({ commit, state: {} });
+
+    mutationBus.emit(
+      {
+        type: "session/setIsRole",
+        payload: { role: "chef", property: "active", value: false },
+      },
+      {},
+    );
+
+    unsubscribe?.();
+    expect(commit).toHaveBeenCalledWith("session/setIsRole", {
+      role: "chef",
+      property: "active",
+      value: true,
+      st: true,
+    });
+    expect(localStorage.getItem("isRole")).toBeNull();
+  });
 });
