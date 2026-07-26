@@ -359,11 +359,13 @@ export class LiveSession {
    *
    * @param id id for identifying and deleting the query
    */
-  _deleteFromQueue(id: number) {
+  _deleteFromQueue(id: unknown): void {
+    if (!Number.isInteger(id)) return;
     if (this._outbox.queue.length <= 0) return;
     for (let i = 0; i < this._outbox.queue.length; i++) {
-      if (this._outbox.queue[i].id === id) {
-        this._checkQueue(this._outbox.queue[i]);
+      const message = this._outbox.queue[i];
+      if (message?.id === id) {
+        this._checkQueue(message);
         // this._store.state.session.messageQueue.splice(i,1);
         this._store.commit("session/deleteMessageQueue", i);
         break;

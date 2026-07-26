@@ -130,6 +130,21 @@ describe("session socket message decoder", () => {
 
     expect(send).not.toHaveBeenCalled();
   });
+
+  it("ignores non-numeric queue acknowledgements", () => {
+    const commit = vi.fn();
+    const session = new LiveSession({
+      commit,
+      state: {
+        players: { players: [] },
+        session: { playerId: "player-1", sessionId: "" },
+      },
+    });
+
+    session._deleteFromQueue("not-a-queue-id");
+
+    expect(commit).not.toHaveBeenCalled();
+  });
 });
 
 afterEach(() => vi.useRealTimers());
