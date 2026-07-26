@@ -41,20 +41,42 @@ import { useModalStore } from "../../stores/modals";
 import { usePlayersStore } from "../../stores/players";
 import { useScenarioStore } from "../../stores/scenario";
 import { useSessionIdentityStore } from "../../stores/session-identity";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
+
+type ReminderSource = {
+  id: string;
+  image?: unknown;
+  imageAlt?: unknown;
+};
+
+type DisplayReminder = {
+  role: string;
+  image?: string;
+  imageAlt?: string;
+  name: string;
+};
+
+const stringValues = (value: unknown) =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 
 /**
  * Helper function that maps a reminder name with a role-based object that provides necessary visual data.
  * @param role The role for which the reminder should be generated
- * @return {function(*): {image: string|string[]|string|*, role: *, name: *, imageAlt: string|*}}
+ * @return 显示提醒标记所需的稳定字段。
  */
 const mapReminder =
-  ({ id, image, imageAlt }: any) =>
-  (name: string) => ({
+  ({ id, image, imageAlt }: ReminderSource) =>
+  (name: string): DisplayReminder => ({
     role: id,
-    image,
-    imageAlt,
+    ...(typeof image === "string" ? { image } : {}),
+    ...(typeof imageAlt === "string" ? { imageAlt } : {}),
     name,
   });
+
+const remindersFor = (role: ReminderSource, names: unknown) =>
+  stringValues(names).map(mapReminder(role));
 
 const { playerIndex } = defineProps<{ playerIndex: number }>();
 const modals = useModalStore();
@@ -64,38 +86,29 @@ const scenario = useScenarioStore();
 const session = useSessionIdentityStore();
 const players = computed(() => playerState.players);
 const availableReminders = computed(() => {
-  let reminders: any[] = [];
+  let reminders: DisplayReminder[] = [];
   const { players, bluffs } = playerState;
-  (scenario.roles as Map<string, any>).forEach((role) => {
+  scenario.roles.forEach((role: ScenarioCatalogRole) => {
     // add reminders from player roles
     if (players.some((p) => p.role.id === role.id)) {
-      if (role.reminders && role.reminders.length)
-        reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
+      reminders = [...reminders, ...remindersFor(role, role.reminders)];
     }
     // add reminders from bluff/other roles
     else if (bluffs.some((bluff) => bluff.id === role.id)) {
-      if (role.reminders && role.reminders.length)
-        reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
+      reminders = [...reminders, ...remindersFor(role, role.reminders)];
     }
     // add global reminders
-    if (role.remindersGlobal && role.remindersGlobal.length) {
-      reminders = [
-        ...reminders,
-        ...role.remindersGlobal.map(mapReminder(role)),
-      ];
-    }
+    reminders = [...reminders, ...remindersFor(role, role.remindersGlobal)];
   });
   // add fabled reminders
   playerState.fabled.forEach((role) => {
-    if (role.reminders && role.reminders.length)
-      reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
+    reminders = [...reminders, ...remindersFor(role, role.reminders)];
   });
 
   // add out of script traveler reminders
-  (scenario.otherTravelers as Map<string, any>).forEach((role) => {
+  scenario.otherTravelers.forEach((role: ScenarioCatalogRole) => {
     if (players.some((p) => p.role.id === role.id)) {
-      if (role.reminders && role.reminders.length)
-        reminders = [...reminders, ...role.reminders.map(mapReminder(role))];
+      reminders = [...reminders, ...remindersFor(role, role.reminders)];
     }
   });
 
@@ -105,9 +118,10 @@ const availableReminders = computed(() => {
   return reminders;
 });
 
-async function addReminder(reminder: any) {
+async function addReminder(reminder: DisplayReminder) {
   const player = players.value[playerIndex];
-  let value;
+  if (!player) return;
+  let value: DisplayReminder[];
 
   if (reminder.role === "custom") {
     const input = await showInputModal({
