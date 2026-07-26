@@ -1,6 +1,6 @@
 # 现代化迁移任务账本
 
-最后更新：2026-07-26（MIG-028 玩家状态转换回归）
+最后更新：2026-07-26（MIG-029 服务端 app factory 收口）
 基线提交：`e0f1d34`（工作区另含用户提供的 `doc/migration-plan.md`）
 
 ## 迁移目标
@@ -38,7 +38,7 @@
 | MIG-005 | 已完成 | Node、CI、许可证元数据与 HTML 入口卫生     | lint 基线、服务端测试、构建                                                                    | 不改变运行时行为                |
 | MIG-006 | 进行中 | `packages/contracts` 与 WS v1/HTTP adapter | 双向 command schema、首批嵌套载荷 schema、envelope decoder 与 HTTP 输入校验；27 个契约测试通过 | 网络继续传输旧三元组            |
 | MIG-007 | 已完成 | `packages/domain` 纯逻辑模块               | 投票、夜间顺序、剧本角色筛选与旅行者补集测试；严格覆盖率门禁通过                               | 不导入 Vue/Express              |
-| MIG-008 | 进行中 | 服务端配置、app factory 与严格类型化入口   | 11 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                                                        | 旧前端可连接                    |
+| MIG-008 | 已完成 | 服务端配置、app factory 与严格类型化入口   | app factory 与 CLI 入口分离；13 个 HTTP/WS/CLI 集成测试与 `tsc` 通过                           | 旧前端可连接                    |
 | MIG-009 | 已完成 | Vue 3、Vite 运行时启动                     | typecheck、核心 E2E、视觉回归                                                                  | Vite 环境变量和静态资源保持兼容 |
 | MIG-010 | 已完成 | Pinia 状态域替换与 Vuex 移除               | 业务 store、运行时 effects 与组件命令均由 Pinia 驱动                                           | 保持单窗口模态框与输入流程语义  |
 | MIG-012 | 已完成 | Playwright 视觉基线稳定性                  | 视觉组串行执行、`domcontentloaded` 导航与重复回归通过                                          | 截图、房间号与 v1 协议保持不变  |
@@ -58,6 +58,7 @@
 | MIG-026 | 已完成 | 通用 Modal 样式归档                        | 全局滚动条、模态框层与过渡迁入样式层，组件测试、构建与视觉回归通过                             | 保持选择器与层叠顺序            |
 | MIG-027 | 已完成 | 游戏状态导入边界类型收口                   | 共享 game-state schema 解析结果、角色引用和版本字段不再使用 `any`，类型与覆盖率门禁通过        | 保留旧导入 JSON 与角色 ID 兼容  |
 | MIG-028 | 已完成 | 玩家状态转换回归                           | 交换/移动、观众清空角色、未读消息与发言席位验证由 Pinia 单测锁定                               | 保持座位与旅行者规则            |
+| MIG-029 | 已完成 | 服务端 app factory 收口                    | 可注入的服务装配从 CLI 入口提取，HTTP/WS/CLI 集成测试继续通过                                  | 保持启动命令与 TLS 语义         |
 
 ## 迁移历史与当前质量基线
 
@@ -169,6 +170,7 @@
 - MIG-026 将复用 Modal 的全局滚动条、遮罩、容器、最大化和过渡规则从 SFC 提取到 `styles/modal`；组件仅保留明确样式层入口，生产构建和三项视觉基线保持一致。
 - MIG-027 将 GameStateModal 的导入边界收敛到 contracts 的 `GameState`，以 record guard 处理历史版本状态、角色字符串/对象引用和未知字段；无效或缺失角色继续使用原有空角色回退，133 个单元测试与 contracts/domain 覆盖率门禁通过。
 - MIG-028 补齐 players store 的座位交换/移动、观众清空时旅行者角色保留、未读消息累计和发言席位 ID 验证；高频玩家状态转换现在由 8 个独立单测覆盖。
+- MIG-029 将服务端可注入的 `createTownSquareServer` 装配提取至 `server/src/app`，CLI 入口只保留版权信息、TLS 环境读取和 listen。服务端测试直接依赖工厂模块，13 个 HTTP/WS/CLI 集成测试、类型检查与前端构建均通过。
 - Vue Test Utils 已开始实际挂载 Vue 组件：`Intro` 的创建/加入房间显式事件和共享菜单状态已由 jsdom 回归测试覆盖，为后续复杂组件交互测试建立基线。
 - `useViewport` 共享浏览器适配器现有 jsdom 生命周期测试，锁定初始尺寸、resize 响应和组件卸载时的监听器释放；TownSquare 已通过该适配器复用窗口尺寸状态。
 - 服务端 WebSocket 集成测试已覆盖同一 host token 的说书人接管：旧连接以 1012 关闭、房间玩家不断开，新的说书人仍可继续发送 v1 游戏状态。

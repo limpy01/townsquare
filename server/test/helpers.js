@@ -2,7 +2,7 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 const WebSocket = require("ws");
-const { createTownSquareServer } = require("../dist/index");
+const { createTownSquareServer } = require("../dist/app");
 
 const TINY_PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL1LwAAAABJRU5ErkJggg==";
