@@ -11,6 +11,7 @@ import type {
   LegacyChatPayload,
   LegacyClaimPayload,
   LegacyGameStatePayload,
+  LegacyGrimoirePayload,
   LegacyRoleActivityPayload,
   LegacySessionStatusPayload,
   LegacySetTalkingPayload,
@@ -1728,16 +1729,19 @@ export class LiveSession {
    * Update grimoire once received
    * @param payload is the grimoire details.
    */
-  _updateGrimoire(payload) {
+  _updateGrimoire(payload: LegacyGrimoirePayload): void {
     // set roles
     payload.roles.forEach((grimRole) => {
+      const update = grimRole[0];
+      if (!update) return;
       // load role, first from session, the global, then fail gracefully
       const role =
-        this._store.state.roles.get(grimRole[0].value) ||
-        rolesJSONbyId.get(grimRole[0].value) ||
+        (update.value && this._store.state.roles.get(update.value)) ||
+        (update.value && rolesJSONbyId.get(update.value)) ||
         {};
       if (role.team === "traveler") return;
-      const player = this._store.state.players.players[grimRole[0].index];
+      const player = this._store.state.players.players[update.index];
+      if (!player) return;
       this._store.commit("players/update", {
         player,
         property: "role",
@@ -1748,10 +1752,12 @@ export class LiveSession {
     // set reminders
     if (payload.reminders) {
       payload.reminders.forEach((grimReminder) => {
-        if (!grimReminder[0].value.length) return;
-        const player = this._store.state.players.players[grimReminder[0].index];
+        const update = grimReminder[0];
+        if (!update || !update.value.length) return;
+        const player = this._store.state.players.players[update.index];
+        if (!player) return;
         const value = Array.from(player.reminders);
-        grimReminder[0].value.forEach((reminder) => {
+        update.value.forEach((reminder) => {
           if (reminder.role === "custom") return;
           value.push(reminder);
         });
@@ -1765,12 +1771,14 @@ export class LiveSession {
     // set stReminders
     if (payload.stReminders) {
       payload.stReminders.forEach((grimReminder) => {
-        if (!grimReminder[0].value.length) return;
-        const player = this._store.state.players.players[grimReminder[0].index];
+        const update = grimReminder[0];
+        if (!update || !update.value.length) return;
+        const player = this._store.state.players.players[update.index];
+        if (!player) return;
         this._store.commit("players/update", {
           player,
           property: "stReminders",
-          value: grimReminder[0].value,
+          value: update.value,
         });
       });
     }

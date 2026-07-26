@@ -57,14 +57,31 @@ const legacySeatUpdateSchema = z
     value: z.unknown(),
   })
   .passthrough();
-const legacyGrimoireEntrySchema = z.tuple([legacySeatUpdateSchema]);
+
+const legacyGrimoireRoleEntrySchema = z.tuple([
+  legacySeatUpdateSchema.extend({
+    property: z.literal("role"),
+    value: z.string().optional(),
+  }),
+]);
+const legacyReminderSchema = z
+  .object({ role: z.string().optional() })
+  .passthrough();
+const legacyGrimoireReminderEntrySchema = z.tuple([
+  legacySeatUpdateSchema.extend({
+    property: z.union([z.literal("reminder"), z.literal("stReminder")]),
+    value: z.array(legacyReminderSchema),
+  }),
+]);
 const legacyGrimoireSchema = z
   .object({
-    roles: z.array(legacyGrimoireEntrySchema),
-    reminders: z.array(legacyGrimoireEntrySchema).optional(),
-    stReminders: z.array(legacyGrimoireEntrySchema).optional(),
+    roles: z.array(legacyGrimoireRoleEntrySchema),
+    reminders: z.array(legacyGrimoireReminderEntrySchema).optional(),
+    stReminders: z.array(legacyGrimoireReminderEntrySchema).optional(),
   })
   .passthrough();
+
+export type LegacyGrimoirePayload = z.infer<typeof legacyGrimoireSchema>;
 const legacyEditionPayloadSchema = z
   .object({
     edition: z.object({ id: z.string().min(1) }).passthrough(),
