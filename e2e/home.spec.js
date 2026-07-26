@@ -23,6 +23,25 @@ async function openHome(page) {
   await expect(page.locator(".intro")).toBeVisible();
 }
 
+async function rejectClipboardWrites(page) {
+  await page.addInitScript(() => {
+    window.unhandledRejections = [];
+    window.addEventListener("unhandledrejection", (event) => {
+      window.unhandledRejections.push(String(event.reason));
+      event.preventDefault();
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: () =>
+          Promise.reject(
+            new DOMException("Write permission denied", "NotAllowedError"),
+          ),
+      },
+    });
+  });
+}
+
 async function openCreateRoomDialog(page) {
   const createRoom = page
     .locator(".intro")
@@ -68,6 +87,7 @@ test("创建房间打开房间和人数输入框", async ({ page }) => {
 });
 
 test("创建房间后进入说书人魔典", async ({ page }) => {
+  await rejectClipboardWrites(page);
   await openHome(page);
   await openCreateRoomDialog(page);
 
@@ -81,6 +101,9 @@ test("创建房间后进入说书人魔典", async ({ page }) => {
   await expect(page.locator(".intro")).toHaveCount(0);
   await expect(page.locator("#townsquare .player")).toHaveCount(2);
   await expect(page.locator("#townsquare .donation")).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => window.unhandledRejections))
+    .toEqual([]);
 });
 
 test("帮助菜单提供法律与署名入口", async ({ page }) => {

@@ -889,7 +889,9 @@ const changeName = async () => {
 };
 const copySessionUrl = () => {
   const url = window.location.href.split("#")[0];
-  void navigator.clipboard.writeText(`${url}#${session.sessionId}`);
+  void navigator.clipboard
+    .writeText(`${url}#${session.sessionId}`)
+    .catch(() => {});
 };
 const showNetworkWarning = () =>
   showInputModal({
