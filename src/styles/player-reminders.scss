@@ -4,6 +4,7 @@
 #townsquare.public .circle .ability {
   display: none;
 }
+
 .circle .player .shroud:hover ~ .token .ability,
 .circle .player .token:hover .ability {
   opacity: 1;
@@ -16,7 +17,7 @@
 
 .player.dead .night-order em {
   color: #ddd;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, gray 100%);
+  background: linear-gradient(180deg, rgb(0 0 0 / 100%) 0%, gray 100%);
 }
 
 /***** Reminder token *****/
@@ -56,7 +57,7 @@
   }
 
   .icon,
-  &:after {
+  &::after {
     content: " ";
     position: absolute;
     top: 0;
@@ -69,7 +70,7 @@
     transition: opacity 200ms;
   }
 
-  &:after {
+  &::after {
     background-image: url("../assets/icons/x.png");
     opacity: 0;
     top: 5%;
@@ -78,9 +79,11 @@
   &.add {
     opacity: 0;
     top: 30px;
-    &:after {
+
+    &::after {
       display: none;
     }
+
     .icon {
       top: 5%;
     }
@@ -90,27 +93,30 @@
     .icon {
       display: none;
     }
+
     .text {
       font-size: 70%;
+      /* stylelint-disable-next-line declaration-property-value-keyword-no-deprecated -- preserves legacy CJK wrapping behavior. */
       word-break: break-word;
       margin-top: 0;
       display: flex;
       align-items: center;
-      align-content: center;
-      justify-content: center;
+      place-content: center center;
       border-radius: 50%;
       top: 0;
     }
   }
 
-  &:hover:before {
+  &:hover::before {
     opacity: 0;
   }
-  &:hover:after {
+
+  &:hover::after {
     opacity: 1;
   }
 }
 
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
 .circle .reminderHoverTarget {
   opacity: 0;
   width: calc(50% + 8px);
@@ -127,7 +133,8 @@
   opacity: 1;
   top: 0;
 }
-.circle li:hover .reminder.add:before {
+
+.circle li:hover .reminder.add::before {
   opacity: 1;
 }
 

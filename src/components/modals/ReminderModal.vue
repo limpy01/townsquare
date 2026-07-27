@@ -176,10 +176,9 @@ ul.reminders .reminder {
   justify-content: center;
   align-items: center;
   margin: 1%;
-
   border-radius: 50%;
   border: 3px solid black;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 10px rgb(0 0 0 / 50%);
   cursor: pointer;
   line-height: 100%;
   transition: transform 500ms ease;

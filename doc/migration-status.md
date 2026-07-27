@@ -1,6 +1,6 @@
 # 现代化迁移状态看板
 
-最后更新：2026-07-27（MIG-059 已完成：面板视觉常量已建立为编译期 Sass token，并替换魔典与玩家样式域中明确重复的值）
+最后更新：2026-07-27（MIG-060 已完成：Stylelint 历史债务清零；仅保留有理由且局部的兼容性/模板命名豁免）
 历史基线提交：`e0f1d34`
 本次复盘基线：MIG-054（多客户端核心会话链路）
 详细复盘：[`migration-review.md`](./migration-review.md)
@@ -49,6 +49,7 @@ MIG-049 至 MIG-055 的 transport、persistence、legacy bridge、socket 领域�
 | MIG-057 | 已完成 | 归档玩家座位全局样式                         | MIG-056  | `Player.vue` 的座位骨架、状态/投票标记和提醒标记样式分别迁入 `player-seat.scss`、`player-status.scss` 与 `player-reminders.scss`；保留原有 Sass 输出顺序、DOM、选择器和值 |
 | MIG-058 | 已完成 | 收口全局响应式与覆盖层边界                   | MIG-057  | 字体、菜单、玩家和魔典响应式规则迁入各自的 `*-responsive.scss`，`media.scss` 仅按历史顺序编排 mixin；聊天、折叠与触控提醒选择器限制在 `#townsquare`/`#townsquare-app` 根节点；重复的 `#version` 声明并入实际拥有节点的 TownSquare 覆盖层 |
 | MIG-059 | 已完成 | 建立渐进式静态视觉 token                     | MIG-058  | `tokens.scss` 新增面板表面、边框、圆角、阴影、提示色与短动画时长等 Sass token；仅替换魔典/玩家样式域中视觉值完全一致的重复声明，不扩张未被运行时主题消费的 CSS 自定义属性 |
+| MIG-060 | 已完成 | 清理 Stylelint 历史债务                       | MIG-059  | 以 Stylelint 自动修复统一格式、颜色函数、媒体语法、伪元素和冗余声明，并将门禁从 628 条历史告警收紧为 0；仅对模板绑定的 camelCase 类名、Firefox token 标签 fallback 和 CJK `word-break: break-word` 保留局部且说明原因的豁免 |
 
 ### 当前阻塞与风险
 
@@ -115,7 +116,7 @@ MIG-049 至 MIG-055 的 transport、persistence、legacy bridge、socket 领域�
 - 项目固定 Node `25.3.0` 和 npm `11.9.0`；MIG-055 已在该版本下通过 182 个单元/组件测试、14 个服务端集成和 8 个 Chromium E2E；完整质量门将在本批结尾重新执行。
 - `npm run test:server` 通过；当前包含 14 个 HTTP、room、lobby、queue、v1 角色/投票/群聊 payload、未知 command、嵌套 payload 和版本信息集成测试。
 - `npm run build` 通过；非首屏 modal 改为按需加载后，入口 JS 为 1,692,889 bytes / 2,000,000 bytes，入口 CSS 为 232,873 bytes / 260,000 bytes。JS 门禁为当前批次临时放宽，后续资源治理须收紧。
-- ESLint 当前为 0 error、0 warning；格式基线仍记录 23 个历史文件，Stylelint 仍记录 628 条历史告警。
+- ESLint 当前为 0 error、0 warning；格式基线仍记录 23 个历史文件，Stylelint 已为 0 条告警并禁止新增。
 - Vitest 当前为 54 个测试文件、182 个测试；MIG-054 后全局覆盖率为 statements 49.22%、branches 38.07%、functions 57.10%、lines 52.59%。contracts/domain 已达到高覆盖率门禁；`socket.ts` 当前为 44.44% lines、38.18% branches，连接/重连、timeout、ping/pong、timer 与 outbox 已有专属回归，领域 controller 仍需继续提高覆盖。
 - 当前前端为 Vue 3 + Vite + Pinia；服务端为 TypeScript、Express 5 与 `ws`。历史 Vuex/Vue CLI 记录仅用于说明迁移路径。
 - Playwright `1.61.1`：首页与创建房间流程可在 Chromium 中验证；`test:visual:update` 是唯一可写截图基线的命令，`test:visual` 仅比较。Chromium CI 作业会执行交互与视觉回归，失败时保留 Playwright 报告和追踪产物。

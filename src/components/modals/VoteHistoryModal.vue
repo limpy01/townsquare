@@ -158,6 +158,7 @@ function setRecordVoteHistory() {
   left: 20px;
   top: 15px;
   cursor: pointer;
+
   &:hover {
     color: red;
   }
@@ -165,6 +166,7 @@ function setRecordVoteHistory() {
 
 .checkbox {
   cursor: pointer;
+
   &:hover {
     color: red;
   }
@@ -172,16 +174,15 @@ function setRecordVoteHistory() {
 
 .options {
   display: flex;
-  justify-content: center;
   align-items: center;
-  justify-content: center;
-  align-content: center;
+  place-content: center center;
 }
 
 .option {
   color: white;
   text-decoration: none;
   margin: 0 15px;
+
   &:hover {
     color: red;
     cursor: pointer;
@@ -190,6 +191,7 @@ function setRecordVoteHistory() {
 
 h3 {
   margin: 0 40px 0 10px;
+
   svg {
     vertical-align: middle;
   }
@@ -212,12 +214,15 @@ tbody {
   td:nth-child(3) {
     color: $townsfolk;
   }
+
   td:nth-child(4) {
     color: $demon;
   }
+
   td:nth-child(6) {
     text-align: center;
   }
+
   td:nth-child(7) {
     text-align: center;
   }

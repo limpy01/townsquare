@@ -3,8 +3,8 @@
 @use "tokens" as *;
 
 @font-face {
-  font-family: "Papyrus";
-  src: url("../assets/fonts/papyrus.eot"); /* IE9*/
+  font-family: Papyrus;
+  src: url("../assets/fonts/papyrus.eot"); /* IE9 */
   src:
     url("../assets/fonts/papyrus.eot?#iefix") format("embedded-opentype"),
     /* IE6-IE8 */ url("../assets/fonts/papyrus.woff2") format("woff2"),

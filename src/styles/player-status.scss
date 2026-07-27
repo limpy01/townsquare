@@ -1,4 +1,5 @@
 @use "tokens" as *;
+
 /****** Vote icon ********/
 .player .has-vote {
   color: #fff;
@@ -78,7 +79,7 @@
 
 .designated-role {
   position: absolute;
-  top: 0px;
+  top: 0;
   right: 2px;
 }
 
@@ -117,29 +118,33 @@
   position: absolute;
   width: 100%;
   top: 0;
-  filter: drop-shadow(0px 0px 6px black);
+  filter: drop-shadow(0 0 6px black);
   pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: opacity 250ms;
   opacity: 0;
-  &:before {
+
+  &::before {
     content: " ";
     padding-top: 100%;
     display: block;
   }
+
   svg {
     height: 60%;
     width: 60%;
     position: absolute;
     stroke: white;
     stroke-width: 15px;
+
     path {
       fill: white;
     }
   }
 }
+
 .player.marked .marked {
   opacity: 0.5;
 }
@@ -153,13 +158,14 @@
   filter: drop-shadow(0 0 3px black);
   cursor: default;
   z-index: 2;
+
   &.highlight {
-    animation-iteration-count: 1;
-    animation: redToWhite 1s normal forwards;
+    animation: red-to-white 1s normal forwards;
   }
 }
 
 // Player Seat Number
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
 .player .seatNum {
   position: absolute;
   top: -5%;
@@ -167,6 +173,7 @@
   font-size: 120%;
   z-index: 3;
   font-weight: bold;
+
   // -webkit-text-stroke-color: #000;
   // -webkit-text-stroke-width: 1px;
   text-shadow:
@@ -177,6 +184,7 @@
 }
 
 // New message bubble
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
 .player .newMessage {
   position: absolute;
   right: 2%;
@@ -192,10 +200,11 @@
 }
 
 // highlight animation
-@keyframes redToWhite {
+@keyframes red-to-white {
   from {
     color: $demon;
   }
+
   to {
     color: white;
   }
@@ -254,7 +263,7 @@
     background: $surface-panel;
     border-radius: $radius-panel;
     border: $border-panel;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 4px 6px rgb(0 0 0 / 50%));
     align-items: center;
     pointer-events: none;
     opacity: 0;
@@ -262,7 +271,7 @@
     padding: 0 4px;
     bottom: -3px;
 
-    &:before {
+    &::before {
       content: " ";
       border: 10px solid transparent;
       width: 0;
@@ -294,7 +303,7 @@
   cursor: pointer;
   box-shadow: $shadow-popover;
 
-  &:before {
+  &::before {
     content: " ";
     width: 0;
     height: 0;
@@ -313,6 +322,7 @@
   li.disabled {
     cursor: not-allowed;
     opacity: 0.5;
+
     &:hover {
       color: white;
     }

@@ -1,6 +1,6 @@
 const { spawnSync } = require("node:child_process");
 
-const MAX_WARNINGS = 628;
+const MAX_WARNINGS = 0;
 const result = spawnSync(
   "npx",
   ["stylelint", "src/**/*.{vue,scss,css}", "--formatter", "json"],

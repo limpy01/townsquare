@@ -74,10 +74,8 @@ onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
   ul {
     list-style-type: disc;
     list-style-position: outside;
-
     display: block;
     flex-wrap: initial;
-
     padding-left: 25px;
     margin-top: 5px;
     margin-bottom: 0;
@@ -86,9 +84,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
   li {
     text-align: left;
     line-height: 1.5;
-
     display: list-item;
-
     margin-bottom: 5px;
   }
 }

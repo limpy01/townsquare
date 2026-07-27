@@ -6,21 +6,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgb(54, 54, 54);
+  background: rgb(54 54 54);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(97, 97, 97);
+  background: rgb(97 97 97);
 }
 
 .modal-backdrop {
   position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: rgba(0, 0, 0, 0.3);
+  inset: 0;
+  background-color: rgb(0 0 0 / 30%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -36,8 +33,7 @@
   flex-direction: column;
   max-height: 95%;
   max-width: 95%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
 
   &.input {
     margin-top: -18vh;
@@ -60,9 +56,8 @@
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    align-content: center;
+    place-content: center center;
     align-items: center;
-    justify-content: center;
     line-height: 100%;
     max-width: 95%;
   }
@@ -98,8 +93,7 @@
   max-width: 100%;
   max-height: 100%;
   display: flex;
-  align-content: center;
-  justify-content: center;
+  place-content: center center;
 
   .roles &,
   .characters & {

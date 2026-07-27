@@ -292,7 +292,7 @@ textarea {
   color: white;
   white-space: pre-wrap;
   word-break: break-all;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgb(255 255 255 / 50%);
   width: 60vw;
   height: 30vh;
   max-width: 100%;

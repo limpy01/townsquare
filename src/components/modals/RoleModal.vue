@@ -184,6 +184,7 @@ function toggleShowTraveler() {
 
 ul.tokens li {
   border-radius: 50%;
+
   // width: 120px;
   margin: 1%;
   transition: transform 500ms ease;
@@ -193,26 +194,31 @@ ul.tokens li {
       0 0 10px $townsfolk,
       0 0 10px #004cff;
   }
+
   &.outsider {
     box-shadow:
       0 0 10px $outsider,
       0 0 10px $outsider;
   }
+
   &.minion {
     box-shadow:
       0 0 10px $minion,
       0 0 10px $minion;
   }
+
   &.demon {
     box-shadow:
       0 0 10px $demon,
       0 0 10px $demon;
   }
+
   &.traveler {
     box-shadow:
       0 0 10px $traveler,
       0 0 10px $traveler;
   }
+
   &:hover {
     transform: scale(1.2);
     z-index: 10;
@@ -224,11 +230,10 @@ ul.tokens li {
   justify-content: center;
   align-items: center;
   width: fit-content;
-
   margin-left: auto;
   margin-right: auto;
-
   cursor: pointer;
+
   &:hover {
     color: red;
   }

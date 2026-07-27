@@ -185,7 +185,7 @@ defineExpose({ uploadAvatar });
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -202,10 +202,10 @@ defineExpose({ uploadAvatar });
   width: 80%;
   height: 80%;
   max-width: 500px;
-  overflow-x: scroll;
-  overflow-y: scroll;
+  overflow: scroll;
   display: flex;
   justify-content: center;
+
   /* align-items: center; */
 }
 
@@ -219,7 +219,6 @@ img {
   max-height: 100%;
   max-width: 100%;
   height: 100%;
-  overflow-y: scroll;
-  overflow-x: hidden;
+  overflow: hidden scroll;
 }
 </style>

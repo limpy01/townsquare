@@ -129,8 +129,7 @@ const teams = computed(() => {
   height: 20%;
   padding: 50px 0 0;
   align-items: center;
-  align-content: center;
-  justify-content: center;
+  place-content: center center;
   flex-wrap: wrap;
   background: url("../assets/demon-head.png") center center no-repeat;
   background-size: auto 100%;
@@ -138,7 +137,7 @@ const teams = computed(() => {
   li {
     font-weight: bold;
     width: 100%;
-    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
+    filter: drop-shadow(0 0 2px rgb(0 0 0 / 70%));
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -166,24 +165,31 @@ const teams = computed(() => {
     .players {
       color: #00f700;
     }
+
     .alive {
       color: #ff4a50;
     }
+
     .votes {
       color: #fff;
     }
+
     .townsfolk {
       color: $townsfolk;
     }
+
     .outsider {
       color: $outsider;
     }
+
     .minion {
       color: $minion;
     }
+
     .demon {
       color: $demon;
     }
+
     .traveler {
       color: $traveler;
     }

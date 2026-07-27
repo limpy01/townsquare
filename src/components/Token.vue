@@ -119,11 +119,12 @@ function setRole() {
 .token {
   border-radius: 50%;
   width: 100%;
+
   // background: url("../assets/token.png") center center;
   background-size: 100%;
   text-align: center;
   border: 3px solid black;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 10px rgb(0 0 0 / 50%);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -133,18 +134,20 @@ function setRole() {
   &:hover .name .label {
     stroke: black;
     fill: white;
-    @-moz-document url-prefix() {
+
+    /* stylelint-disable-next-line at-rule-no-deprecated -- preserves the Firefox token-label fallback. */
+    @document url-prefix() {
       &.mozilla {
         stroke: none;
         filter: drop-shadow(0 1.5px 0 black) drop-shadow(0 -1.5px 0 black)
           drop-shadow(1.5px 0 0 black) drop-shadow(-1.5px 0 0 black)
-          drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+          drop-shadow(0 2px 2px rgb(0 0 0 / 50%));
       }
     }
   }
 
   .icon,
-  &:before {
+  &::before {
     background-size: 100%;
     background-repeat: no-repeat;
     background-position: center 30%;
@@ -204,19 +207,20 @@ function setRole() {
       stroke: white;
       stroke-width: 2px;
       paint-order: stroke;
-      font-family: "Papyrus", serif;
+      font-family: Papyrus, serif;
       font-weight: bold;
-      text-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+      text-shadow: 0 2px 2px rgb(0 0 0 / 20%);
       letter-spacing: 1px;
 
-      @-moz-document url-prefix() {
+      /* stylelint-disable-next-line at-rule-no-deprecated -- preserves the Firefox token-label fallback. */
+      @document url-prefix() {
         &.mozilla {
           // Vue doesn't support scoped media queries, so we have to use a second css class
           stroke: none;
           text-shadow: none;
           filter: drop-shadow(0 1.5px 0 white) drop-shadow(0 -1.5px 0 white)
             drop-shadow(1.5px 0 0 white) drop-shadow(-1.5px 0 0 white)
-            drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+            drop-shadow(0 2px 2px rgb(0 0 0 / 50%));
         }
       }
     }
@@ -240,19 +244,18 @@ function setRole() {
     width: 250px;
     z-index: 25;
     font-size: 80%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgb(0 0 0 / 50%);
     border-radius: 10px;
     border: 3px solid black;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 4px 6px rgb(0 0 0 / 50%));
     text-align: left;
-    justify-items: center;
+    place-items: center center;
     align-content: center;
-    align-items: center;
     pointer-events: none;
     opacity: 0;
     transition: opacity 200ms ease-in-out;
 
-    &:before {
+    &::before {
       content: " ";
       border: 10px solid transparent;
       width: 0;

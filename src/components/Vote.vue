@@ -337,23 +337,22 @@ onBeforeUnmount(clearVoteTimer);
   z-index: 20;
   display: flex;
   align-items: center;
-  align-content: center;
-  justify-content: center;
+  place-content: center center;
   background: url("../assets/demon-head.png") center center no-repeat;
   background-size: auto 75%;
   text-align: center;
   text-shadow:
-    0 1px 2px #000000,
-    0 -1px 2px #000000,
-    1px 0 2px #000000,
-    -1px 0 2px #000000;
+    0 1px 2px #000,
+    0 -1px 2px #000,
+    1px 0 2px #000,
+    -1px 0 2px #000;
 
   .mark .button {
     font-size: 75%;
     margin: 0;
   }
 
-  &:after {
+  &::after {
     content: " ";
     padding-bottom: 100%;
     display: block;
@@ -363,6 +362,7 @@ onBeforeUnmount(clearVoteTimer);
     color: $demon;
     font-style: normal;
     font-weight: bold;
+
     &.blue {
       color: $townsfolk;
     }
@@ -370,8 +370,9 @@ onBeforeUnmount(clearVoteTimer);
 
   svg {
     cursor: pointer;
+
     &:hover path {
-      fill: url(#demon);
+      fill: url("#demon");
       stroke-width: 30px;
       stroke: white;
     }
@@ -383,6 +384,7 @@ onBeforeUnmount(clearVoteTimer);
     opacity: 0;
     transform: rotate(-180deg);
   }
+
   100% {
     opacity: 1;
     transform: rotate(0deg);
@@ -394,6 +396,7 @@ onBeforeUnmount(clearVoteTimer);
     opacity: 0;
     transform: rotate(180deg);
   }
+
   100% {
     opacity: 1;
     transform: rotate(0deg);
@@ -406,13 +409,15 @@ onBeforeUnmount(clearVoteTimer);
   height: 150%;
   width: 25%;
   pointer-events: none;
+
   span {
     position: absolute;
     width: 100%;
     height: 100%;
     transition: transform 2.9s ease-in-out;
   }
-  span:before {
+
+  span::before {
     content: " ";
     width: 100%;
     height: 100%;
@@ -421,13 +426,15 @@ onBeforeUnmount(clearVoteTimer);
     background-repeat: no-repeat;
     background-position: center center;
     position: absolute;
-    filter: drop-shadow(0px 0px 3px #000);
+    filter: drop-shadow(0 0 3px #000);
   }
-  .nominator:before {
+
+  .nominator::before {
     background-image: url("../assets/clock-small.png");
     animation: arrow-ccw 1s ease-out;
   }
-  .nominee:before {
+
+  .nominee::before {
     background-image: url("../assets/clock-big.png");
     animation: arrow-cw 1s ease-out;
   }
@@ -439,17 +446,21 @@ onBeforeUnmount(clearVoteTimer);
     opacity: 0;
     filter: blur(20px);
   }
+
   10% {
     opacity: 1;
   }
+
   50% {
     transform: scale(1);
     filter: blur(0);
   }
+
   90% {
     color: $townsfolk;
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -461,17 +472,21 @@ onBeforeUnmount(clearVoteTimer);
     opacity: 0;
     filter: blur(20px);
   }
+
   10% {
     opacity: 1;
   }
+
   50% {
     transform: scale(1);
     filter: blur(0);
   }
+
   90% {
     color: $demon;
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -483,48 +498,60 @@ onBeforeUnmount(clearVoteTimer);
   align-items: center;
   justify-content: center;
   pointer-events: none;
+
   audio {
     height: 0;
     width: 0;
     visibility: hidden;
   }
+
   span {
     position: absolute;
     font-size: 8em;
     font-weight: bold;
     opacity: 0;
   }
+
   span:nth-child(1) {
     animation: countdown 1100ms normal forwards;
   }
+
   span:nth-child(2) {
     animation: countdown 1100ms normal forwards 1000ms;
   }
+
   span:nth-child(3) {
     animation: countdown 1100ms normal forwards 2000ms;
   }
+
   span:nth-child(4) {
     animation: countdown-go 1100ms normal forwards 3000ms;
   }
 }
 
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
 .secretVote {
   cursor: pointer;
   color: white;
+
   &:hover {
     color: red;
   }
-  em:not(#demon):not(.button) 
+
+  em:not(#demon, .button)
   // &.fa-check-square
   // &.fa-square
   {
     color: white !important;
+
     &:hover {
       color: inherit !important;
     }
   }
+
   svg {
     cursor: pointer !important;
+
     &:hover {
       fill: white !important;
     }

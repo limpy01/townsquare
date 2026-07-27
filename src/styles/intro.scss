@@ -16,6 +16,7 @@
   a {
     color: white;
   }
+
   a.redirect {
     display: block;
     text-decoration: none;
@@ -26,9 +27,11 @@
     background: $surface-panel;
     border: $border-panel;
     border-radius: $radius-panel;
+
     &:hover {
       color: red;
     }
+
     img {
       width: 120px;
       display: block;
@@ -36,6 +39,7 @@
       margin-bottom: 1vh;
     }
   }
+
   img.logo {
     position: absolute;
     bottom: 100%;
@@ -46,6 +50,7 @@
     box-shadow: $shadow-panel-solid;
     border: $border-panel;
   }
+
   .footer {
     font-size: 60%;
     opacity: 0.75;

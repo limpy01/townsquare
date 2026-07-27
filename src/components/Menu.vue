@@ -1267,10 +1267,11 @@ defineExpose({
 @use "../vars.scss" as *;
 
 // success animation
-@keyframes greenToWhite {
+@keyframes green-to-white {
   from {
     color: green;
   }
+
   to {
     color: white;
   }
@@ -1280,15 +1281,16 @@ defineExpose({
 ::-webkit-scrollbar {
   width: 5px;
 }
+
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: rgb(54, 54, 54);
+  background: rgb(54 54 54);
   border-radius: 10px;
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(97, 97, 97);
+  background: rgb(97 97 97);
 }
 
 // Controls
@@ -1301,9 +1303,10 @@ defineExpose({
   z-index: 75;
 
   svg {
-    filter: drop-shadow(0 0 5px rgba(0, 0, 0, 1));
+    filter: drop-shadow(0 0 5px rgb(0 0 0 / 100%));
+
     &.success {
-      animation: greenToWhite 1s normal forwards;
+      animation: green-to-white 1s normal forwards;
       animation-iteration-count: 1;
     }
   }
@@ -1322,9 +1325,11 @@ defineExpose({
 
   span.session {
     color: $demon;
+
     &.spectator {
       color: $townsfolk;
     }
+
     &.reconnecting {
       animation: blink 1s infinite;
     }
@@ -1353,7 +1358,7 @@ defineExpose({
 
   > svg {
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgb(0 0 0 / 50%);
     border: 3px solid black;
     width: 40px;
     height: 50px;
@@ -1366,6 +1371,7 @@ defineExpose({
   a {
     color: white;
     text-decoration: none;
+
     &:hover {
       color: red;
     }
@@ -1391,7 +1397,7 @@ defineExpose({
       padding: 2px 5px;
       color: white;
       text-align: left;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgb(0 0 0 / 70%);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1405,9 +1411,10 @@ defineExpose({
 
       .input {
         width: 45px; // Shrink the width significantly
-        right: 0px;
+        right: 0;
         padding: 2px 3px; // Reduce padding
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        border: 1px solid rgb(255 255 255 / 30%);
+
         // background: rgba(0, 0, 0, 0.5);
         background: white;
         color: black;
@@ -1419,7 +1426,7 @@ defineExpose({
         appearance: textfield; // Firefox
         &::-webkit-outer-spin-button,
         &::-webkit-inner-spin-button {
-          -webkit-appearance: none; // Chrome, Safari, Edge
+          appearance: none; // Chrome, Safari, Edge
           margin: 0; // Remove margin that might be added by default
         }
       }
@@ -1427,6 +1434,7 @@ defineExpose({
       &.tabs {
         display: flex;
         padding: 0;
+
         svg {
           flex-grow: 1;
           flex-shrink: 0;
@@ -1436,13 +1444,16 @@ defineExpose({
           padding: 5px 0;
           cursor: pointer;
           transition: color 250ms;
+
           &:hover {
             color: red;
           }
+
           &:last-child {
             border-right: 0;
           }
         }
+
         &.grimoire .fa-book-open,
         &.players .fa-users,
         &.characters .fa-theater-masks,
@@ -1451,12 +1462,12 @@ defineExpose({
           background: linear-gradient(
             to bottom,
             $townsfolk 0%,
-            rgba(0, 0, 0, 0.5) 100%
+            rgb(0 0 0 / 50%) 100%
           );
         }
       }
 
-      &:not(.headline):not(.tabs):hover {
+      &:not(.headline, .tabs):hover {
         cursor: pointer;
         color: red;
       }
@@ -1478,18 +1489,19 @@ defineExpose({
       background: linear-gradient(
         to right,
         $townsfolk 0%,
-        rgba(0, 0, 0, 0.5) 20%,
-        rgba(0, 0, 0, 0.5) 80%,
+        rgb(0 0 0 / 50%) 20%,
+        rgb(0 0 0 / 50%) 80%,
         $demon 100%
       );
     }
   }
 }
 
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
 .timerButton {
   // opacity: 0.5;
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 5px 5px 5px 5px;
+  background-color: rgb(0 0 0 / 50%);
+  border-radius: 5px;
   right: 8px;
   border: white;
   color: white;

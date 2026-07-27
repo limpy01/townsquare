@@ -210,50 +210,62 @@ watch(() => scenario.roles, selectRandomRoles);
 
 ul.tokens {
   padding-left: 5%;
+
   li {
     border-radius: 50%;
+
     // width: 120px;
     margin: 5px;
     opacity: 0.5;
     transition: all 250ms;
+
     &.selected {
       opacity: 1;
+
       .buttons {
         display: flex;
       }
+
       .fa-exclamation-triangle {
         display: block;
       }
     }
+
     &.townsfolk {
       box-shadow:
         0 0 10px $townsfolk,
         0 0 10px #004cff;
     }
+
     &.outsider {
       box-shadow:
         0 0 10px $outsider,
         0 0 10px $outsider;
     }
+
     &.minion {
       box-shadow:
         0 0 10px $minion,
         0 0 10px $minion;
     }
+
     &.demon {
       box-shadow:
         0 0 10px $demon,
         0 0 10px $demon;
     }
+
     &.traveler {
       box-shadow:
         0 0 10px $traveler,
         0 0 10px $traveler;
     }
+
     &:hover {
       transform: scale(1.2);
       z-index: 10;
     }
+
     .fa-exclamation-triangle {
       position: absolute;
       color: red;
@@ -263,6 +275,7 @@ ul.tokens {
       font-size: 150%;
       display: none;
     }
+
     .buttons {
       display: none;
       position: absolute;
@@ -271,13 +284,16 @@ ul.tokens {
       width: 100%;
       z-index: 30;
       font-weight: bold;
-      filter: drop-shadow(0 0 5px rgba(0, 0, 0, 1));
+      filter: drop-shadow(0 0 5px rgb(0 0 0 / 100%));
+
       span {
         flex-grow: 1;
       }
+
       svg {
         opacity: 0.25;
         cursor: pointer;
+
         &:hover {
           opacity: 1;
           color: red;
@@ -285,6 +301,7 @@ ul.tokens {
       }
     }
   }
+
   .count {
     opacity: 1;
     position: absolute;
@@ -295,20 +312,25 @@ ul.tokens {
     display: flex;
     align-items: center;
     justify-content: center;
-    &:after {
+
+    &::after {
       content: " ";
       display: block;
       padding-top: 100%;
     }
+
     &.townsfolk {
       color: $townsfolk;
     }
+
     &.outsider {
       color: $outsider;
     }
+
     &.minion {
       color: $minion;
     }
+
     &.demon {
       color: $demon;
     }
@@ -320,31 +342,38 @@ ul.tokens {
     display: block;
     text-align: center;
     cursor: pointer;
+
     &.checked,
     &:hover {
       color: red;
     }
+
     &.checked {
       margin-top: 10px;
     }
+
     svg {
       margin-right: 5px;
     }
+
     input {
       display: none;
     }
   }
 
+  /* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
   .warningSetup {
     color: red;
     position: absolute;
     bottom: 20px;
     right: 20px;
     z-index: 10;
+
     svg {
       font-size: 150%;
       vertical-align: middle;
     }
+
     span {
       display: none;
       text-align: center;
@@ -352,26 +381,30 @@ ul.tokens {
       right: -20px;
       bottom: 30px;
       width: 420px;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgb(0 0 0 / 75%);
       padding: 5px;
       border-radius: 10px;
       border: 2px solid black;
     }
+
     &:hover span {
       display: block;
     }
   }
 
+  /* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
   .warningReview {
     color: yellow;
     position: absolute;
     bottom: 20px;
     left: 20px;
     z-index: 10;
+
     svg {
       font-size: 150%;
       vertical-align: middle;
     }
+
     span {
       display: none;
       text-align: center;
@@ -379,11 +412,12 @@ ul.tokens {
       left: -20px;
       bottom: 30px;
       width: 420px;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgb(0 0 0 / 75%);
       padding: 5px;
       border-radius: 10px;
       border: 2px solid black;
     }
+
     &:hover span {
       display: block;
     }

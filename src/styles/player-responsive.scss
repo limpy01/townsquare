@@ -6,7 +6,7 @@
   #townsquare .player > .menu {
     bottom: 0;
 
-    &:before {
+    &::before {
       bottom: 0;
     }
   }

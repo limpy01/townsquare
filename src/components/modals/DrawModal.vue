@@ -156,6 +156,7 @@ ul.tokens {
     width: 120px;
     margin: 5px;
     transition: all 250ms;
+
     .buttons {
       display: none;
       position: absolute;
@@ -163,22 +164,23 @@ ul.tokens {
       text-align: center;
       width: 100%;
       z-index: 30;
-      filter: drop-shadow(0 0 5px rgba(0, 0, 0, 1));
+      filter: drop-shadow(0 0 5px rgb(0 0 0 / 100%));
     }
   }
+
   .life {
     border-radius: 50%;
     width: 100%;
     background: url("../../assets/life.png") center center;
     background-size: 100%;
     border: 3px solid black;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 10px rgb(0 0 0 / 50%);
     cursor: pointer;
     position: absolute;
     left: 0;
     top: 0;
 
-    &:before {
+    &::before {
       content: " ";
       display: block;
       padding-top: 100%;
@@ -189,6 +191,7 @@ ul.tokens {
     }
   }
 }
+
 .roles .modal {
   .multiple {
     display: block;

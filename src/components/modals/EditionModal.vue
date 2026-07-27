@@ -318,8 +318,9 @@ ul.editions .edition {
     1px -1px 0 #000,
     -1px 1px 0 #000,
     1px 1px 0 #000,
-    0 0 5px rgba(0, 0, 0, 0.75);
+    0 0 5px rgb(0 0 0 / 75%);
   cursor: pointer;
+
   &:hover {
     color: red;
   }
@@ -327,9 +328,11 @@ ul.editions .edition {
 
 .custom {
   text-align: center;
+
   input[type="file"] {
     display: none;
   }
+
   .scripts {
     list-style-type: disc;
     font-size: 120%;
@@ -338,6 +341,7 @@ ul.editions .edition {
     width: 50%;
     text-align: left;
     margin: 10px auto;
+
     li:hover {
       color: red;
     }

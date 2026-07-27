@@ -5,27 +5,27 @@
 
 // Ordered compositor for responsive rules owned by the style domains above.
 @mixin responsive {
-  @media screen and (max-width: 1199.98px) {
+  @media screen and (width <= 1199.98px) {
     @include responsive-base.desktop;
     @include town-square-responsive.desktop;
   }
 
-  @media screen and (max-width: 991.98px) {
+  @media screen and (width <= 991.98px) {
     @include responsive-base.tablet;
     @include menu-responsive.tablet;
     @include town-square-responsive.tablet;
   }
 
-  @media screen and (max-width: 767.98px) {
+  @media screen and (width <= 767.98px) {
     @include responsive-base.phone-landscape;
     @include player-responsive.phone-landscape;
   }
 
-  @media screen and (max-width: 575.98px) {
+  @media screen and (width <= 575.98px) {
     @include responsive-base.phone;
   }
 
-  @media (max-aspect-ratio: 11/7) {
+  @media (aspect-ratio <= 11 / 7) {
     @include town-square-responsive.narrow-aspect;
   }
 

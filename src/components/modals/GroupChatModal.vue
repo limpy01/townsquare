@@ -208,6 +208,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
 <style scoped lang="scss">
 @use "sass:color";
 @use "../../vars.scss" as *;
+
 $confirm-color: #0a65dd;
 $remove-color: #e84b20;
 
@@ -216,7 +217,7 @@ $remove-color: #e84b20;
   min-width: min(80vw, 1200px);
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }
 
 .chat-row {
@@ -277,6 +278,7 @@ $remove-color: #e84b20;
 
 .chat-header {
   margin-bottom: 15px;
+
   .chat-id {
     font-weight: bold;
     font-size: 0.9em;
@@ -356,12 +358,14 @@ $remove-color: #e84b20;
 
 input[type="checkbox"].checkbox {
   --checkbox-size: 20px;
+
   width: var(--checkbox-size);
   height: var(--checkbox-size);
 }
 
 h3 {
   margin: 0 40px 0 10px;
+
   svg {
     vertical-align: middle;
   }
@@ -374,24 +378,25 @@ table {
   border-spacing: 0 0;
   margin-left: auto;
   margin-right: auto;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden auto;
 
   thead th:nth-child(1),
   thead td:nth-child(1) {
     width: 8%;
     text-align: center;
   }
+
   thead th:nth-child(2),
   thead td:nth-child(2) {
     width: 8%;
     text-align: center;
   }
+
   thead th:nth-child(3),
   thead td:nth-child(3) {
     width: 70%;
     text-align: center;
-    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   tbody th:nth-child(1),
@@ -399,16 +404,18 @@ table {
     width: 8%;
     text-align: center;
   }
+
   tbody th:nth-child(2),
   tbody td:nth-child(2) {
     width: 8%;
     text-align: center;
   }
+
   tbody th:nth-child(3),
   tbody td:nth-child(3) {
     width: 70%;
     text-align: left;
-    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 }
 

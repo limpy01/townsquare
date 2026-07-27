@@ -230,6 +230,7 @@ const playersByRole = computed(() => {
   left: 20px;
   top: 15px;
   cursor: pointer;
+
   &:hover {
     color: red;
   }
@@ -237,6 +238,7 @@ const playersByRole = computed(() => {
 
 h3 {
   margin: 0 40px;
+
   svg {
     vertical-align: middle;
   }
@@ -246,30 +248,37 @@ h3 {
   .name {
     color: $townsfolk;
   }
+
   aside {
     background: linear-gradient(-90deg, $townsfolk, transparent);
   }
 }
+
 .outsider {
   .name {
     color: $outsider;
   }
+
   aside {
     background: linear-gradient(-90deg, $outsider, transparent);
   }
 }
+
 .minion {
   .name {
     color: $minion;
   }
+
   aside {
     background: linear-gradient(-90deg, $minion, transparent);
   }
 }
+
 .demon {
   .name {
     color: $demon;
   }
+
   aside {
     background: linear-gradient(-90deg, $demon, transparent);
   }
@@ -279,6 +288,7 @@ h3 {
   .name {
     color: $fabled;
   }
+
   aside {
     background: linear-gradient(-90deg, $fabled, transparent);
   }
@@ -288,9 +298,11 @@ h3 {
   .explain {
     left: 18px;
   }
+
   .name {
     color: #cc04ff;
   }
+
   aside {
     background: linear-gradient(-90deg, #cc04ff, transparent);
   }
@@ -300,6 +312,7 @@ h3 {
   .name {
     display: block;
   }
+
   aside {
     visibility: hidden;
   }
@@ -309,24 +322,25 @@ h3 {
   display: flex;
   align-items: stretch;
   width: 100%;
-  &:not(:last-child):after {
+
+  &:not(:last-child)::after {
     content: " ";
     display: block;
     width: 25%;
     height: 1px;
-    background: linear-gradient(90deg, #ffffffaa, transparent);
+    background: linear-gradient(90deg, #fffa, transparent);
     position: absolute;
     left: 0;
     bottom: 0;
   }
+
   aside {
     width: 30px;
     display: flex;
     flex-grow: 0;
     flex-shrink: 0;
     align-items: center;
-    justify-content: center;
-    align-content: center;
+    place-content: center center;
     overflow: hidden;
     text-shadow: 0 0 4px black;
   }
@@ -357,32 +371,38 @@ ul {
     align-items: center;
     flex-grow: 1;
     width: 420px;
+
     .icon {
       width: 8vh;
       background-size: cover;
       background-position: 0 -5px;
       flex-shrink: 0;
       flex-grow: 0;
-      &:after {
+
+      &::after {
         content: " ";
         display: block;
         padding-top: 75%;
       }
     }
+
     .role {
       line-height: 80%;
       flex-grow: 1;
     }
+
     .name {
       font-weight: bold;
       font-size: 75%;
       display: block;
     }
+
     .player {
       color: #888;
       float: right;
       font-size: 60%;
     }
+
     .ability {
       font-size: 70%;
     }
@@ -391,26 +411,31 @@ ul {
 
 /** break into 1 column below 1200px **/
 // @media screen and (max-width: 1199.98px) {
-@media screen and (max-width: 1199.98px) {
+@media screen and (width <= 1199.98px) {
   .modal {
     max-height: 95%;
     max-width: 80%;
     position: static;
   }
+
   ul {
     li {
       .icon {
         width: 6vh;
       }
+
       .role {
         line-height: 100%;
       }
+
       .name {
         font-size: 100%;
       }
+
       .player {
         font-size: 100%;
       }
+
       .ability {
         font-size: 90%;
       }
@@ -419,7 +444,7 @@ ul {
 }
 
 /** trim icon size on maximized one-column sheet **/
-@media screen and (max-width: 991.98px) {
+@media screen and (width <= 991.98px) {
   .characters .modal.maximized ul li .icon {
     width: 5.1vh;
   }

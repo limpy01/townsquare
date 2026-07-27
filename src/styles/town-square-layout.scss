@@ -8,8 +8,7 @@
   padding: 20px;
   display: flex;
   align-items: center;
-  align-content: center;
-  justify-content: center;
+  place-content: center center;
   flex-direction: row;
   position: relative;
 }
@@ -37,6 +36,7 @@
       width: 100%;
       pointer-events: all;
     }
+
     > .reminder {
       margin-left: -25%;
       width: 50%;
@@ -53,44 +53,53 @@
   @for $i from 1 through $item-count {
     &:nth-child(#{$i}) {
       transform: rotate($rot * 1deg);
+
       @if $i - 1 <= math.div($item-count, 2) {
         // first half of players
         z-index: $item-count - $i + 1;
+
         // open menu on the left
         .player > .menu {
           left: auto;
           right: 110%;
           margin-right: 15px;
-          &:before {
+
+          &::before {
             border-left-color: black;
             border-right-color: transparent;
             right: auto;
             left: 100%;
           }
         }
+
         .fold-enter-active,
         .fold-leave-active {
           transform-origin: right center;
         }
+
         .fold-enter,
         .fold-leave-to {
           transform: perspective(200px) rotateY(-90deg);
         }
+
         // show ability tooltip on the left
         .ability {
           right: 120%;
           left: auto;
-          &:before {
+
+          &::before {
             border-right-color: transparent;
             border-left-color: black;
             right: auto;
             left: 100%;
           }
         }
+
         .pronouns {
           left: 110%;
           right: auto;
-          &:before {
+
+          &::before {
             border-left-color: transparent;
             border-right-color: black;
             left: auto;
@@ -119,6 +128,7 @@
       // move reminders closer to the sides of the circle
       $q: math.div($item-count, 4);
       $x: $i - 1;
+
       @if $x < $q or ($x >= math.div($item-count, 2) and $x < $q * 3) {
         .player {
           margin-bottom: -10% + 20% * (1 - math.div($x % $q, $q));
@@ -129,6 +139,7 @@
         }
       }
     }
+
     $rot: $rot + $angle;
   }
 }
@@ -143,17 +154,20 @@
 #townsquare > .bluffs,
 #townsquare > .fabled {
   position: absolute;
+
   &.bluffs {
     bottom: 10px;
   }
+
   &.fabled {
     top: 10px;
   }
+
   left: 10px;
   background: $surface-panel;
   border-radius: $radius-panel;
   border: $border-panel;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 50%));
   transform-origin: bottom left;
   transform: scale(1);
   opacity: 1;
@@ -165,62 +179,75 @@
     top: 10px;
     right: 10px;
     cursor: pointer;
+
     &:hover {
       color: red;
     }
   }
+
   h3 {
     margin: 5px 1vh 0;
     display: flex;
     align-items: center;
-    align-content: center;
-    justify-content: center;
+    place-content: center center;
+
     span {
       flex-grow: 1;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
     svg {
       cursor: pointer;
       flex-grow: 0;
+
       &.fa-times-circle {
-        margin-left: 0vh;
+        margin-left: 0;
       }
+
       &.fa-plus-circle {
-        margin-left: 0vh;
+        margin-left: 0;
         display: none;
       }
+
       &:hover path {
-        fill: url(#demon);
+        fill: url("#demon");
         stroke-width: 30px;
         stroke: white;
       }
     }
   }
+
   ul {
     display: flex;
     align-items: center;
     justify-content: center;
+
     li {
       margin: 0 0.5%;
       display: inline-block;
       transition: all 250ms;
     }
   }
+
   &.closed {
     svg.fa-times-circle {
       display: none;
     }
+
     svg.fa-plus-circle {
       display: block;
     }
+
     ul li {
       width: 0;
       height: 0;
+
       .night-order {
         opacity: 0;
       }
+
       .token {
         border-width: 0;
       }
@@ -239,7 +266,7 @@
 
   // Outer border style
   border: 2px solid #b67d43; /* A dark, textured border for the outer frame */
-  background-color: rgba(0, 0, 0, 1);
+  background-color: rgb(0 0 0 / 100%);
   padding: 10px 20px;
   color: inherit;
   cursor: pointer;
@@ -256,6 +283,7 @@
   animation: glow-cycle 605s linear; /* 10m duration */
   animation-delay: 1s;
 }
+
 // The keyframe animation for 10 minutes oscillation
 @keyframes glow-cycle {
   0% {
@@ -335,7 +363,7 @@
   transform: scale(0.1);
 }
 
-.fabled ul li .token:before {
+.fabled ul li .token::before {
   content: " ";
   opacity: 0;
   transition: opacity 250ms;
@@ -344,6 +372,7 @@
 }
 
 // New message bubble
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
 .fabled ul li .newMessage {
   position: absolute;
   right: 2%;

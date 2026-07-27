@@ -12,7 +12,7 @@
   align-items: center;
   pointer-events: none;
 
-  &:after {
+  &::after {
     content: " ";
     display: block;
     padding-top: 100%;
@@ -37,13 +37,13 @@
     background: $surface-panel;
     border-radius: $radius-panel;
     border: $border-panel;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 4px 6px rgb(0 0 0 / 50%));
     text-align: left;
     align-items: center;
     opacity: 0;
     transition: opacity $duration-fast ease-in-out;
 
-    &:before {
+    &::before {
       transform: rotate(-90deg);
       transform-origin: center top;
       left: -98px;
@@ -55,7 +55,7 @@
       width: 200px;
     }
 
-    &:after {
+    &::after {
       content: " ";
       border: 10px solid transparent;
       width: 0;
@@ -69,12 +69,14 @@
     background: linear-gradient(
       to right,
       $townsfolk 0%,
-      rgba(0, 0, 0, 0.5) 20%
+      rgb(0 0 0 / 50%) 20%
     );
-    &:before {
+
+    &::before {
       content: "首夜";
     }
-    &:after {
+
+    &::after {
       border-left-color: $townsfolk;
       margin-left: 3px;
       left: 100%;
@@ -83,11 +85,13 @@
 
   &.other span {
     left: 120%;
-    background: linear-gradient(to right, $demon 0%, rgba(0, 0, 0, 0.5) 20%);
-    &:before {
+    background: linear-gradient(to right, $demon 0%, rgb(0 0 0 / 50%) 20%);
+
+    &::before {
       content: "其他夜";
     }
-    &:after {
+
+    &::after {
       right: 100%;
       margin-right: 3px;
       border-right-color: $demon;
@@ -101,7 +105,7 @@
     height: 40px;
     border-radius: 50%;
     border: 3px solid black;
-    filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 0 6px rgb(0 0 0 / 50%));
     font-weight: bold;
     opacity: 1;
     pointer-events: all;
@@ -114,12 +118,12 @@
 
   &.first em {
     left: -10%;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, $townsfolk 100%);
+    background: linear-gradient(180deg, rgb(0 0 0 / 100%) 0%, $townsfolk 100%);
   }
 
   &.other em {
     right: -10%;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, $demon 100%);
+    background: linear-gradient(180deg, rgb(0 0 0 / 100%) 0%, $demon 100%);
   }
 
   em:hover + span {
@@ -131,7 +135,8 @@
     span {
       right: auto;
       left: 40px;
-      &:after {
+
+      &::after {
         left: auto;
         right: 100%;
         margin-left: 0;

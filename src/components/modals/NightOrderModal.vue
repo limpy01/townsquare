@@ -319,6 +319,7 @@ function toggleVacantSeats() {
   left: 20px;
   top: 15px;
   cursor: pointer;
+
   &:hover {
     color: red;
   }
@@ -326,6 +327,7 @@ function toggleVacantSeats() {
 
 h3 {
   margin: 0 40px;
+
   svg {
     vertical-align: middle;
   }
@@ -336,17 +338,20 @@ h4 {
   display: flex;
   align-items: center;
   height: 20px;
-  &:before,
-  &:after {
+
+  &::before,
+  &::after {
     content: " ";
     width: 100%;
     height: 1px;
     border-radius: 2px;
   }
-  &:before {
+
+  &::before {
     margin-right: 15px;
   }
-  &:after {
+
+  &::after {
     margin-left: 15px;
   }
 }
@@ -354,56 +359,69 @@ h4 {
 .fabled {
   .name {
     background: linear-gradient(90deg, $fabled, transparent 35%);
+
     .night .other & {
       background: linear-gradient(-90deg, $fabled, transparent 35%);
     }
   }
 }
+
 .townsfolk {
   .name {
     background: linear-gradient(90deg, $townsfolk, transparent 35%);
+
     .night .other & {
       background: linear-gradient(-90deg, $townsfolk, transparent 35%);
     }
   }
 }
+
 .outsider {
   .name {
     background: linear-gradient(90deg, $outsider, transparent 35%);
+
     .night .other & {
       background: linear-gradient(-90deg, $outsider, transparent 35%);
     }
   }
 }
+
 .minion {
   .name {
     background: linear-gradient(90deg, $minion, transparent 35%);
+
     .night .other & {
       background: linear-gradient(-90deg, $minion, transparent 35%);
     }
   }
 }
+
 .demon {
   .name {
     background: linear-gradient(90deg, $demon, transparent 35%);
+
     .night .other & {
       background: linear-gradient(-90deg, $demon, transparent 35%);
     }
   }
 }
+
 .traveler {
   .name {
     background: linear-gradient(90deg, $traveler, transparent 35%);
+
     .night .other & {
       background: linear-gradient(-90deg, $traveler, transparent 35%);
     }
   }
 }
+
 ul {
   li {
     display: flex;
     width: 100%;
     margin-bottom: 3px;
+
     .icon {
       width: 6vh;
       background-size: cover;
@@ -412,12 +430,14 @@ ul {
       flex-shrink: 0;
       text-align: center;
       margin: 0 2px;
-      &:after {
+
+      &::after {
         content: " ";
         display: block;
         padding-top: 66%;
       }
     }
+
     .name {
       flex-grow: 0;
       flex-shrink: 0;
@@ -425,16 +445,19 @@ ul {
       text-align: right;
       font-size: 110%;
       padding: 5px;
-      border-left: 1px solid rgba(255, 255, 255, 0.4);
-      border-right: 1px solid rgba(255, 255, 255, 0.4);
+      border-left: 1px solid rgb(255 255 255 / 40%);
+      border-right: 1px solid rgb(255 255 255 / 40%);
+
       small {
         color: #888;
         margin-right: 5px;
+
         &.dead {
           text-decoration: line-through;
         }
       }
     }
+
     .reminder {
       position: fixed;
       padding: 5px 10px;
@@ -442,31 +465,35 @@ ul {
       bottom: 10%;
       width: 500px;
       z-index: 25;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgb(0 0 0 / 75%);
       border-radius: 10px;
       border: 3px solid black;
-      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+      filter: drop-shadow(0 4px 6px rgb(0 0 0 / 50%));
       text-align: left;
       pointer-events: none;
       opacity: 0;
       transition: opacity 200ms ease-in-out;
       margin-left: -250px;
     }
+
     &:hover .reminder {
       opacity: 1;
     }
   }
+
   &.legend {
     font-weight: bold;
     height: 20px;
     margin-top: 10px;
+
     li span {
       background: none;
       height: auto;
       font-family: inherit;
       font-size: inherit;
     }
-    .icon:after {
+
+    .icon::after {
       padding-top: 0;
     }
   }
@@ -476,30 +503,35 @@ ul {
   display: flex;
   align-items: flex-start;
   justify-content: center;
+
   > *:first-child {
     margin-right: 2vh;
   }
+
   > * {
     flex-grow: 0;
-    flex-wrap: nowrap;
-    flex-direction: column;
+    flex-flow: column nowrap;
   }
+
   .headline {
     display: block;
     font-weight: bold;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    border-bottom: 1px solid rgb(255 255 255 / 40%);
     padding: 5px 10px;
     border-radius: 0;
     text-align: center;
   }
+
   .name {
     flex-grow: 1;
   }
+
   .first {
     .name {
       border-left: 0;
     }
   }
+
   .other {
     li .name {
       text-align: left;
@@ -513,11 +545,10 @@ ul {
   justify-content: center;
   align-items: center;
   width: fit-content;
-
   margin-left: auto;
   margin-right: auto;
-
   cursor: pointer;
+
   &:hover {
     color: red;
   }

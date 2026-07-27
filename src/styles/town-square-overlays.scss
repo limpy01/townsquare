@@ -1,10 +1,11 @@
 @use "tokens" as *;
 
 /* chat with ST */
+/* stylelint-disable selector-class-pattern -- template-bound legacy classes. */
 #townsquare .chatMin {
   position: absolute;
   right: 10px;
-  bottom: 0px;
+  bottom: 0;
   transform-origin: bottom right;
   width: 15%;
   height: 5%;
@@ -34,6 +35,7 @@
 #townsquare .chatMin .chatbox {
   display: none;
 }
+
 // New message bubble
 #townsquare .chatMin .newMessage {
   position: absolute;
@@ -53,6 +55,7 @@
   bottom: 10px;
   transform-origin: bottom right;
   background-color: #0000007f;
+
   // width: 30%;
   // height: 40%;
   border-radius: $radius-panel;
@@ -61,6 +64,7 @@
   display: flex;
   flex-direction: column;
 }
+
 // New message bubble
 #townsquare .chat .newMessage {
   position: absolute;
@@ -88,8 +92,7 @@
 
 #townsquare .chat .title .group {
   position: inherit;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
 }
 
 #townsquare .chat .title .close {
@@ -115,8 +118,7 @@
   padding: 5px;
   font-size: 80%;
   background-color: #131313;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
   height: 100%;
   flex: 1;
   display: flex;
@@ -132,8 +134,7 @@
 
 #townsquare .chat .chatbox .edit {
   flex: 1;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden auto;
   max-height: 60px;
   font-size: 70%;
   border: solid;
@@ -168,8 +169,9 @@
   display: flex;
   flex-direction: column;
 }
+/* stylelint-enable selector-class-pattern */
 
-#townsquare:not(.spectator) .fabled ul li:hover .token:before {
+#townsquare:not(.spectator) .fabled ul li:hover .token::before {
   opacity: 1;
 }
 
@@ -213,19 +215,17 @@
   z-index: 50;
   text-decoration: none;
   padding: 20px 16px 20px 24px;
-
   display: flex;
   justify-content: center;
   align-items: center;
-
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 50%);
   border-radius: 10px;
   border: 3px solid black;
   opacity: 1;
   cursor: pointer;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgb(0 0 0 / 60%);
     transition: background-color 0.3s;
   }
 
@@ -238,7 +238,7 @@
 
 #floating-notice {
   position: fixed;
-  bottom: 0px;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 70%;
@@ -257,7 +257,7 @@
 
   .floating-text {
     display: inline-block;
-    color: #ffff00;
+    color: #ff0;
     font-weight: bold;
     font-size: 1.1rem;
 
@@ -272,14 +272,17 @@
   0% {
     transform: translate3d(100vw, 0, 0);
   }
+
   /* 0.55% (~10 seconds): Slide left completely past the view box until it safely clears */
   0.85% {
     transform: translate3d(-100%, 0, 0);
   }
+
   /* 99.99%: Hold its completely hidden off-screen position for the rest of the 30 minutes */
   99.99% {
     transform: translate3d(-100%, 0, 0);
   }
+
   /* 100%: Instantly snap back to the right origin without showing an animation frame rewind */
   100% {
     transform: translate3d(100vw, 0, 0);

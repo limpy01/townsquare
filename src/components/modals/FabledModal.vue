@@ -59,6 +59,7 @@ onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
 
 ul.tokens li {
   border-radius: 50%;
+
   // width: 120px;
   margin: 0.5%;
   transition: transform 500ms ease;
