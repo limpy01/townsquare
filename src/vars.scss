@@ -1,6 +1,2 @@
-$fabled: #ffe91f;
-$townsfolk: #1f65ff;
-$outsider: #46d5ff;
-$minion: #ff6900;
-$demon: #ce0100;
-$traveler: #cc04ff;
+// Compatibility entrypoint while component styles migrate to styles/tokens.
+@forward "styles/tokens";

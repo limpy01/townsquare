@@ -21,18 +21,12 @@
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      gradients: [
-        ["demon", "#ce0100", "#000"],
-        ["townsfolk", "#1f65ff", "#000"],
-        ["default", "#4E4E4E", "#000"]
-      ]
-    };
-  }
-};
+<script setup lang="ts">
+const gradients = [
+  ["demon", "#ce0100", "#000"],
+  ["townsfolk", "#1f65ff", "#000"],
+  ["default", "#4e4e4e", "#000"],
+];
 </script>
 
 <style lang="scss" scoped>

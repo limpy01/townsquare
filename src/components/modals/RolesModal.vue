@@ -2,13 +2,13 @@
   <Modal
     class="roles"
     v-if="modals.roles && nonTravelers >= 5"
-    @close="toggleModal('roles')"
+    @close="modals.toggle('roles')"
   >
     <h3>为当前{{ nonTravelers }}名玩家选择角色</h3>
-    <ul class="tokens" v-for="(teamRoles, team) in roleSelection" :key="team" >
+    <ul class="tokens" v-for="(teamRoles, team) in roleSelection" :key="team">
       <li class="count" :class="[team]">
         {{ teamRoles.reduce((a, { selected }) => a + selected, 0) }} /
-        {{ game[nonTravelers - 5][team] }}
+        {{ game[nonTravelers - 5]?.[team] ?? 0 }}
       </li>
       <li
         v-for="role in teamRoles"
@@ -32,13 +32,13 @@
     <div class="warningSetup" v-if="hasSelectedSetupRoles">
       <font-awesome-icon icon="exclamation-triangle" />
       <span>
-        警告: 目前选择的角色会修改游戏的初始角色配置！随机分发器不会识别这些角色的功能。建议说书人手动调整要分发的角色。
+        警告:
+        目前选择的角色会修改游戏的初始角色配置！随机分发器不会识别这些角色的功能。建议说书人手动调整要分发的角色。
       </span>
-    </div><div class="warningReview" v-if="session.isReview">
+    </div>
+    <div class="warningReview" v-if="review.isReview">
       <font-awesome-icon icon="exclamation-triangle" />
-      <span>
-        警告: 正在使用复盘视角，如果即将进行游戏请先关闭复盘视角！
-      </span>
+      <span> 警告: 正在使用复盘视角，如果即将进行游戏请先关闭复盘视角！ </span>
     </div>
     <label class="multiple" :class="{ checked: allowMultiple }">
       <font-awesome-icon :icon="allowMultiple ? 'check-square' : 'square'" />
@@ -50,18 +50,23 @@
         class="button"
         @click="assignRoles(true)"
         :class="{
-          disabled: selectedRoles > nonTravelers || !selectedRoles
+          disabled: selectedRoles > nonTravelers || !selectedRoles,
         }"
       >
-        <font-awesome-icon icon="exclamation-triangle" v-if="session.isReview" style="color: yellow;"/>
-        <font-awesome-icon icon="people-arrows" v-else/>
+        <font-awesome-icon
+          icon="exclamation-triangle"
+          v-if="review.isReview"
+          style="color: yellow"
+        />
+        <font-awesome-icon icon="people-arrows" v-else />
         随机分配{{ selectedRoles }}个角色
       </div>
-      <div v-if="session.isReview"
+      <div
+        v-if="review.isReview"
         class="button"
         @click="assignRoles(false)"
         :class="{
-          disabled: selectedRoles > nonTravelers || !selectedRoles
+          disabled: selectedRoles > nonTravelers || !selectedRoles,
         }"
       >
         <font-awesome-icon icon="people-arrows" />
@@ -71,7 +76,7 @@
         class="button"
         @click="drawRoles()"
         :class="{
-          disabled: selectedRoles > nonTravelers || !selectedRoles
+          disabled: selectedRoles > nonTravelers || !selectedRoles,
         }"
       >
         抽取角色（线下）
@@ -84,192 +89,183 @@
   </Modal>
 </template>
 
-<script>
-import Modal from "./Modal";
-import gameJSON from "./../../game";
-import Token from "./../Token";
-import { mapGetters, mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
+import Modal from "./Modal.vue";
+import gameJSON from "../../game.json";
+import Token from "../Token.vue";
+import { useDrawStore } from "../../stores/draw";
+import { emitGameEvent } from "../../store/game-events";
+import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
+import { useReviewStore } from "../../stores/review";
+import { useScenarioStore } from "../../stores/scenario";
 
-const randomElement = arr => arr[Math.floor(Math.random() * arr.length)];
+const randomElement = <T,>(items: T[]) =>
+  items[Math.floor(Math.random() * items.length)];
+const modals = useModalStore();
+const playerState = usePlayersStore();
+const scenario = useScenarioStore();
+const draw = useDrawStore();
+const review = useReviewStore();
+const players = computed(() => playerState.players);
+type SelectableRole = ScenarioCatalogRole & { selected: number };
+type GameComposition = Record<string, number>;
 
-export default {
-  components: {
-    Token,
-    Modal
-  },
-  data: function() {
-    return {
-      roleSelection: {},
-      game: gameJSON,
-      allowMultiple: false,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight
-    };
-  },
-  computed: {
-    selectedRoles: function() {
-      return Object.values(this.roleSelection)
-        .map(roles => roles.reduce((a, { selected }) => a + selected, 0))
-        .reduce((a, b) => a + b, 0);
-    },
-    hasSelectedSetupRoles: function() {
-      return Object.values(this.roleSelection).some(roles =>
-        roles.some(role => role.selected && role.setup)
-      );
-    },
-    tokenWidth() {
-      const percentage = 0.06
-      const width = percentage * this.windowWidth;
-      return width >= 80 ? "width: 6vw" : "width: 80px";
-    },
-    ...mapState(["roles", "modals", "session"]),
-    ...mapState("players", ["players"]),
-    ...mapGetters({ nonTravelers: "players/nonTravelers" })
-  },
-  methods: {
-    handleResize(){
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
-    },
-    selectRandomRoles() {
-      this.roleSelection = {};
-      this.roles.forEach(role => {
-        if (!this.roleSelection[role.team]) {
-          this.$set(this.roleSelection, role.team, []);
-        }
-        this.roleSelection[role.team].push(role);
-        this.$set(role, "selected", 0);
-      });
-      const teamSelected = ["townsfolk", "outsider", "minion", "demon"];
-      const teamDeselected = [];
-      Object.keys(this.roleSelection).forEach(team => {
-        if (!teamSelected.includes(team)) teamDeselected.push(team);
-      });
-      teamDeselected.forEach(team => {
-        delete this.roleSelection[team];
-      })
-      const playerCount = Math.max(5, this.nonTravelers);
-      const composition = this.game[playerCount - 5];
-      Object.keys(composition).forEach(team => {
-        for (let x = 0; x < composition[team]; x++) {
-          if (this.roleSelection[team]) {
-            const available = this.roleSelection[team].filter(
-              role => !role.selected
-            );
-            if (available.length) {
-              randomElement(available).selected = 1;
-            }
-          }
-        }
-      });
-    },
-    assignRoles(allowReview = true) {
-      if (this.selectedRoles <= this.nonTravelers && this.selectedRoles) {
-        // generate list of selected roles and randomize it
-        if (!allowReview && this.session.isReview) {
-          this.$store.commit("session/setIsReview", false);
-        }
-        const roles = Object.values(this.roleSelection)
-          .map(roles =>
-            roles
-              // duplicate roles selected more than once and filter unselected
-              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], [])
-          )
-          // flatten into a single array
-          .reduce((a, b) => [...a, ...b], [])
-          .map(a => [Math.random(), a])
-          .sort((a, b) => a[0] - b[0])
-          .map(a => a[1]);
-        this.players.forEach(player => {
-          if (player.role.team !== "traveler" && roles.length) {
-            const value = roles.pop();
-            this.$store.commit("players/update", {
-              player,
-              property: "role",
-              value
-            });
-          }
-        });
-        this.$store.commit("toggleModal", "roles");
-      }
-    },
-    drawRoles() {
-      if (this.selectedRoles <= this.nonTravelers && this.selectedRoles) {
-        // generate list of selected roles and randomize it
-        const roles = Object.values(this.roleSelection)
-          .map(roles =>
-            roles
-              // duplicate roles selected more than once and filter unselected
-              .reduce((a, r) => [...a, ...Array(r.selected).fill(r)], [])
-          )
-          // flatten into a single array
-          .reduce((a, b) => [...a, ...b], [])
-          .map(a => [Math.random(), a])
-          .sort((a, b) => a[0] - b[0])
-          .map(a => a[1]);
-        this.$store.commit("session/setDrawRoles", roles);
-        this.$store.commit("toggleModal", "roles");
-        this.$store.commit("toggleModal", "draw");
-      }
-    },
-    ...mapMutations(["toggleModal"])
-  },
-  mounted: function() {
-    if (!Object.keys(this.roleSelection).length) {
-      this.selectRandomRoles();
+const roles = scenario.roles;
+const roleSelection = ref<Record<string, SelectableRole[]>>({});
+const game = gameJSON as unknown as GameComposition[];
+const allowMultiple = ref(false);
+const windowWidth = ref(window.innerWidth);
+const windowHeight = ref(window.innerHeight);
+const nonTravelers = computed(() =>
+  Math.min(
+    players.value.filter((player) => player.role.team !== "traveler").length,
+    15,
+  ),
+);
+const selectedRoles = computed(() =>
+  Object.values(roleSelection.value)
+    .flat()
+    .reduce((total, role) => total + role.selected, 0),
+);
+const hasSelectedSetupRoles = computed(() =>
+  Object.values(roleSelection.value)
+    .flat()
+    .some((role) => role.selected && role.setup),
+);
+const tokenWidth = computed(() =>
+  windowWidth.value * 0.06 >= 80 ? "width: 6vw" : "width: 80px",
+);
+
+function handleResize() {
+  windowWidth.value = window.innerWidth;
+  windowHeight.value = window.innerHeight;
+}
+function selectedAndShuffledRoles() {
+  return Object.values(roleSelection.value)
+    .flatMap((teamRoles) =>
+      teamRoles.flatMap((role) => Array(role.selected).fill(role)),
+    )
+    .map((role) => [Math.random(), role] as const)
+    .sort((a, b) => a[0] - b[0])
+    .map(([, role]) => role);
+}
+function selectRandomRoles() {
+  const selection: Record<string, SelectableRole[]> = {};
+  roles.forEach((role) => {
+    (selection[role.team] ??= []).push({ ...role, selected: 0 });
+  });
+  for (const team of Object.keys(selection))
+    if (!["townsfolk", "outsider", "minion", "demon"].includes(team))
+      delete selection[team];
+  const composition = game[Math.max(5, nonTravelers.value) - 5];
+  Object.keys(composition ?? {}).forEach((team) => {
+    for (let index = 0; index < (composition?.[team] ?? 0); index++) {
+      const available = selection[team]?.filter((role) => !role.selected) ?? [];
+      const selected = randomElement(available);
+      if (selected) selected.selected = 1;
     }
-    window.addEventListener("resize", this.handleResize);
-  },
-  beforeDestroy(){
-    window.removeEventListener("resize", this.handleResize);
-  },
-  watch: {
-    roles() {
-      this.selectRandomRoles();
-    }
+  });
+  roleSelection.value = selection;
+}
+function assignRoles(allowReview = true) {
+  if (selectedRoles.value > nonTravelers.value || !selectedRoles.value) return;
+  if (!allowReview && review.isReview) {
+    review.setReview(false);
+    emitGameEvent("session/setIsReview", false);
   }
-};
+  const assigned = selectedAndShuffledRoles();
+  players.value.forEach((player) => {
+    if (player.role.team !== "traveler" && assigned.length) {
+      const payload = {
+        player,
+        property: "role",
+        value: assigned.pop(),
+      };
+      playerState.update(payload);
+      emitGameEvent("players/update", payload);
+    }
+  });
+  modals.toggle("roles");
+}
+function drawRoles() {
+  if (selectedRoles.value > nonTravelers.value || !selectedRoles.value) return;
+  draw.setRoles(selectedAndShuffledRoles());
+  modals.toggle("roles");
+  modals.toggle("draw");
+}
+
+onMounted(() => {
+  if (!Object.keys(roleSelection.value).length) selectRandomRoles();
+  window.addEventListener("resize", handleResize);
+});
+onBeforeUnmount(() => window.removeEventListener("resize", handleResize));
+watch(() => scenario.roles, selectRandomRoles);
 </script>
 
 <style lang="scss" scoped>
-@import "../../vars.scss";
+@use "../../vars.scss" as *;
 
 ul.tokens {
   padding-left: 5%;
+
   li {
     border-radius: 50%;
+
     // width: 120px;
     margin: 5px;
     opacity: 0.5;
     transition: all 250ms;
+
     &.selected {
       opacity: 1;
+
       .buttons {
         display: flex;
       }
+
       .fa-exclamation-triangle {
         display: block;
       }
     }
+
     &.townsfolk {
-      box-shadow: 0 0 10px $townsfolk, 0 0 10px #004cff;
+      box-shadow:
+        0 0 10px $townsfolk,
+        0 0 10px #004cff;
     }
+
     &.outsider {
-      box-shadow: 0 0 10px $outsider, 0 0 10px $outsider;
+      box-shadow:
+        0 0 10px $outsider,
+        0 0 10px $outsider;
     }
+
     &.minion {
-      box-shadow: 0 0 10px $minion, 0 0 10px $minion;
+      box-shadow:
+        0 0 10px $minion,
+        0 0 10px $minion;
     }
+
     &.demon {
-      box-shadow: 0 0 10px $demon, 0 0 10px $demon;
+      box-shadow:
+        0 0 10px $demon,
+        0 0 10px $demon;
     }
+
     &.traveler {
-      box-shadow: 0 0 10px $traveler, 0 0 10px $traveler;
+      box-shadow:
+        0 0 10px $traveler,
+        0 0 10px $traveler;
     }
+
     &:hover {
       transform: scale(1.2);
       z-index: 10;
     }
+
     .fa-exclamation-triangle {
       position: absolute;
       color: red;
@@ -279,6 +275,7 @@ ul.tokens {
       font-size: 150%;
       display: none;
     }
+
     .buttons {
       display: none;
       position: absolute;
@@ -287,13 +284,16 @@ ul.tokens {
       width: 100%;
       z-index: 30;
       font-weight: bold;
-      filter: drop-shadow(0 0 5px rgba(0, 0, 0, 1));
+      filter: drop-shadow(0 0 5px rgb(0 0 0 / 100%));
+
       span {
         flex-grow: 1;
       }
+
       svg {
         opacity: 0.25;
         cursor: pointer;
+
         &:hover {
           opacity: 1;
           color: red;
@@ -301,6 +301,7 @@ ul.tokens {
       }
     }
   }
+
   .count {
     opacity: 1;
     position: absolute;
@@ -311,20 +312,25 @@ ul.tokens {
     display: flex;
     align-items: center;
     justify-content: center;
-    &:after {
+
+    &::after {
       content: " ";
       display: block;
       padding-top: 100%;
     }
+
     &.townsfolk {
       color: $townsfolk;
     }
+
     &.outsider {
       color: $outsider;
     }
+
     &.minion {
       color: $minion;
     }
+
     &.demon {
       color: $demon;
     }
@@ -336,31 +342,38 @@ ul.tokens {
     display: block;
     text-align: center;
     cursor: pointer;
+
     &.checked,
     &:hover {
       color: red;
     }
+
     &.checked {
       margin-top: 10px;
     }
+
     svg {
       margin-right: 5px;
     }
+
     input {
       display: none;
     }
   }
 
+  /* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
   .warningSetup {
     color: red;
     position: absolute;
     bottom: 20px;
     right: 20px;
     z-index: 10;
+
     svg {
       font-size: 150%;
       vertical-align: middle;
     }
+
     span {
       display: none;
       text-align: center;
@@ -368,26 +381,30 @@ ul.tokens {
       right: -20px;
       bottom: 30px;
       width: 420px;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgb(0 0 0 / 75%);
       padding: 5px;
       border-radius: 10px;
       border: 2px solid black;
     }
+
     &:hover span {
       display: block;
     }
   }
-  
+
+  /* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
   .warningReview {
     color: yellow;
     position: absolute;
     bottom: 20px;
     left: 20px;
     z-index: 10;
+
     svg {
       font-size: 150%;
       vertical-align: middle;
     }
+
     span {
       display: none;
       text-align: center;
@@ -395,11 +412,12 @@ ul.tokens {
       left: -20px;
       bottom: 30px;
       width: 420px;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgb(0 0 0 / 75%);
       padding: 5px;
       border-radius: 10px;
       border: 2px solid black;
     }
+
     &:hover span {
       display: block;
     }

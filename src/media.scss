@@ -1,94 +1,35 @@
-/*** Media queries ***/
-// Large devices (desktops, less than 1200px)
-@media screen and (max-width: 1199.98px) {
-  html,
-  body {
-    font-size: 1.1em;
-  }
-  .night-order em {
-    width: 30px;
-    height: 30px;
-  }
-  .fabled .night-order.first span {
-    left: 30px;
-  }
-}
+@use "styles/menu-responsive";
+@use "styles/player-responsive";
+@use "styles/responsive-base";
+@use "styles/town-square-responsive";
 
-// Medium devices (tablets, less than 992px)
-@media screen and (max-width: 991.98px) {
-  html,
-  body {
-    font-size: 1em;
-  }
-  #controls svg {
-    font-size: 20px;
-  }
-  .night-order em {
-    width: 20px;
-    height: 20px;
-  }
-  .fabled .night-order.first span {
-    left: 20px;
-  }
-  #townsquare {
-    padding: 10px;
-  }
-}
-
-// Small devices (landscape phones, less than 768px)
-@media screen and (max-width: 767.98px) {
-  html,
-  body {
-    font-size: 0.9em;
-  }
-  .player > .name {
-    top: 0;
-  }
-  .player > .menu {
-    bottom: 0;
-    &:before {
-      bottom: 0;
-    }
-  }
-}
-
-// Old phones
-@media screen and (max-width: 575.98px) {
-  html,
-  body {
-    font-size: 0.8em;
-  }
-}
-
-// odd aspect ratio
-@media (max-aspect-ratio: 11/7) {
-  .bluffs,
-  .fabled {
-    h3 {
-      max-width: 14vh;
-    }
-    ul {
-      flex-direction: column;
-    }
+// Ordered compositor for responsive rules owned by the style domains above.
+@mixin responsive {
+  @media screen and (width <= 1199.98px) {
+    @include responsive-base.desktop;
+    @include town-square-responsive.desktop;
   }
 
-  #townsquare > .donation {
-    top: 10px;
-    left: calc(70px + 8vw);
+  @media screen and (width <= 991.98px) {
+    @include responsive-base.tablet;
+    @include menu-responsive.tablet;
+    @include town-square-responsive.tablet;
   }
 
-  #townsquare > .is-role {
-    bottom: 10px;
-    left: calc(70px + 10vw);
+  @media screen and (width <= 767.98px) {
+    @include responsive-base.phone-landscape;
+    @include player-responsive.phone-landscape;
   }
-}
 
-// touch devices
-@media (hover: none) {
-  .circle li .reminder.add {
-    opacity: 1;
-    top: 0;
-    width: 35%;
-    padding-bottom: 35%;
+  @media screen and (width <= 575.98px) {
+    @include responsive-base.phone;
+  }
+
+  @media (aspect-ratio <= 11 / 7) {
+    @include town-square-responsive.narrow-aspect;
+  }
+
+  @media (hover: none) {
+    @include player-responsive.touch;
   }
 }

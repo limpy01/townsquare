@@ -1,0 +1,321 @@
+@use "tokens" as *;
+
+.fold-enter-active,
+.fold-leave-active {
+  transition: transform 250ms ease-in-out;
+  transform-origin: left center;
+  transform: perspective(200px);
+}
+
+.fold-enter,
+.fold-leave-to {
+  transform: perspective(200px) rotateY(90deg);
+}
+
+/***** Player token *****/
+.circle .player {
+  margin-bottom: 10px;
+
+  &::before {
+    content: " ";
+    display: block;
+    padding-top: 100%;
+  }
+
+  .shroud {
+    top: 0;
+    left: 0;
+    position: absolute;
+    width: 100%;
+    height: 45%;
+    cursor: pointer;
+    transform: rotateX(0deg);
+    transform-origin: top center;
+    transition: transform 200ms ease-in-out;
+    z-index: 2;
+    filter: drop-shadow(0 0 5px rgb(0 0 0 / 80%));
+
+    &::before {
+      content: " ";
+      background: url("../assets/shroud.png") center -10px no-repeat;
+      background-size: auto 110%;
+      position: absolute;
+      margin-left: -50%;
+      width: 100%;
+      height: 100%;
+      left: 50%;
+      top: -30%;
+      opacity: 0;
+      transform: perspective(400px) scale(1.5);
+      transform-origin: top center;
+      transition: all 200ms;
+      pointer-events: none;
+    }
+
+    #townsquare.spectator & {
+      pointer-events: none;
+    }
+
+    #townsquare:not(.spectator) &:hover::before {
+      opacity: 0.5;
+      top: -10px;
+      transform: scale(1);
+    }
+  }
+
+  &.dead .shroud::before {
+    opacity: 1;
+    top: 0;
+    transform: perspective(400px) scale(1);
+  }
+
+  #townsquare:not(.spectator) &.dead .shroud:hover::before {
+    opacity: 1;
+  }
+}
+
+/****** Life token *******/
+.player {
+  z-index: 1;
+
+  .life {
+    border-radius: 50%;
+    width: 100%;
+    background: url("../assets/life.png") center center;
+    background-size: 100%;
+    border: 3px solid black;
+    box-shadow: $shadow-panel;
+    cursor: pointer;
+    transition: transform $duration-fast ease-in-out;
+    transform: perspective(400px) rotateY(180deg);
+    backface-visibility: hidden;
+    position: absolute;
+    left: 0;
+    top: 0;
+
+    &::before {
+      content: " ";
+      display: block;
+      padding-top: 100%;
+    }
+  }
+
+  &.dead {
+    &.no-vote .life::after {
+      display: none;
+    }
+
+    .life {
+      background-image: url("../assets/death.png");
+
+      &::after {
+        content: " ";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: url("../assets/vote.png") center center no-repeat;
+        background-size: 50%;
+        height: 100%;
+        pointer-events: none;
+      }
+    }
+  }
+
+  &.traveler .life {
+    filter: grayscale(100%);
+  }
+}
+
+#townsquare.public .player {
+  .shroud {
+    transform: perspective(400px) rotateX(90deg);
+    pointer-events: none;
+  }
+
+  .life {
+    transform: perspective(400px) rotateY(0deg);
+  }
+
+  &.traveler:not(.dead) .token {
+    transform: perspective(400px) scale(0.8);
+    pointer-events: none;
+    transition-delay: 0s;
+  }
+
+  &.traveler.dead .token {
+    transition-delay: 0s;
+  }
+}
+
+/***** Role token ******/
+.player .token {
+  // z-index: 4;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  transition: transform $duration-fast ease-in-out;
+  transform: perspective(400px) rotateY(0deg);
+  backface-visibility: hidden;
+}
+
+.player .avatar,
+.player .token {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+}
+
+.player .avatar {
+  border-radius: 50%;
+  padding: 6%;
+  cursor: pointer;
+}
+
+.player .avatar img {
+  border-radius: 50%;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+
+.player .avatar img.on {
+  filter: blur(3px);
+}
+
+#townsquare.public .circle .token {
+  transform: perspective(400px) rotateY(-180deg);
+}
+
+/****** Player choice icons *******/
+.player .overlay {
+  width: 100%;
+  position: absolute;
+  pointer-events: none;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &::after {
+    content: " ";
+    display: block;
+    padding-top: 100%;
+  }
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
+.player .overlay .sitDown {
+  position: relative;
+  text-align: left;
+  white-space: nowrap;
+  background: $surface-panel;
+  padding: 2px 5px;
+  border-radius: $radius-panel;
+  border: 2px solid #000;
+
+  // margin-left: 15px;
+  cursor: pointer;
+  box-shadow: $shadow-popover;
+  width: 60%;
+  height: 60%;
+  transform: scale(1.3);
+  font-size: 90%;
+}
+
+.player .overlay svg {
+  position: absolute;
+  filter: drop-shadow(0 0 3px black);
+  z-index: 2;
+  cursor: pointer;
+
+  &.swap,
+  &.move,
+  &.nominate,
+  &.vote,
+  &.cancel {
+    width: 50%;
+    height: 60%;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 250ms;
+    transform: scale(0.2);
+
+    * {
+      stroke-width: 10px;
+      stroke: white;
+      fill: url("#default");
+    }
+
+    &:hover *,
+    &.fa-hand-paper * {
+      fill: url("#demon");
+    }
+
+    &.fa-times * {
+      fill: url("#townsfolk");
+    }
+  }
+}
+
+// other player voted yes, but is not locked yet
+#townsquare.vote .player.vote-yes .overlay svg.vote.fa-hand-paper {
+  opacity: 0.5;
+  transform: scale(1);
+}
+
+// you voted yes | a locked vote yes | a locked vote no
+#townsquare.vote .player.talking.vote-yes .overlay svg.vote.fa-hand-paper,
+#townsquare.vote .player.vote-lock.vote-yes .overlay svg.vote.fa-hand-paper,
+#townsquare.vote .player.vote-lock:not(.vote-yes) .overlay svg.vote.fa-times {
+  opacity: 1;
+  transform: scale(1);
+}
+
+// a locked vote can be clicked on by the ST
+#townsquare.vote:not(.spectator) .player.vote-lock .overlay svg.vote {
+  pointer-events: all;
+}
+
+.vote-enter-active,
+.vote-leave-active,
+.vote-appear-active,
+.vote-move {
+  transition: all 250ms ease-in-out;
+}
+
+/* Defines the initial state for entering and appearing elements. */
+.vote-enter,
+.vote-appear {
+  opacity: 0;
+  transform: scale(0.2);
+}
+
+/* Defines the final state for entering and appearing elements. */
+.vote-enter-to,
+.vote-appear-to {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Defines the final state for leaving elements. */
+.vote-leave-to {
+  opacity: 0;
+  transform: scale(0.2);
+}
+
+li.from:not(.nominate) .player .overlay svg.cancel {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: all;
+}
+
+li.swap:not(.from) .player .overlay svg.swap,
+li.nominate .player .overlay svg.nominate,
+li.move:not(.from) .player .overlay svg.move {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: all;
+}

@@ -15,10 +15,45 @@
 - 夜间行动顺序和提醒可以帮助说书人和玩家。
 - 支持所有自定义原创角色和剧本。
 
+## 开发与验证
+
+当前前端使用 Vue 3、Vite 和 Pinia；服务端使用 TypeScript、Express 5 与 `ws`。推荐使用仓库固定的 Node `25.3.0`：
+
+```bash
+nvm use
+npm ci
+```
+
+启动前端开发服务器：
+
+```bash
+npm run serve
+```
+
+另开终端启动本地服务端（默认端口 `8081`）：
+
+```bash
+npm run server
+```
+
+前端默认连接正式 API；本地联调可设置 `VITE_API_BASE` 和 `VITE_WS_BASE`。服务端的 `PORT`、`HOST`、`DATA_DIR` 和跨域设置见 [server/README.md](server/README.md)。
+
+生产发布与回滚须知也在 [server/README.md](server/README.md) 中：服务端房间和待发直连消息保存在内存中，重启会中断当前房间；请在维护窗口发布，并保留上一版构建与头像数据备份。
+
+提交前执行完整质量门禁：
+
+```bash
+npm run check
+npm run test:visual
+```
+
+`npm run check` 会运行格式与 lint 基线、运行时 TypeScript 源码检查、类型检查、单元/服务端集成/E2E 测试以及生产构建；视觉截图只比较基线，更新基线请显式使用 `npm run test:visual:update`。
+
+资源治理可运行 `npm run report:assets`；它会输出由静态引用或 Vite glob 覆盖的资源目录，以及待人工确认的未引用资源，不会删除文件。
+
 ### 自定义剧本支持
 
 任何从[英文剧本工具](https://bloodontheclocktower.com/script)或[中文剧本工具](https://clocktower.gstonegames.com/script_tool/)生成的JSON剧本文件都被支持，可以上传完整JSON文件或从剪切板粘贴。如果你想继续自定义剧本，可以加入以下`"_meta"`对象对剧本整体做出调整。
-
 
 ```json
 [
@@ -27,14 +62,23 @@
     "name": "无上愉悦",
     "author": "作者",
     "logo": "https://url.to/your/logo.png",
-    "firstNight": ["dusk","minioninfo","demoninfo","marionette","poisoner","amnesiac","dawn"],
-    "otherNight": ["dusk","dawn"],
+    "firstNight": [
+      "dusk",
+      "minioninfo",
+      "demoninfo",
+      "marionette",
+      "poisoner",
+      "amnesiac",
+      "dawn"
+    ],
+    "otherNight": ["dusk", "dawn"],
     "bootlegger": ["私货商人1", "私货商人2"]
   }
 ]
 ```
 
 这些设置可以让剧本的主题更加明确，使用更方便。
+
 - `"firstNight"`、`"otherNight`和`"bootlegger"`是[英文剧本工具](https://bloodontheclocktower.com/script)支持的关键词，可以直接从中导出无需修改。
 - 包含`"firstNight"`会改写魔典内置角色的首夜行动顺序。
 - 包含`"otherNight`会改写魔典内置角色的除首夜外其他夜的行动顺序。
@@ -60,11 +104,11 @@
     "firstNight": 72,
     "otherNight": 111
   },
-  { 
-    "id": "investigator" 
+  {
+    "id": "investigator"
   },
-  { 
-    "id": "imp" 
+  {
+    "id": "imp"
   }
 ]
 ```
@@ -90,17 +134,21 @@
   _注意_：如果你创建了一个自定义的“传奇角色”（Fabled）或“奇遇角色”(Loric)，它将在加载自定义剧本时自动添加到游戏中。
 - **ability**: 该角色的显示能力文本。
 - **jinxes**: 自定义角色与其他角色的相克，会在角色技能表中出现，每个id代表跟一个角色的相克。具体如下：
+
 ```json
 "jinxes":[{"id":"example1_id","reason":"相克1。", "id":"example2_id", "reason":"相克2。"}]
 ```
 
 ## 法律声明与下游告示要求
+
 本项目采用带有 GPLv3 第 7 条附加条款的开源协议。如果您分发或分叉（Fork）本项目：
-* 您**必须**完整保留终端启动时的版权横幅（Banner）。
-* 您**必须**保留用于打印许可证详细信息的交互式命令或参数（如 --version）。
-* 您**不得**移除用户界面（UI）中的任何作者署名信息。
+
+- 您**必须**完整保留终端启动时的版权横幅（Banner）。
+- 您**必须**保留用于打印许可证详细信息的交互式命令或参数（如 --version）。
+- 您**不得**移除用户界面（UI）中的任何作者署名信息。
 
 ## 全局版权声明
+
 除非另有明确说明，本仓库内的所有源代码文件、配置文件、组件文件（.vue）、脚本文件（.js）以及数据集定义文件（.json）均包含由 [@limpy01](https://github.com/limpy01)（2026年）独立创作的重大修改与原创功能增强。上述所有内容均受到版权法保护，并严格受本仓库附带的 GPLv3 第 7 条附加条款之约束。任何未经授权移除署名或违反本协议的分发行为，均将导致许可授权的即时终止。
 
 本项目及其网站免费提供，不以任何方式隶属于 The Pandemonium Institute。

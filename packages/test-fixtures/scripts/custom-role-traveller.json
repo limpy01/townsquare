@@ -1,0 +1,8 @@
+[
+  {
+    "id": "test_traveller",
+    "name": "测试旅行者",
+    "team": "traveller",
+    "ability": "你可以随时离开游戏。"
+  }
+]

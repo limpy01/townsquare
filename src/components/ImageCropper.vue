@@ -2,24 +2,34 @@
   <div>
     <div v-show="cropping" class="overlay">
       <div class="cropper-modal">
-        <input 
+        <input
           v-show="false"
-          type="file" 
-          ref="upload" 
-          accept="image/*" 
+          type="file"
+          ref="upload"
+          accept="image/*"
           @change="onFileChange"
         />
         <div v-if="image" class="canvas">
-          <img :src="image" ref="image" alt="Image to crop" />
+          <img :src="image" ref="imageElement" alt="Image to crop" />
           <div v-if="warning" style="color: red">
             <span>{{ warning }}</span>
           </div>
           <div>
-            <button @click="startCropping" :disabled="disabled.startCropping">裁剪</button>
-            <button @click="startMoving" :disabled="disabled.startMoving">移动</button>
-            <button @click="cropImage" :disabled="disabled.cropImage">预览</button>
-            <button @click="sendImage" :disabled="disabled.sendImage">确定</button>
-            <button @click="closeCropping" :disabled="disabled.closeCropping">关闭</button>
+            <button @click="startCropping" :disabled="disabled.startCropping">
+              裁剪
+            </button>
+            <button @click="startMoving" :disabled="disabled.startMoving">
+              移动
+            </button>
+            <button @click="cropImage" :disabled="disabled.cropImage">
+              预览
+            </button>
+            <button @click="sendImage" :disabled="disabled.sendImage">
+              确定
+            </button>
+            <button @click="closeCropping" :disabled="disabled.closeCropping">
+              关闭
+            </button>
           </div>
           <div v-if="croppedImage && preview">
             <img :src="croppedImage" alt="Cropped Image" />
@@ -30,157 +40,142 @@
   </div>
 </template>
 
+<script setup lang="ts">
+import { nextTick, ref } from "vue";
+import Cropper from "cropperjs";
+import "cropperjs/dist/cropper.css";
+import { apiBase } from "../config";
+import { showInputModal } from "../services/input-modal";
+import { emitGameEvent } from "../store/game-events";
+import { useProfileStore } from "../stores/profile";
+import { useSessionIdentityStore } from "../stores/session-identity";
 
-<script>
-import { mapState } from "vuex";
-import Cropper from 'cropperjs';
-import 'cropperjs/dist/cropper.css';
+const session = useSessionIdentityStore();
+const profile = useProfileStore();
+const upload = ref<HTMLInputElement | null>(null);
+const imageElement = ref<HTMLImageElement | null>(null);
+const image = ref<string | null>(null);
+const croppedImage = ref<string | null>(null);
+const cropper = ref<Cropper | null>(null);
+const cropping = ref(false);
+const preview = ref(false);
+const warning = ref("");
+const disabled = ref({
+  startCropping: false,
+  startMoving: false,
+  cropImage: false,
+  sendImage: false,
+  closeCropping: false,
+});
 
-export default {
-  data() {
-    return {
-      image: null,
-      croppedImage: null,
-      cropper: null,
-      cropping: false,
-      preview: false,
-      warning: "",
-      disabled: {
-        startCropping: false,
-        startMoving: false,
-        cropImage: false,
-        sendImage: false
-      }
+async function uploadAvatar() {
+  upload.value?.click();
+}
+function onFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      image.value = String(e.target?.result ?? "");
+      nextTick(initCropper);
     };
-  },
-  computed: {
-    ...mapState(["session"])
-  },
-  methods: {
-    async showInputModal({ inputType, inputModal, inputData }) {
-      return new Promise((resolve, reject) => {
-        this.$store.commit("session/setInputResolver", resolve);
-        this.$store.commit("session/setInputRejecter", reject);
-
-        this.$store.commit("session/setInputType", inputType);
-        this.$store.commit("session/setInputModal", inputModal);
-        this.$store.commit("session/setInputData", inputData);
-
-        this.$store.commit("toggleModal", "input");
+    reader.readAsDataURL(file);
+  }
+  cropping.value = true;
+}
+function initCropper() {
+  cropper.value?.destroy();
+  if (!imageElement.value) return;
+  cropper.value = new Cropper(imageElement.value, {
+    aspectRatio: 1,
+    viewMode: 1,
+    autoCrop: false,
+    autoCropArea: 1,
+    dragMode: "move",
+    rotatable: false,
+  });
+}
+function startCropping() {
+  cropper.value?.setDragMode("crop");
+}
+function startMoving() {
+  cropper.value?.setDragMode("move");
+  cropper.value?.clear();
+}
+function getCanvas() {
+  return cropper.value?.getCroppedCanvas({
+    width: 512,
+    height: 512,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: "high",
+  });
+}
+function cropImage() {
+  const canvas = getCanvas();
+  if (!canvas) return;
+  preview.value = true;
+  warning.value = "";
+  croppedImage.value = canvas.toDataURL("image/webp", 0.85);
+}
+async function sendImage() {
+  preview.value = false;
+  warning.value = "";
+  for (const button of Object.keys(
+    disabled.value,
+  ) as (keyof typeof disabled.value)[])
+    disabled.value[button] = true;
+  const canvas = getCanvas();
+  if (!canvas) return;
+  croppedImage.value = canvas.toDataURL("image/webp", 0.85);
+  const maxBase64Length = 1 * 1024 * 1024 * (4 / 3);
+  if (croppedImage.value.length > maxBase64Length) {
+    warning.value = "图片过大，请选择更小的图片进行上传！";
+  } else {
+    try {
+      const response = await fetch(`${apiBase}/upload/avatar`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          playerId: session.playerId,
+          uploadContent: croppedImage.value,
+        }),
       });
-    },
-    async uploadAvatar() {
-      this.$refs.upload.click();
-    },
-    onFileChange(event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.image = e.target.result;
-          this.$nextTick(() => {
-            this.initCropper();
-          });
-        };
-        reader.readAsDataURL(file);
-      }
-      this.cropping = true;
-    },
-    initCropper() {
-      if (this.cropper) {
-        this.cropper.destroy();
-      }
-      this.cropper = new Cropper(this.$refs.image, {
-        aspectRatio: 1,
-        viewMode: 1,
-        autoCrop: false, 
-        autoCropArea: 1,
-        dragMode: 'move',
-        rotatable: false
-      });
-    },
-    startCropping() {
-      this.cropper.setDragMode('crop');
-    },
-    startMoving() {
-      this.cropper.setDragMode('move');
-      this.cropper.clear();
-    },
-    cropImage() {
-      this.preview = true;
-      this.warning = "";
-      const canvas = this.cropper.getCroppedCanvas({
-        width: 512,
-        height: 512,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high'
-      });
-      this.croppedImage = canvas.toDataURL('image/webp', 0.85);
-    },
-    async sendImage() {
-      this.preview = false;
-      this.warning = "";
-      for (const button in this.disabled) {
-        this.disabled[button] = true;
-      }
-      const canvas = this.cropper.getCroppedCanvas({
-        width: 512,
-        height: 512,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high'
-      });
-      this.croppedImage = canvas.toDataURL('image/webp', 0.85)
-      const maxBase64Length = 1 * 1024 * 1024 * (4 / 3);
-      if (this.croppedImage.length > maxBase64Length) {
-        this.warning = "图片过大，请选择更小的图片进行上传！"
+      const result = await response.json();
+      if (!response.ok || result.status !== "success") {
+        warning.value = "图片上传失败！请重试！";
       } else {
-        // this.$store.commit("session/setPlayerAvatar", this.croppedImage);
-        try {
-          const response = await fetch("https://api.botcgrimoire.top/upload/avatar", {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              playerId: this.session.playerId,
-              uploadContent: this.croppedImage
-            })
-          });
-          const result = await response.json();
-          if (!response.ok || result.status !== "success") {
-            this.warning = "图片上传失败！请重试！";
-          } else {
-            this.$store.commit("session/updatePlayerAvatar", result.avatarUrl);
-            this.closeCropping();
-            await this.showInputModal({
-              inputType: "alert",
-              inputModal: "text",
-              inputData: {
-                name: ["头像上传成功！"],
-              }
-            }).catch(() => {
-              return null;
-            });
-          }
-        } catch (e) {
-          this.warning = "图片上传失败！请重试！";
-          for (const button in this.disabled) {
-            this.disabled[button] = false;
-          }
-        }
+        profile.updatePlayerAvatar(result.avatarUrl);
+        emitGameEvent("session/updatePlayerAvatar", result.avatarUrl);
+        closeCropping();
+        await showInputModal({
+          inputType: "alert",
+          inputModal: "text",
+          inputData: {
+            name: ["头像上传成功！"],
+          },
+        }).catch(() => null);
       }
-    },
-    closeCropping() {
-      this.cropping = false;
-      this.$refs.upload.value = '';
-      this.image = null;
-      this.croppedImage = null;
-      this.cropper = null;
-      this.warning = "";
-      this.preview = false;
+    } catch {
+      warning.value = "图片上传失败！请重试！";
+      for (const button of Object.keys(
+        disabled.value,
+      ) as (keyof typeof disabled.value)[])
+        disabled.value[button] = false;
     }
-  },
-};
+  }
+}
+function closeCropping() {
+  cropping.value = false;
+  if (upload.value) upload.value.value = "";
+  image.value = null;
+  croppedImage.value = null;
+  cropper.value = null;
+  warning.value = "";
+  preview.value = false;
+}
+defineExpose({ uploadAvatar });
 </script>
 
 <style scoped>
@@ -190,7 +185,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -207,10 +202,10 @@ export default {
   width: 80%;
   height: 80%;
   max-width: 500px;
-  overflow-x: scroll;
-  overflow-y: scroll;
+  overflow: scroll;
   display: flex;
   justify-content: center;
+
   /* align-items: center; */
 }
 
@@ -224,9 +219,6 @@ img {
   max-height: 100%;
   max-width: 100%;
   height: 100%;
-  overflow-y: scroll;
-  overflow-x: hidden;
+  overflow: hidden scroll;
 }
 </style>
-
-

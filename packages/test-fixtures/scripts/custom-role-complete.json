@@ -1,0 +1,18 @@
+[
+  {
+    "id": "test_seer",
+    "name": "测试先知",
+    "team": "townsfolk",
+    "ability": "每个夜晚，你会得知一名玩家。",
+    "firstNight": 12,
+    "otherNight": 12,
+    "firstNightReminder": "唤醒测试先知。",
+    "otherNightReminder": "唤醒测试先知。",
+    "reminders": ["得知"],
+    "remindersGlobal": [],
+    "setup": false,
+    "jinxes": [{ "id": "imp", "reason": "测试相克。" }]
+  },
+  { "id": "investigator" },
+  { "id": "imp" }
+]

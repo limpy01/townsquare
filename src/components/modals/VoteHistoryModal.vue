@@ -1,8 +1,8 @@
 <template>
   <Modal
     class="vote-history"
-    v-if="modals.voteHistory && (session.voteHistory || !session.isSpectator)"
-    @close="toggleModal('voteHistory')"
+    v-if="modals.voteHistory && (voting.voteHistory || !session.isSpectator)"
+    @close="modals.toggle('voteHistory')"
   >
     <font-awesome-icon
       @click="clearVoteHistory"
@@ -20,14 +20,17 @@
           <font-awesome-icon
             :icon="[
               'fas',
-              session.isVoteHistoryAllowed ? 'check-square' : 'square'
+              voting.isVoteHistoryAllowed ? 'check-square' : 'square',
             ]"
           />
           玩家可查看
         </div>
         <div class="option" @click="clearVoteHistory">
           <font-awesome-icon icon="trash-alt" />
-          清除<span v-if="!session.voteSelected.every(selected => selected === false)">选中</span><span v-else>全部</span>记录
+          清除<span
+            v-if="!voting.voteSelected.every((selected) => selected === false)"
+            >选中</span
+          ><span v-else>全部</span>记录
         </div>
       </div>
     </template>
@@ -38,7 +41,10 @@
             <font-awesome-icon
               :icon="[
                 'fas',
-                session.voteSelected.length > 0 && session.voteSelected.every(selected => selected === true) ? 'check-square' : 'square'
+                voting.voteSelected.length > 0 &&
+                voting.voteSelected.every((selected) => selected === true)
+                  ? 'check-square'
+                  : 'square',
               ]"
               @click="setVoteSelected(-1)"
               class="checkbox"
@@ -58,28 +64,20 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(vote, index) in session.voteHistory" :key="index">
+        <tr v-for="(vote, index) in voting.voteHistory" :key="index">
           <td>
             <font-awesome-icon
               :icon="[
                 'fas',
-                session.voteSelected[index] ? 'check-square' : 'square'
+                voting.voteSelected[index] ? 'check-square' : 'square',
               ]"
               @click="setVoteSelected(index)"
               class="checkbox"
             />
           </td>
           <td>
-            {{
-              vote.timestamp
-                .getHours()
-                .toString()
-                .padStart(2, "0")
-            }}:{{
-              vote.timestamp
-                .getMinutes()
-                .toString()
-                .padStart(2, "0")
+            {{ vote.timestamp.getHours().toString().padStart(2, "0") }}:{{
+              vote.timestamp.getMinutes().toString().padStart(2, "0")
             }}
           </td>
           <td>{{ vote.nominator }}</td>
@@ -95,7 +93,7 @@
             <font-awesome-icon
               :icon="[
                 'fas',
-                vote.votes >= vote.majority ? 'check-square' : 'square'
+                vote.votes >= vote.majority ? 'check-square' : 'square',
               ]"
             />
           </td>
@@ -108,61 +106,59 @@
   </Modal>
 </template>
 
-<script>
-import Modal from "./Modal";
-import { mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import Modal from "./Modal.vue";
+import { useVotingStore } from "../../stores/voting";
+import { useModalStore } from "../../stores/modals";
+import { useSessionIdentityStore } from "../../stores/session-identity";
+import { emitGameEvent } from "../../store/game-events";
 
-export default {
-  components: {
-    Modal
-  },
-  computed: {
-    ...mapState(["session", "modals"])
-  },
-  methods: {
-    setVoteSelected(index) {
-      if (index >= 0) {
-        this.$store.commit("session/setVoteSelected", {index, value: !this.session.voteSelected[index]});
-      } else {
-        const selectedAll = this.session.voteSelected.every(selected => selected === true);
-        for (let i=0; i<this.session.voteSelected.length; i++) {
-          this.$store.commit("session/setVoteSelected", {index: i, value: !selectedAll});
-        }
-      }
-    },
-    clearVoteHistory() {
-      const someSelected = !this.session.voteSelected.every(selected => selected === false);
-      if (someSelected) {
-        const selected = [];
-        for (let i=0; i<this.session.voteSelected.length; i++) {
-          if (this.session.voteSelected[i]) selected.push(i);
-        }
-        this.$store.commit("session/clearVoteHistory", selected);
-      }
-      else {
-        this.$store.commit("session/clearVoteHistory", []);
-      }
-      
-    },
-    setRecordVoteHistory() {
-      this.$store.commit(
-        "session/setVoteHistoryAllowed",
-        !this.session.isVoteHistoryAllowed
-      );
-    },
-    ...mapMutations(["toggleModal"])
+const modals = useModalStore();
+const session = useSessionIdentityStore();
+const voting = useVotingStore();
+
+function setVoteSelected(index: number) {
+  if (index >= 0) {
+    voting.setVoteSelected({
+      index,
+      value: !voting.voteSelected[index],
+    });
+    return;
   }
-};
+  const selectedAll = voting.voteSelected.every(
+    (selected) => selected === true,
+  );
+  for (let voteIndex = 0; voteIndex < voting.voteSelected.length; voteIndex++) {
+    voting.setVoteSelected({
+      index: voteIndex,
+      value: !selectedAll,
+    });
+  }
+}
+
+function clearVoteHistory() {
+  const selected = voting.voteSelected
+    .map((isSelected, index) => (isSelected ? index : -1))
+    .filter((index) => index >= 0);
+  voting.clearVoteHistory(selected);
+  emitGameEvent("session/clearVoteHistory", selected);
+}
+
+function setRecordVoteHistory() {
+  voting.setVoteHistoryAllowed(!voting.isVoteHistoryAllowed);
+  emitGameEvent("session/setVoteHistoryAllowed", voting.isVoteHistoryAllowed);
+}
 </script>
 
 <style lang="scss" scoped>
-@import "../../vars.scss";
+@use "../../vars.scss" as *;
 
 .clear {
   position: absolute;
   left: 20px;
   top: 15px;
   cursor: pointer;
+
   &:hover {
     color: red;
   }
@@ -170,6 +166,7 @@ export default {
 
 .checkbox {
   cursor: pointer;
+
   &:hover {
     color: red;
   }
@@ -177,16 +174,15 @@ export default {
 
 .options {
   display: flex;
-  justify-content: center;
   align-items: center;
-  justify-content: center;
-  align-content: center;
+  place-content: center center;
 }
 
 .option {
   color: white;
   text-decoration: none;
   margin: 0 15px;
+
   &:hover {
     color: red;
     cursor: pointer;
@@ -195,6 +191,7 @@ export default {
 
 h3 {
   margin: 0 40px 0 10px;
+
   svg {
     vertical-align: middle;
   }
@@ -217,12 +214,15 @@ tbody {
   td:nth-child(3) {
     color: $townsfolk;
   }
+
   td:nth-child(4) {
     color: $demon;
   }
+
   td:nth-child(6) {
     text-align: center;
   }
+
   td:nth-child(7) {
     text-align: center;
   }

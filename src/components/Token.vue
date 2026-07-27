@@ -1,16 +1,17 @@
 <template>
-  <div class="token" @click="setRole" :class="[role.id]" 
-  :style="tokenBackground"
+  <div
+    class="token"
+    @click="setRole"
+    :class="[role.id]"
+    :style="tokenBackground"
   >
     <span
       class="icon"
       v-if="role.id"
       :style="{
         backgroundImage: `url(${
-          role.image && grimoire.isImageOptIn
-            ? role.image
-            : require('../assets/icons/' + (role.imageAlt || role.id.replace(/old1$/, '')) + '.png')
-        })`
+          role.image && grimoire.isImageOptIn ? role.image : roleIcon
+        })`,
       }"
     ></span>
     <span
@@ -34,7 +35,7 @@
         x="66.6%"
         text-anchor="middle"
         class="label mozilla"
-        :font-size="role.name | nameToFontSize"
+        :font-size="nameToFontSize(role.name)"
       >
         <textPath xlink:href="#curve">
           {{ role.name }}
@@ -48,61 +49,82 @@
   </div>
 </template>
 
-<script>
-import { mapState } from "vuex";
+<script setup lang="ts">
+import { computed } from "vue";
+import { useGrimoireStore } from "../stores/grimoire";
 
-export default {
-  name: "Token",
-  props: {
-    role: {
-      type: Object,
-      default: () => ({})
-    },
-    id: {
-      type: String,
-      default: ""
-    },
-    image: {
-      type: String,
-      default: ""
-    }
-  },
-  computed: {
-    reminderLeaves: function() {
-      return (
-        (this.role.reminders || []).length +
-        (this.role.remindersGlobal || []).length
-      );
-    },
-    tokenBackground() {
-      return (!!this.id && !!this.image) ? {} : {backgroundImage: `url(${require('../assets/token.png')})`}
-    },
-    ...mapState(["grimoire"])
-  },
-  data() {
-    return {};
-  },
-  filters: {
-    nameToFontSize: name => (name && name.length > 10 ? "90%" : "110%")
-  },
-  methods: {
-    setRole() {
-      this.$emit("set-role");
-    }
-  }
+type TokenRole = Record<string, unknown> & {
+  id?: string;
+  name?: string;
+  image?: string;
+  imageAlt?: string;
+  edition?: string;
+  team?: string;
+  ability?: string;
+  firstNight?: number;
+  firstNightReminder?: string;
+  otherNight?: number;
+  otherNightReminder?: string;
+  reminders?: unknown[];
+  remindersGlobal?: unknown[];
+  setup?: boolean;
 };
+
+const iconImages = import.meta.glob("../assets/icons/*.png", {
+  eager: true,
+  import: "default",
+});
+const tokenImage = new URL("../assets/token.png", import.meta.url).href;
+
+const props = withDefaults(
+  defineProps<{
+    role?: TokenRole | undefined;
+    id?: string;
+    image?: string;
+  }>(),
+  {
+    role: () => ({}),
+    id: "",
+    image: "",
+  },
+);
+
+const emit = defineEmits<{ "set-role": [] }>();
+const grimoire = useGrimoireStore();
+const reminderLeaves = computed(
+  () =>
+    (Array.isArray(props.role.reminders) ? props.role.reminders.length : 0) +
+    (Array.isArray(props.role.remindersGlobal)
+      ? props.role.remindersGlobal.length
+      : 0),
+);
+const tokenBackground = computed(() =>
+  props.id && props.image ? {} : { backgroundImage: `url(${tokenImage})` },
+);
+const roleIcon = computed(() => {
+  const id = props.role.imageAlt || props.role.id?.replace(/old1$/, "") || "";
+  return iconImages[`../assets/icons/${id}.png`];
+});
+
+function nameToFontSize(name: unknown) {
+  return typeof name === "string" && name.length > 10 ? "90%" : "110%";
+}
+
+function setRole() {
+  emit("set-role");
+}
 </script>
 
 <style scoped lang="scss">
-
 .token {
   border-radius: 50%;
   width: 100%;
+
   // background: url("../assets/token.png") center center;
   background-size: 100%;
   text-align: center;
   border: 3px solid black;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 10px rgb(0 0 0 / 50%);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -112,18 +134,20 @@ export default {
   &:hover .name .label {
     stroke: black;
     fill: white;
-    @-moz-document url-prefix() {
+
+    /* stylelint-disable-next-line at-rule-no-deprecated -- preserves the Firefox token-label fallback. */
+    @document url-prefix() {
       &.mozilla {
         stroke: none;
         filter: drop-shadow(0 1.5px 0 black) drop-shadow(0 -1.5px 0 black)
           drop-shadow(1.5px 0 0 black) drop-shadow(-1.5px 0 0 black)
-          drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+          drop-shadow(0 2px 2px rgb(0 0 0 / 50%));
       }
     }
   }
 
   .icon,
-  &:before {
+  &::before {
     background-size: 100%;
     background-repeat: no-repeat;
     background-position: center 30%;
@@ -183,19 +207,20 @@ export default {
       stroke: white;
       stroke-width: 2px;
       paint-order: stroke;
-      font-family: "Papyrus", serif;
+      font-family: Papyrus, serif;
       font-weight: bold;
-      text-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+      text-shadow: 0 2px 2px rgb(0 0 0 / 20%);
       letter-spacing: 1px;
 
-      @-moz-document url-prefix() {
+      /* stylelint-disable-next-line at-rule-no-deprecated -- preserves the Firefox token-label fallback. */
+      @document url-prefix() {
         &.mozilla {
           // Vue doesn't support scoped media queries, so we have to use a second css class
           stroke: none;
           text-shadow: none;
           filter: drop-shadow(0 1.5px 0 white) drop-shadow(0 -1.5px 0 white)
             drop-shadow(1.5px 0 0 white) drop-shadow(-1.5px 0 0 white)
-            drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+            drop-shadow(0 2px 2px rgb(0 0 0 / 50%));
         }
       }
     }
@@ -219,19 +244,18 @@ export default {
     width: 250px;
     z-index: 25;
     font-size: 80%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgb(0 0 0 / 50%);
     border-radius: 10px;
     border: 3px solid black;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 4px 6px rgb(0 0 0 / 50%));
     text-align: left;
-    justify-items: center;
+    place-items: center center;
     align-content: center;
-    align-items: center;
     pointer-events: none;
     opacity: 0;
     transition: opacity 200ms ease-in-out;
 
-    &:before {
+    &::before {
       content: " ";
       border: 10px solid transparent;
       width: 0;

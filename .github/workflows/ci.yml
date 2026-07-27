@@ -1,0 +1,60 @@
+name: Migration Baseline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  baseline:
+    name: Legacy behavior baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint:baseline
+      - run: npm run lint:styles
+      - run: npm run check:runtime-sources
+      - run: npm run check:type-suppressions
+      - run: npm run typecheck
+      - run: npm run test:unit:coverage
+      - run: npm run check:coverage:domain
+      - run: npm run check:coverage:contracts
+      - run: npm run test:server
+      - run: npm run build
+      - name: Upload unit coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: coverage
+          if-no-files-found: ignore
+
+  browser:
+    name: Browser interaction baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: npm run test:visual
+      - name: Upload browser test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore

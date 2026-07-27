@@ -4,3 +4,10 @@ dist
 *.pem
 /server/certs
 /server/dynamic
+.DS_Store
+/server/data
+blob-report
+playwright-report
+test-results
+coverage
+packages/*/dist

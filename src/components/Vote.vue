@@ -5,27 +5,34 @@
       <span class="nominator" :style="nominatorStyle"></span>
     </div>
     <div class="overlay">
-      <em class="blue">{{ (session.nomination[0] + 1) + ". " + nominator.name }}</em> 提名了
-      <em>{{ (session.nomination[1] + 1) + ". " + nominee.name }}</em
+      <em class="blue">{{ nomination[0] + 1 + ". " + nominator.name }}</em>
+      提名了 <em>{{ nomination[1] + 1 + ". " + nominee.name }}</em
       >！
       <br />
       <em class="blue">
-        {{ session.votes.filter(item => typeof item === "number" || typeof item === "boolean").reduce((item, sum) => item + sum, 0) }} 票
+        {{
+          voting.votes
+            .filter(
+              (item) => typeof item === "number" || typeof item === "boolean",
+            )
+            .reduce((item, sum) => Number(item) + Number(sum), 0)
+        }}
+        票
       </em>
-      
+
       <em v-if="nominee.role.team !== 'traveler'">
         （满{{ Math.ceil(alive / 2) }}票通过）
       </em>
       <em v-else>（满{{ Math.ceil(players.length / 2) }}票通过）</em>
 
       <template v-if="!session.isSpectator">
-        <div v-if="!session.isVoteInProgress && session.lockedVote < 1">
+        <div v-if="!voting.isVoteInProgress && voting.lockedVote < 1">
           每位玩家投票时间：
           <font-awesome-icon
             @mousedown.prevent="setVotingSpeed(-500)"
             icon="minus-circle"
           />
-          {{ session.votingSpeed / 1000 }}s
+          {{ voting.votingSpeed / 1000 }}s
           <font-awesome-icon
             @mousedown.prevent="setVotingSpeed(500)"
             icon="plus-circle"
@@ -34,22 +41,30 @@
         <div class="button-group">
           <div
             class="button townsfolk"
-            v-if="!session.isVoteInProgress"
+            v-if="!voting.isVoteInProgress"
             @click="countdown"
           >
             倒计时
           </div>
-          <div class="button" v-if="!session.isVoteInProgress && !session.lockedVote" @click="start">
+          <div
+            class="button"
+            v-if="!voting.isVoteInProgress && !voting.lockedVote"
+            @click="start"
+          >
             {{ "开始" }}
           </div>
-          <div class="button" v-if="!session.isVoteInProgress && !session.lockedVote" @click="start0">
+          <div
+            class="button"
+            v-if="!voting.isVoteInProgress && !voting.lockedVote"
+            @click="start0"
+          >
             {{ "统计" }}
           </div>
           <template v-else>
             <div
-              v-if="session.isVoteInProgress"
+              v-if="voting.isVoteInProgress"
               class="button townsfolk"
-              :class="{ disabled: !session.lockedVote }"
+              :class="{ disabled: !voting.lockedVote }"
               @click="pause"
             >
               {{ voteTimer ? "暂停" : "继续" }}
@@ -62,30 +77,35 @@
           <div
             class="button"
             :class="{
-              disabled: session.nomination[1] === session.markedPlayer
+              disabled: nomination[1] === voting.markedPlayer,
             }"
             @click="setMarked"
           >
             标记处决
           </div>
-          <div class="button" @click="removeMarked">
-            清除标记
-          </div>
+          <div class="button" @click="removeMarked">清除标记</div>
         </div>
-        
+
         <div class="secretVote" @click="setSecretVote()">
-          <span>闭眼投票
-          <em><font-awesome-icon :icon="['fas', session.isSecretVote ? 'check-square' : 'square']"/></em>
+          <span
+            >闭眼投票
+            <em
+              ><font-awesome-icon
+                :icon="[
+                  'fas',
+                  voting.isSecretVote ? 'check-square' : 'square',
+                ]"
+            /></em>
           </span>
         </div>
       </template>
       <template v-else-if="canVote">
-        <div v-if="!session.isVoteInProgress">
-          {{ session.votingSpeed / 1000 }} 秒投票间隔
+        <div v-if="!voting.isVoteInProgress">
+          {{ voting.votingSpeed / 1000 }} 秒投票间隔
         </div>
         <div class="button-group">
           <div
-            v-if="session.playerVotes > 1 && nominee.role.team !== 'traveler'"
+            v-if="voting.playerVotes > 1 && nominee.role.team !== 'traveler'"
             class="button townsfolk"
             @click="vote(false)"
             :class="{ disabled: minVote }"
@@ -107,7 +127,7 @@
             投票
           </div>
           <div
-            v-if="session.playerVotes > 1 && nominee.role.team !== 'traveler'"
+            v-if="voting.playerVotes > 1 && nominee.role.team !== 'traveler'"
             class="button demon"
             @click="vote(true)"
             :class="{ disabled: maxVote }"
@@ -116,17 +136,15 @@
           </div>
         </div>
       </template>
-      <div v-else-if="!player">
-        请落座后投票！
-      </div>
-      <div v-if="session.isSpectator" v-show="session.isSecretVote">
+      <div v-else-if="!player">请落座后投票！</div>
+      <div v-if="session.isSpectator" v-show="voting.isSecretVote">
         闭眼投票
       </div>
     </div>
     <transition name="blur">
       <div
         class="countdown"
-        v-if="session.isVoteInProgress && !session.lockedVote"
+        v-if="voting.isVoteInProgress && !voting.lockedVote"
       >
         <span>3</span>
         <span>2</span>
@@ -137,178 +155,181 @@
   </div>
 </template>
 
-<script>
-import { mapGetters, mapState } from "vuex";
+<script setup lang="ts">
+import { computed, onBeforeUnmount, watch } from "vue";
+import { useVotingStore } from "../stores/voting";
+import { usePlayersStore } from "../stores/players";
+import { useSessionIdentityStore } from "../stores/session-identity";
+import { emitGameEvent } from "../store/game-events";
+import { useVoteController } from "../composables/use-vote-controller";
 
-export default {
-  computed: {
-    ...mapState("players", ["players"]),
-    ...mapState(["session", "grimoire"]),
-    ...mapGetters({ alive: "players/alive" }),
-    nominator: function() {
-      return this.players[this.session.nomination[0]];
-    },
-    nominatorStyle: function() {
-      const players = this.players.length;
-      const nomination = this.session.nomination[0];
-      return {
-        transform: `rotate(${Math.round((nomination / players) * 360)}deg)`,
-        transitionDuration: this.session.votingSpeed - 100 + "ms"
-      };
-    },
-    nominee: function() {
-      return this.players[this.session.nomination[1]];
-    },
-    nomineeStyle: function() {
-      const players = this.players.length;
-      const nomination = this.session.nomination[1];
-      const lock = this.session.lockedVote;
-      const rotation = (360 * (nomination + Math.min(lock, players))) / players;
-      return {
-        transform: `rotate(${Math.round(rotation)}deg)`,
-        transitionDuration: this.session.votingSpeed - 100 + "ms"
-      };
-    },
-    player: function() {
-      return this.players.find(p => p.id === this.session.playerId);
-    },
-    maxVote: function() {
-      const index = this.players.findIndex(p => p.id === this.session.playerId);
-      return index >= 0 ? (!!this.session.votes[index] && this.session.votes[index] >= (this.nominee.role.team === 'traveler' ? 1 : this.session.playerVotes)) : false;
-    },
-    minVote: function() {
-      const index = this.players.findIndex(p => p.id === this.session.playerId);
-      return index >= 0 ? (!this.session.votes[index] || this.session.votes[index] <= 0) : true;
-    },
-    canVote: function() {
-      if (!this.player) return false;
-      if (this.player.isVoteless && this.nominee.role.team !== "traveler")
-        return false;
-      const session = this.session;
-      const players = this.players.length;
-      const index = this.players.indexOf(this.player);
-      const indexAdjusted =
-        (index - 1 + players - session.nomination[1]) % players;
-      return indexAdjusted >= session.lockedVote - 1;
-    },
-    voters: function() {
-      const nomination = this.session.nomination[1];
-      const voters = Array(this.players.length)
-        .fill("")
-        .map((x, index) =>
-          this.session.votes[index] ? this.players[index].name : ""
-        );
-      const reorder = [
-        ...voters.slice(nomination + 1),
-        ...voters.slice(0, nomination + 1)
-      ];
-      return (this.session.lockedVote
-        ? reorder.slice(0, this.session.lockedVote - 1)
-        : reorder
-      ).filter(n => !!n);
-    }
-  },
-  data() {
-    return {
-      voteTimer: null
-    };
-  },
-  watch: {
-    'nominee.role.team': {
-      handler(val) {
-        if (val === 'traveler') {
-          const index = this.players.findIndex(p => p.id === this.session.playerId);
-          if (index >= 0 && !!this.session.votes[index] && this.session.votes[index] > 1) this.$store.commit("session/voteSync", [index, 1]);
-        }
-      },
-      immediate: true
-    }
-  },
-  methods: {
-    countdown() {
-      this.$store.commit("session/lockVote", 0);
-      this.$store.commit("session/setVoteInProgress", true);
-      this.voteTimer = setInterval(() => {
-        this.start();
-      }, 4000);
-    },
-    start() {
-      this.$store.commit("session/lockVote", 1);
-      this.$store.commit("session/setVoteInProgress", true);
-      clearInterval(this.voteTimer);
-      this.voteTimer = setInterval(() => {
-        this.$store.commit("session/lockVote");
-        if (this.session.lockedVote > this.players.length) {
-          clearInterval(this.voteTimer);
-          this.$store.commit("session/setVoteInProgress", false);
-        }
-      }, this.session.votingSpeed);
-    },
-    start0() {
-      const speed = this.session.votingSpeed;
-      this.$store.commit("session/setVotingSpeed", 0);
-      this.start();
-      this.$store.commit("session/setVotingSpeed", speed);
-    },
-    pause() {
-      if (this.voteTimer) {
-        clearInterval(this.voteTimer);
-        this.voteTimer = null;
-      } else {
-        this.voteTimer = setInterval(() => {
-          this.$store.commit("session/lockVote");
-          if (this.session.lockedVote > this.players.length) {
-            clearInterval(this.voteTimer);
-            this.$store.commit("session/setVoteInProgress", false);
-          }
-        }, this.session.votingSpeed);
-      }
-    },
-    stop() {
-      clearInterval(this.voteTimer);
-      this.voteTimer = null;
-      this.$store.commit("session/setVoteInProgress", false);
-      this.$store.commit("session/lockVote", 0);
-    },
-    finish() {
-      clearInterval(this.voteTimer);
-      this.$store.commit("session/addHistory", this.players);
-      this.$store.commit("session/addVoteSelected", {selected: false, players:this.players, save: true});
-      this.$store.commit("session/nomination");
-    },
-    vote(vote) {
-      if (!this.canVote) return false;
-      const index = this.players.findIndex(p => p.id === this.session.playerId);
-      const limit = this.nominee.role.team === "traveler" ? 1 : this.session.playerVotes; // 投票数上限
-      if (index >= 0) {
-        const votes = (typeof vote === "number") ? Math.max(Math.min(vote + (this.session.votes[index] || !!this.session.votes[index]), limit), 0) : (vote ? limit : 0);
-        this.$store.commit("session/voteSync", [index, votes]);
-      }
-    },
-    setVotingSpeed(diff) {
-      const speed = Math.round(this.session.votingSpeed + diff);
-      if (speed > 0) {
-        this.$store.commit("session/setVotingSpeed", speed);
-      }
-    },
-    setMarked() {
-      this.$store.commit("session/setMarkedPlayer", {val: this.session.nomination[1], force: true});
-    },
-    removeMarked() {
-      this.$store.commit("session/setMarkedPlayer", {val: -1, force: true});
-    },
-    setSecretVote() {
-      if (this.session.isSpectator) return;
-      if (this.session.isVoteInProgress) return;
-      const isSecretVote = !this.session.isSecretVote;
-      this.$store.commit("session/setSecretVote", isSecretVote);
-    }
+const voting = useVotingStore();
+const playerState = usePlayersStore();
+const session = useSessionIdentityStore();
+
+const players = computed(() => playerState.players);
+const alive = computed(
+  () => players.value.filter((player) => !player.isDead).length,
+);
+const nomination = computed(
+  () => voting.nomination || ([0, 0] as [number, number]),
+);
+const nominator = computed(() => players.value[nomination.value[0]]);
+const nominee = computed(() => players.value[nomination.value[1]]);
+const nominatorStyle = computed(() => {
+  const playerCount = players.value.length;
+  const nominationIndex = nomination.value[0];
+  return {
+    transform: `rotate(${Math.round(
+      (nominationIndex / playerCount) * 360,
+    )}deg)`,
+    transitionDuration: voting.votingSpeed - 100 + "ms",
+  };
+});
+const nomineeStyle = computed(() => {
+  const playerCount = players.value.length;
+  const nominationIndex = nomination.value[1];
+  const rotation =
+    (360 * (nominationIndex + Math.min(voting.lockedVote, playerCount))) /
+    playerCount;
+  return {
+    transform: `rotate(${Math.round(rotation)}deg)`,
+    transitionDuration: voting.votingSpeed - 100 + "ms",
+  };
+});
+const player = computed(() =>
+  players.value.find((item) => item.id === session.playerId),
+);
+const maxVote = computed(() => {
+  const index = players.value.findIndex((item) => item.id === session.playerId);
+  return index >= 0
+    ? !!voting.votes[index] &&
+        Number(voting.votes[index]) >=
+          (nominee.value.role.team === "traveler" ? 1 : voting.playerVotes)
+    : false;
+});
+const minVote = computed(() => {
+  const index = players.value.findIndex((item) => item.id === session.playerId);
+  return index >= 0
+    ? !voting.votes[index] || Number(voting.votes[index]) <= 0
+    : true;
+});
+const canVote = computed(() => {
+  if (!player.value) return false;
+  if (player.value.isVoteless && nominee.value.role.team !== "traveler") {
+    return false;
   }
-};
+  const playerCount = players.value.length;
+  const index = players.value.indexOf(player.value);
+  const indexAdjusted =
+    (index - 1 + playerCount - nomination.value[1]) % playerCount;
+  return indexAdjusted >= voting.lockedVote - 1;
+});
+const voters = computed(() => {
+  const nominationIndex = nomination.value[1];
+  const voterNames = Array(players.value.length)
+    .fill("")
+    .map((_, index) => (voting.votes[index] ? players.value[index].name : ""));
+  const reordered = [
+    ...voterNames.slice(nominationIndex + 1),
+    ...voterNames.slice(0, nominationIndex + 1),
+  ];
+  return (
+    voting.lockedVote ? reordered.slice(0, voting.lockedVote - 1) : reordered
+  ).filter(Boolean);
+});
+const controller = useVoteController({
+  voting,
+  session,
+  getPlayers: () => players.value,
+  getNomineeTeam: () => nominee.value?.role?.team,
+});
+const voteTimer = controller.timer;
+
+function clearVoteTimer() {
+  controller.clearTimer();
+}
+
+function setVotingSpeedValue(value: number) {
+  voting.setVotingSpeed(value);
+  emitGameEvent("session/setVotingSpeed", value);
+}
+
+function voteSync(payload: [number, boolean | number]) {
+  voting.vote(payload);
+  emitGameEvent("session/voteSync", payload);
+}
+
+function countdown() {
+  controller.countdown();
+}
+
+function start() {
+  controller.start();
+}
+
+function start0() {
+  controller.startImmediate();
+}
+
+function pause() {
+  controller.pause();
+}
+
+function stop() {
+  controller.stop();
+}
+
+function finish() {
+  controller.finish();
+}
+
+function vote(vote: boolean | number) {
+  controller.cast(canVote.value, vote);
+}
+
+function setVotingSpeed(diff: number) {
+  const speed = Math.round(voting.votingSpeed + diff);
+  if (speed > 0) setVotingSpeedValue(speed);
+}
+
+function setMarked() {
+  controller.setMarked(nomination.value[1]);
+}
+
+function removeMarked() {
+  controller.setMarked(-1);
+}
+
+function setSecretVote() {
+  if (session.isSpectator || voting.isVoteInProgress) return;
+  voting.setSecretVote(!voting.isSecretVote);
+  emitGameEvent("session/setSecretVote", voting.isSecretVote);
+}
+
+watch(
+  () => nominee.value?.role?.team,
+  (team) => {
+    if (team !== "traveler") return;
+    const index = players.value.findIndex(
+      (item) => item.id === session.playerId,
+    );
+    if (
+      index >= 0 &&
+      !!voting.votes[index] &&
+      Number(voting.votes[index]) > 1
+    ) {
+      voteSync([index, 1]);
+    }
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(clearVoteTimer);
 </script>
 
 <style lang="scss" scoped>
-@import "../vars.scss";
+@use "../vars.scss" as *;
 
 #vote {
   position: absolute;
@@ -316,20 +337,22 @@ export default {
   z-index: 20;
   display: flex;
   align-items: center;
-  align-content: center;
-  justify-content: center;
+  place-content: center center;
   background: url("../assets/demon-head.png") center center no-repeat;
   background-size: auto 75%;
   text-align: center;
-  text-shadow: 0 1px 2px #000000, 0 -1px 2px #000000, 1px 0 2px #000000,
-    -1px 0 2px #000000;
+  text-shadow:
+    0 1px 2px #000,
+    0 -1px 2px #000,
+    1px 0 2px #000,
+    -1px 0 2px #000;
 
   .mark .button {
     font-size: 75%;
     margin: 0;
   }
 
-  &:after {
+  &::after {
     content: " ";
     padding-bottom: 100%;
     display: block;
@@ -339,6 +362,7 @@ export default {
     color: $demon;
     font-style: normal;
     font-weight: bold;
+
     &.blue {
       color: $townsfolk;
     }
@@ -346,8 +370,9 @@ export default {
 
   svg {
     cursor: pointer;
+
     &:hover path {
-      fill: url(#demon);
+      fill: url("#demon");
       stroke-width: 30px;
       stroke: white;
     }
@@ -359,6 +384,7 @@ export default {
     opacity: 0;
     transform: rotate(-180deg);
   }
+
   100% {
     opacity: 1;
     transform: rotate(0deg);
@@ -370,6 +396,7 @@ export default {
     opacity: 0;
     transform: rotate(180deg);
   }
+
   100% {
     opacity: 1;
     transform: rotate(0deg);
@@ -382,13 +409,15 @@ export default {
   height: 150%;
   width: 25%;
   pointer-events: none;
+
   span {
     position: absolute;
     width: 100%;
     height: 100%;
     transition: transform 2.9s ease-in-out;
   }
-  span:before {
+
+  span::before {
     content: " ";
     width: 100%;
     height: 100%;
@@ -397,13 +426,15 @@ export default {
     background-repeat: no-repeat;
     background-position: center center;
     position: absolute;
-    filter: drop-shadow(0px 0px 3px #000);
+    filter: drop-shadow(0 0 3px #000);
   }
-  .nominator:before {
+
+  .nominator::before {
     background-image: url("../assets/clock-small.png");
     animation: arrow-ccw 1s ease-out;
   }
-  .nominee:before {
+
+  .nominee::before {
     background-image: url("../assets/clock-big.png");
     animation: arrow-cw 1s ease-out;
   }
@@ -415,17 +446,21 @@ export default {
     opacity: 0;
     filter: blur(20px);
   }
+
   10% {
     opacity: 1;
   }
+
   50% {
     transform: scale(1);
     filter: blur(0);
   }
+
   90% {
     color: $townsfolk;
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -437,17 +472,21 @@ export default {
     opacity: 0;
     filter: blur(20px);
   }
+
   10% {
     opacity: 1;
   }
+
   50% {
     transform: scale(1);
     filter: blur(0);
   }
+
   90% {
     color: $demon;
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -459,49 +498,61 @@ export default {
   align-items: center;
   justify-content: center;
   pointer-events: none;
+
   audio {
     height: 0;
     width: 0;
     visibility: hidden;
   }
+
   span {
     position: absolute;
     font-size: 8em;
     font-weight: bold;
     opacity: 0;
   }
+
   span:nth-child(1) {
     animation: countdown 1100ms normal forwards;
   }
+
   span:nth-child(2) {
     animation: countdown 1100ms normal forwards 1000ms;
   }
+
   span:nth-child(3) {
     animation: countdown 1100ms normal forwards 2000ms;
   }
+
   span:nth-child(4) {
     animation: countdown-go 1100ms normal forwards 3000ms;
   }
 }
 
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
 .secretVote {
   cursor: pointer;
   color: white;
+
   &:hover {
     color: red;
   }
-  em:not(#demon):not(.button) 
+
+  em:not(#demon, .button)
   // &.fa-check-square
-  // &.fa-square 
+  // &.fa-square
   {
     color: white !important;
+
     &:hover {
       color: inherit !important;
     }
   }
+
   svg {
     cursor: pointer !important;
-    &:hover{
+
+    &:hover {
       fill: white !important;
     }
   }

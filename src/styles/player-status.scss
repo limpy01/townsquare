@@ -1,0 +1,334 @@
+@use "tokens" as *;
+
+/****** Vote icon ********/
+.player .has-vote {
+  color: #fff;
+  filter: drop-shadow(0 0 3px black);
+  transition: opacity 250ms;
+  z-index: 2;
+
+  #townsquare.public & {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.has-vote {
+  position: absolute;
+  margin-top: -15%;
+  right: 2px;
+}
+
+.player .secret-no-vote {
+  color: red;
+  filter: drop-shadow(0 0 3px black);
+  transition: opacity 250ms;
+  z-index: 2;
+
+  #townsquare.public & {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.secret-no-vote {
+  position: absolute;
+  margin-top: -15%;
+  right: 2px;
+}
+
+.player .multiple-votes {
+  color: #fff;
+  cursor: default;
+  filter: drop-shadow(0 0 3px black);
+  transition: opacity 250ms;
+  z-index: 2;
+
+  #townsquare.public & {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.multiple-votes {
+  position: absolute;
+  margin-top: -17%;
+  right: -0.6vw;
+}
+
+.multiple-votes span {
+  font-size: 80%;
+}
+
+/****** Role specific icon ********/
+.player .designated-role {
+  color: #fff;
+  filter: drop-shadow(0 0 3px black);
+  transition: opacity 250ms;
+  z-index: 2;
+
+  &.is-using-wraith {
+    color: red;
+  }
+
+  #townsquare.public & {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.designated-role {
+  position: absolute;
+  top: 0;
+  right: 2px;
+}
+
+#slash {
+  z-index: 3;
+  pointer-events: none;
+}
+
+/****** Session seat glow when talking *****/
+@mixin glow($name, $color) {
+  @keyframes #{$name}-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 rgba($color, 1);
+      border-color: $color;
+    }
+  }
+
+  .player.talking.#{$name} .token {
+    animation: #{$name}-glow 0.5s infinite;
+  }
+}
+
+@include glow("townsfolk", $townsfolk);
+@include glow("outsider", $outsider);
+@include glow("demon", $demon);
+@include glow("minion", $minion);
+@include glow("traveler", $traveler);
+
+.player.talking .token {
+  animation: townsfolk-glow 0.5s infinite;
+}
+
+/****** Marked icon ******/
+.player .marked {
+  position: absolute;
+  width: 100%;
+  top: 0;
+  filter: drop-shadow(0 0 6px black);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 250ms;
+  opacity: 0;
+
+  &::before {
+    content: " ";
+    padding-top: 100%;
+    display: block;
+  }
+
+  svg {
+    height: 60%;
+    width: 60%;
+    position: absolute;
+    stroke: white;
+    stroke-width: 15px;
+
+    path {
+      fill: white;
+    }
+  }
+}
+
+.player.marked .marked {
+  opacity: 0.5;
+}
+
+/****** Seat icon ********/
+.player .seat {
+  position: absolute;
+  left: 2px;
+  margin-top: -15%;
+  color: #fff;
+  filter: drop-shadow(0 0 3px black);
+  cursor: default;
+  z-index: 2;
+
+  &.highlight {
+    animation: red-to-white 1s normal forwards;
+  }
+}
+
+// Player Seat Number
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
+.player .seatNum {
+  position: absolute;
+  top: -5%;
+  left: 8%;
+  font-size: 120%;
+  z-index: 3;
+  font-weight: bold;
+
+  // -webkit-text-stroke-color: #000;
+  // -webkit-text-stroke-width: 1px;
+  text-shadow:
+    -1px 1px #000,
+    1px 1px #000,
+    -1px 1px #000,
+    -1px -1px #000;
+}
+
+// New message bubble
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
+.player .newMessage {
+  position: absolute;
+  right: 2%;
+  top: 1%;
+  z-index: 3;
+  pointer-events: none;
+  background: $color-notification;
+  border-radius: 100%;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  font-size: 80%;
+}
+
+// highlight animation
+@keyframes red-to-white {
+  from {
+    color: $demon;
+  }
+
+  to {
+    color: white;
+  }
+}
+
+.player.talking .seat {
+  color: $townsfolk;
+}
+
+/***** Player name *****/
+.player > .name {
+  right: 10%;
+  display: flex;
+  justify-content: center;
+  font-size: 80%;
+  line-height: 170%;
+  cursor: pointer;
+  white-space: nowrap;
+  width: 120%;
+  background: $surface-panel;
+  border: $border-panel;
+  border-radius: $radius-panel;
+  top: 5px;
+  box-shadow: $shadow-panel-solid;
+  padding: 0 4px;
+
+  svg {
+    top: 3px;
+    margin-right: 2px;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+    flex-grow: 1;
+  }
+
+  #townsquare:not(.spectator) &:hover,
+  &.active {
+    color: red;
+  }
+
+  &:hover .pronouns {
+    opacity: 1;
+    color: white;
+  }
+
+  .pronouns {
+    display: flex;
+    position: absolute;
+    right: 110%;
+    max-width: 250px;
+    z-index: 25;
+    background: $surface-panel;
+    border-radius: $radius-panel;
+    border: $border-panel;
+    filter: drop-shadow(0 4px 6px rgb(0 0 0 / 50%));
+    align-items: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity $duration-fast ease-in-out;
+    padding: 0 4px;
+    bottom: -3px;
+
+    &::before {
+      content: " ";
+      border: 10px solid transparent;
+      width: 0;
+      height: 0;
+      border-left-color: black;
+      position: absolute;
+      margin-left: 2px;
+      left: 100%;
+    }
+  }
+}
+
+.player.dead > .name {
+  opacity: 0.5;
+}
+
+/***** Player menu *****/
+.player > .menu {
+  position: absolute;
+  left: 110%;
+  bottom: -5px;
+  text-align: left;
+  white-space: nowrap;
+  background: $surface-panel;
+  padding: 2px 5px;
+  border-radius: $radius-panel;
+  border: $border-panel;
+  margin-left: 15px;
+  cursor: pointer;
+  box-shadow: $shadow-popover;
+
+  &::before {
+    content: " ";
+    width: 0;
+    height: 0;
+    position: absolute;
+    border: 10px solid transparent;
+    border-right-color: black;
+    right: 100%;
+    bottom: var(--before);
+    margin-right: 2px;
+  }
+
+  li:hover {
+    color: red;
+  }
+
+  li.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+
+    &:hover {
+      color: white;
+    }
+  }
+
+  svg {
+    margin-right: 2px;
+  }
+}

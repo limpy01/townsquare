@@ -1,0 +1,12 @@
+{
+  "name": "@townsquare/test-fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "game-state",
+    "scripts",
+    "storage",
+    "ws"
+  ]
+}

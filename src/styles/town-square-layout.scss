@@ -1,0 +1,386 @@
+@use "sass:math";
+@use "tokens" as *;
+
+
+#townsquare {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  place-content: center center;
+  flex-direction: row;
+  position: relative;
+}
+
+.circle {
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  list-style: none;
+  margin: 0;
+
+  > li {
+    position: absolute;
+    left: 50%;
+    height: 50%;
+    transform-origin: 0 100%;
+    pointer-events: none;
+
+    &:hover {
+      z-index: 25 !important;
+    }
+
+    > .player {
+      margin-left: -50%;
+      width: 100%;
+      pointer-events: all;
+    }
+
+    > .reminder {
+      margin-left: -25%;
+      width: 50%;
+      pointer-events: all;
+    }
+  }
+}
+
+@mixin on-circle($item-count) {
+  $angle: math.div(360, $item-count);
+  $rot: 0;
+
+  // rotation and tooltip placement
+  @for $i from 1 through $item-count {
+    &:nth-child(#{$i}) {
+      transform: rotate($rot * 1deg);
+
+      @if $i - 1 <= math.div($item-count, 2) {
+        // first half of players
+        z-index: $item-count - $i + 1;
+
+        // open menu on the left
+        .player > .menu {
+          left: auto;
+          right: 110%;
+          margin-right: 15px;
+
+          &::before {
+            border-left-color: black;
+            border-right-color: transparent;
+            right: auto;
+            left: 100%;
+          }
+        }
+
+        .fold-enter-active,
+        .fold-leave-active {
+          transform-origin: right center;
+        }
+
+        .fold-enter,
+        .fold-leave-to {
+          transform: perspective(200px) rotateY(-90deg);
+        }
+
+        // show ability tooltip on the left
+        .ability {
+          right: 120%;
+          left: auto;
+
+          &::before {
+            border-right-color: transparent;
+            border-left-color: black;
+            right: auto;
+            left: 100%;
+          }
+        }
+
+        .pronouns {
+          left: 110%;
+          right: auto;
+
+          &::before {
+            border-left-color: transparent;
+            border-right-color: black;
+            left: auto;
+            right: 100%;
+          }
+        }
+      } @else {
+        // second half of players
+        z-index: $i - 1;
+      }
+
+      > * {
+        transform: rotate($rot * -1deg);
+      }
+
+      // animation cascade
+      .life,
+      .token,
+      .shroud,
+      .night-order,
+      .seat {
+        animation-delay: ($i - 1) * 50ms;
+        transition-delay: ($i - 1) * 50ms;
+      }
+
+      // move reminders closer to the sides of the circle
+      $q: math.div($item-count, 4);
+      $x: $i - 1;
+
+      @if $x < $q or ($x >= math.div($item-count, 2) and $x < $q * 3) {
+        .player {
+          margin-bottom: -10% + 20% * (1 - math.div($x % $q, $q));
+        }
+      } @else {
+        .player {
+          margin-bottom: -10% + 20% * math.div($x % $q, $q);
+        }
+      }
+    }
+
+    $rot: $rot + $angle;
+  }
+}
+
+@for $i from 1 through 20 {
+  .circle.size-#{$i} > li {
+    @include on-circle($item-count: $i);
+  }
+}
+
+/***** Demon bluffs / Fabled *******/
+#townsquare > .bluffs,
+#townsquare > .fabled {
+  position: absolute;
+
+  &.bluffs {
+    bottom: 10px;
+  }
+
+  &.fabled {
+    top: 10px;
+  }
+
+  left: 10px;
+  background: $surface-panel;
+  border-radius: $radius-panel;
+  border: $border-panel;
+  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 50%));
+  transform-origin: bottom left;
+  transform: scale(1);
+  opacity: 1;
+  transition: all $duration-fast ease-in-out;
+  z-index: 50;
+
+  > svg {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+
+    &:hover {
+      color: red;
+    }
+  }
+
+  h3 {
+    margin: 5px 1vh 0;
+    display: flex;
+    align-items: center;
+    place-content: center center;
+
+    span {
+      flex-grow: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    svg {
+      cursor: pointer;
+      flex-grow: 0;
+
+      &.fa-times-circle {
+        margin-left: 0;
+      }
+
+      &.fa-plus-circle {
+        margin-left: 0;
+        display: none;
+      }
+
+      &:hover path {
+        fill: url("#demon");
+        stroke-width: 30px;
+        stroke: white;
+      }
+    }
+  }
+
+  ul {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    li {
+      margin: 0 0.5%;
+      display: inline-block;
+      transition: all 250ms;
+    }
+  }
+
+  &.closed {
+    svg.fa-times-circle {
+      display: none;
+    }
+
+    svg.fa-plus-circle {
+      display: block;
+    }
+
+    ul li {
+      width: 0;
+      height: 0;
+
+      .night-order {
+        opacity: 0;
+      }
+
+      .token {
+        border-width: 0;
+      }
+    }
+  }
+}
+
+#townsquare > .donation {
+  position: absolute;
+  top: calc(50px + 16vh);
+  left: 10px;
+  height: 2rem;
+  width: 4rem;
+  z-index: 50;
+  text-decoration: none;
+
+  // Outer border style
+  border: 2px solid #b67d43; /* A dark, textured border for the outer frame */
+  background-color: rgb(0 0 0 / 100%);
+  padding: 10px 20px;
+  color: inherit;
+  cursor: pointer;
+
+  span {
+    position: absolute;
+    top: 0.05rem;
+    left: 0.7rem;
+    white-space: nowrap;
+    font-size: 1.2rem;
+  }
+
+  box-shadow: 0 0 5px #b67d43;
+  animation: glow-cycle 605s linear; /* 10m duration */
+  animation-delay: 1s;
+}
+
+// The keyframe animation for 10 minutes oscillation
+@keyframes glow-cycle {
+  0% {
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  0.0826% {
+    // Peak of the 1st pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.165% {
+    // End of the 1st pulse
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  0.247% {
+    // Peak of the 2nd pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.33% {
+    // End of the 2nd pulse
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  0.413% {
+    // Peak of the 3rd pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.495% {
+    // End of the 3rd pulse
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  0.578% {
+    // Peak of the 4th pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.66% {
+    // End of the 4th pulse
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  0.743% {
+    // Peak of the 5th pulse
+    box-shadow: 0 0 20px #dab060;
+    border-color: #dab060;
+  }
+
+  0.826% {
+    // End of the 5th pulse, which is 5 seconds in
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+
+  100% {
+    // The rest of the 10-minute duration is spent here
+    box-shadow: 0 0 5px #b67d43;
+    border-color: #b67d43;
+  }
+}
+
+#townsquare.public > .bluffs {
+  opacity: 0;
+  transform: scale(0.1);
+}
+
+.fabled ul li .token::before {
+  content: " ";
+  opacity: 0;
+  transition: opacity 250ms;
+  background-image: url("../assets/icons/x.png");
+  z-index: 2;
+}
+
+// New message bubble
+/* stylelint-disable-next-line selector-class-pattern -- template-bound legacy class. */
+.fabled ul li .newMessage {
+  position: absolute;
+  right: 2%;
+  top: 1%;
+  background: $color-notification;
+  border-radius: 100%;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  font-size: 80%;
+}

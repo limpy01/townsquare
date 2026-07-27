@@ -1,11 +1,11 @@
 <template>
   <Modal
     class="characters"
-    @close="toggleModal('reference')"
+    @close="modals.toggle('reference')"
     v-if="modals.reference && roles.size"
   >
     <font-awesome-icon
-      @click="toggleModal('nightOrder')"
+      @click="modals.toggle('nightOrder')"
       icon="cloud-moon"
       class="toggle"
       title="Show Night Order"
@@ -45,15 +45,13 @@
               backgroundImage: `url(${
                 role.image && grimoire.isImageOptIn
                   ? role.image
-                  : require('../../assets/icons/' +
-                      (role.imageAlt || role.id.replace(/old1$/, '')) +
-                      '.png')
-              })`
+                  : iconImage(role.imageAlt || role.id.replace(/old1$/, ''))
+              })`,
             }"
           ></span>
           <div class="role">
             <span class="player" v-if="Object.keys(playersByRole).length">{{
-              playersByRole[role.id] ? playersByRole[role.id].join(", ") : ""
+              (playersByRole[role.id] ?? []).join(", ")
             }}</span>
             <span class="name">{{ role.name }}</span>
             <span class="ability">{{ role.ability }}</span>
@@ -71,37 +69,38 @@
       <ul>
         <li v-for="(jinx, index) in jinxed" :key="index">
           <span
-            v-if="jinx.first"
+            v-if="jinx.first && jinx.second"
             class="icon"
             :style="{
-              backgroundImage: `url(${require('../../assets/icons/' +
-                (jinx.first.imageAlt || jinx.first.id.replace(/old1$/, '')) +
-                '.png')})`
+              backgroundImage: `url(${iconImage(
+                jinx.first.imageAlt || jinx.first.id.replace(/old1$/, ''),
+              )})`,
             }"
           ></span>
           <span
             v-else
             class="icon"
             :style="{
-              backgroundImage: `url(${require('../../assets/icons/custom.png')})`
+              backgroundImage: `url(${iconImage('custom')})`,
             }"
           ></span>
-          <span v-if="jinx.first"
+          <span
+            v-if="jinx.first && jinx.second"
             class="icon"
             :style="{
-              backgroundImage: `url(${require('../../assets/icons/' +
-                (jinx.second.imageAlt || jinx.second.id.replace(/old1$/, '')) +
-                '.png')})`
+              backgroundImage: `url(${iconImage(
+                jinx.second.imageAlt || jinx.second.id.replace(/old1$/, ''),
+              )})`,
             }"
           ></span>
           <div class="role">
-            <span v-if="jinx.first" class="name"
+            <span v-if="jinx.first && jinx.second" class="name"
               >{{ jinx.first.name }} & {{ jinx.second.name }}</span
             >
-            <span v-else class="name"
-              >{{ jinx.name }}</span
-            >
-            <span v-if="jinx.first" class="ability">{{ jinx.reason }}</span>
+            <span v-else class="name">{{ jinx.name }}</span>
+            <span v-if="jinx.first && jinx.second" class="ability">{{
+              jinx.reason
+            }}</span>
             <span v-else class="ability">{{ jinx.ability }}</span>
           </div>
         </li>
@@ -112,107 +111,126 @@
   </Modal>
 </template>
 
-<script>
-import Modal from "./Modal";
-import { mapMutations, mapState } from "vuex";
+<script setup lang="ts">
+import { computed } from "vue";
+import { iconImage } from "../../assets/images";
+import Modal from "./Modal.vue";
+import { useGrimoireStore } from "../../stores/grimoire";
+import { useModalStore } from "../../stores/modals";
+import { usePlayersStore } from "../../stores/players";
+import { useScenarioStore } from "../../stores/scenario";
+import type { ScenarioCatalogRole } from "@townsquare/domain";
 
-export default {
-  components: {
-    Modal
-  },
-  computed: {
-    /**
-     * Return a list of jinxes in the form of role IDs and a reason
-     * @returns {*[]} [{first, second, reason}]
-     */
-    jinxed: function() {
-      const jinxed = [];
-      const jinxNames = ["jinxes", "jinxed", "jinx", "hatred", "hate"];
-      this.roles.forEach(role => {
-        if (jinxNames.includes(role.team)) {
-          jinxed.push(role);
-        }
-        if (this.jinxes.get(role.id)) {
-          this.jinxes.get(role.id).forEach((reason, second) => {
-            if (this.roles.get(second)) {
-              jinxed.push({
-                first: role,
-                second: this.roles.get(second),
-                reason
-              });
-            }
-          });
-        }
-        const jinxName = Object.keys(role).find(key => jinxNames.includes(key));
-        if (jinxName) {
-          role[jinxName].forEach((item) => {
-            if (this.roles.get(item.id.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""))) {
-              jinxed.push({
-                first: role,
-                second: this.roles.get(item.id.toLocaleLowerCase().replace(/[^a-z0-9]/g, "")),
-                reason: item.reason
-              });
-            }
-          });
-        }
-      });
-      return jinxed;
-    },
-    rolesGrouped: function() {
-      const rolesGrouped = {};
-      this.roles.forEach(role => {
-        if (!rolesGrouped[role.team]) {
-          rolesGrouped[role.team] = [];
-        }
-        rolesGrouped[role.team].push(role);
-      });
-      delete rolesGrouped["traveler"];
-      delete rolesGrouped["jinxed"];
-      delete rolesGrouped["jinxes"];
-      delete rolesGrouped["jinx"];
-      delete rolesGrouped["hatred"];
-      delete rolesGrouped["hate"];
-      return rolesGrouped;
-    },
-    // states: function() {
-    //   var statePresent = false;
-    //   if (key == "state"){
-    //   statePresent = true;
-    //   Vue.set(rolesCn, "状态", value);
-    // }else if (key == "status" && !statePresent){
-    //   Vue.set(rolesCn, "状态", value);
-    // }
-    // },
-    playersByRole: function() {
-      const players = {};
-      this.players.forEach(({ name, role }) => {
-        if (role && role.id && role.team !== "traveler") {
-          if (!players[role.id]) {
-            players[role.id] = [];
-          }
-          players[role.id].push(name);
-        }
-      });
-      return players;
-    },
-    ...mapState(["roles", "modals", "edition", "grimoire", "jinxes", "states", "teamsNames"]),
-    ...mapState("players", ["players"])
-  },
-  methods: {
-    ...mapMutations(["toggleModal"])
-  }
+type ReferenceRole = ScenarioCatalogRole & {
+  name?: string;
+  ability?: string;
+  image?: string;
+  imageAlt?: string;
 };
 
+type ReferenceState = Record<string, string>;
+type JinxEntry = {
+  first?: ReferenceRole;
+  second?: ReferenceRole;
+  reason?: string;
+  name?: string;
+  ability?: string;
+};
+
+const jinxNames = ["jinxes", "jinxed", "jinx", "hatred", "hate"];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const asReferenceState = (value: unknown): ReferenceState | null => {
+  if (!isRecord(value)) return null;
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string",
+  );
+  return entries.length ? Object.fromEntries(entries) : null;
+};
+
+const modals = useModalStore();
+const grimoire = useGrimoireStore();
+const playerState = usePlayersStore();
+const scenario = useScenarioStore();
+const roles = scenario.roles as Map<string, ReferenceRole>;
+const jinxes = scenario.jinxes;
+const edition = computed(() => scenario.edition);
+const states = computed(() =>
+  scenario.states.flatMap((state) => {
+    const normalized = asReferenceState(state);
+    return normalized ? [normalized] : [];
+  }),
+);
+const teamsNames = scenario.teamsNames;
+
+const jinxed = computed(() => {
+  const result: JinxEntry[] = [];
+  roles.forEach((role) => {
+    if (jinxNames.includes(role.team)) result.push(role);
+
+    jinxes.get(role.id)?.forEach((reason, second) => {
+      const secondRole = roles.get(second);
+      if (secondRole) result.push({ first: role, second: secondRole, reason });
+    });
+
+    const jinxName = Object.keys(role).find((key) => jinxNames.includes(key));
+    const entries = jinxName ? role[jinxName] : undefined;
+    if (!Array.isArray(entries)) return;
+    entries.filter(isRecord).forEach((item) => {
+      if (typeof item.id !== "string") return;
+      const secondRole = roles.get(
+        item.id.toLocaleLowerCase().replace(/[^a-z0-9]/g, ""),
+      );
+      if (secondRole) {
+        result.push({
+          first: role,
+          second: secondRole,
+          ...(typeof item.reason === "string" ? { reason: item.reason } : {}),
+        });
+      }
+    });
+  });
+  return result;
+});
+
+const rolesGrouped = computed(() => {
+  const grouped: Record<string, ReferenceRole[]> = {};
+  roles.forEach((role) => (grouped[role.team] ??= []).push(role));
+  for (const team of [
+    "traveler",
+    "jinxed",
+    "jinxes",
+    "jinx",
+    "hatred",
+    "hate",
+  ]) {
+    delete grouped[team];
+  }
+  return grouped;
+});
+
+const playersByRole = computed(() => {
+  const grouped: Record<string, string[]> = {};
+  playerState.players.forEach(({ name, role }) => {
+    if (role?.id && role.team !== "traveler") {
+      (grouped[role.id] ??= []).push(name);
+    }
+  });
+  return grouped;
+});
 </script>
 
 <style lang="scss" scoped>
-@import "../../vars.scss";
+@use "../../vars.scss" as *;
 
 .toggle {
   position: absolute;
   left: 20px;
   top: 15px;
   cursor: pointer;
+
   &:hover {
     color: red;
   }
@@ -220,6 +238,7 @@ export default {
 
 h3 {
   margin: 0 40px;
+
   svg {
     vertical-align: middle;
   }
@@ -229,30 +248,37 @@ h3 {
   .name {
     color: $townsfolk;
   }
+
   aside {
     background: linear-gradient(-90deg, $townsfolk, transparent);
   }
 }
+
 .outsider {
   .name {
     color: $outsider;
   }
+
   aside {
     background: linear-gradient(-90deg, $outsider, transparent);
   }
 }
+
 .minion {
   .name {
     color: $minion;
   }
+
   aside {
     background: linear-gradient(-90deg, $minion, transparent);
   }
 }
+
 .demon {
   .name {
     color: $demon;
   }
+
   aside {
     background: linear-gradient(-90deg, $demon, transparent);
   }
@@ -262,20 +288,23 @@ h3 {
   .name {
     color: $fabled;
   }
+
   aside {
     background: linear-gradient(-90deg, $fabled, transparent);
   }
 }
 
 .state {
-  .explain{
+  .explain {
     left: 18px;
   }
+
   .name {
-    color: #CC04FF;
+    color: #cc04ff;
   }
+
   aside {
-    background: linear-gradient(-90deg, #CC04FF, transparent)
+    background: linear-gradient(-90deg, #cc04ff, transparent);
   }
 }
 
@@ -283,6 +312,7 @@ h3 {
   .name {
     display: block;
   }
+
   aside {
     visibility: hidden;
   }
@@ -292,24 +322,25 @@ h3 {
   display: flex;
   align-items: stretch;
   width: 100%;
-  &:not(:last-child):after {
+
+  &:not(:last-child)::after {
     content: " ";
     display: block;
     width: 25%;
     height: 1px;
-    background: linear-gradient(90deg, #ffffffaa, transparent);
+    background: linear-gradient(90deg, #fffa, transparent);
     position: absolute;
     left: 0;
     bottom: 0;
   }
+
   aside {
     width: 30px;
     display: flex;
     flex-grow: 0;
     flex-shrink: 0;
     align-items: center;
-    justify-content: center;
-    align-content: center;
+    place-content: center center;
     overflow: hidden;
     text-shadow: 0 0 4px black;
   }
@@ -340,32 +371,38 @@ ul {
     align-items: center;
     flex-grow: 1;
     width: 420px;
+
     .icon {
       width: 8vh;
       background-size: cover;
       background-position: 0 -5px;
       flex-shrink: 0;
       flex-grow: 0;
-      &:after {
+
+      &::after {
         content: " ";
         display: block;
         padding-top: 75%;
       }
     }
+
     .role {
       line-height: 80%;
       flex-grow: 1;
     }
+
     .name {
       font-weight: bold;
       font-size: 75%;
       display: block;
     }
+
     .player {
       color: #888;
       float: right;
       font-size: 60%;
     }
+
     .ability {
       font-size: 70%;
     }
@@ -374,26 +411,31 @@ ul {
 
 /** break into 1 column below 1200px **/
 // @media screen and (max-width: 1199.98px) {
-@media screen and (max-width: 1199.98px) {
+@media screen and (width <= 1199.98px) {
   .modal {
     max-height: 95%;
     max-width: 80%;
     position: static;
   }
+
   ul {
     li {
       .icon {
         width: 6vh;
       }
+
       .role {
         line-height: 100%;
       }
+
       .name {
         font-size: 100%;
       }
+
       .player {
         font-size: 100%;
       }
+
       .ability {
         font-size: 90%;
       }
@@ -402,7 +444,7 @@ ul {
 }
 
 /** trim icon size on maximized one-column sheet **/
-@media screen and (max-width: 991.98px) {
+@media screen and (width <= 991.98px) {
   .characters .modal.maximized ul li .icon {
     width: 5.1vh;
   }

@@ -1,0 +1,19 @@
+$fabled: #ffe91f;
+$townsfolk: #1f65ff;
+$outsider: #46d5ff;
+$minion: #ff6900;
+$demon: #ce0100;
+$traveler: #cc04ff;
+
+// Shared static chrome. Keep these as Sass tokens until a runtime theme needs
+// CSS custom properties; they compile to the existing visual values.
+$surface-panel: rgb(0 0 0 / 50%);
+$surface-modal: rgb(0 0 0 / 80%);
+$surface-modal-maximized: rgb(0 0 0 / 95%);
+$border-panel: 3px solid black;
+$radius-panel: 10px;
+$shadow-panel: 0 0 10px rgb(0 0 0 / 50%);
+$shadow-panel-solid: 0 0 10px black;
+$shadow-popover: 0 0 5px rgb(0 0 0 / 50%);
+$color-notification: rgb(255 51 85);
+$duration-fast: 200ms;

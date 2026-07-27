@@ -1,0 +1,22 @@
+@mixin phone-landscape {
+  #townsquare .player > .name {
+    top: 0;
+  }
+
+  #townsquare .player > .menu {
+    bottom: 0;
+
+    &::before {
+      bottom: 0;
+    }
+  }
+}
+
+@mixin touch {
+  #townsquare .circle li .reminder.add {
+    opacity: 1;
+    top: 0;
+    width: 35%;
+    padding-bottom: 35%;
+  }
+}
