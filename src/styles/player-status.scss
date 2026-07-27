@@ -183,7 +183,7 @@
   top: 1%;
   z-index: 3;
   pointer-events: none;
-  background: rgb(255, 51, 85);
+  background: $color-notification;
   border-radius: 100%;
   width: 20px;
   height: 20px;
@@ -215,11 +215,11 @@
   cursor: pointer;
   white-space: nowrap;
   width: 120%;
-  background: rgba(0, 0, 0, 0.5);
-  border: 3px solid black;
-  border-radius: 10px;
+  background: $surface-panel;
+  border: $border-panel;
+  border-radius: $radius-panel;
   top: 5px;
-  box-shadow: 0 0 5px black;
+  box-shadow: $shadow-panel-solid;
   padding: 0 4px;
 
   svg {
@@ -251,14 +251,14 @@
     right: 110%;
     max-width: 250px;
     z-index: 25;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 10px;
-    border: 3px solid black;
+    background: $surface-panel;
+    border-radius: $radius-panel;
+    border: $border-panel;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
     align-items: center;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 200ms ease-in-out;
+    transition: opacity $duration-fast ease-in-out;
     padding: 0 4px;
     bottom: -3px;
 
@@ -286,13 +286,13 @@
   bottom: -5px;
   text-align: left;
   white-space: nowrap;
-  background: rgba(0, 0, 0, 0.5);
+  background: $surface-panel;
   padding: 2px 5px;
-  border-radius: 10px;
-  border: 3px solid #000;
+  border-radius: $radius-panel;
+  border: $border-panel;
   margin-left: 15px;
   cursor: pointer;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  box-shadow: $shadow-popover;
 
   &:before {
     content: " ";
@@ -322,4 +322,3 @@
     margin-right: 2px;
   }
 }
-

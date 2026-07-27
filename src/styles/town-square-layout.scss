@@ -150,14 +150,14 @@
     top: 10px;
   }
   left: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 10px;
-  border: 3px solid black;
+  background: $surface-panel;
+  border-radius: $radius-panel;
+  border: $border-panel;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
   transform-origin: bottom left;
   transform: scale(1);
   opacity: 1;
-  transition: all 200ms ease-in-out;
+  transition: all $duration-fast ease-in-out;
   z-index: 50;
 
   > svg {
@@ -348,11 +348,10 @@
   position: absolute;
   right: 2%;
   top: 1%;
-  background: rgb(255, 51, 85);
+  background: $color-notification;
   border-radius: 100%;
   width: 20px;
   height: 20px;
   text-align: center;
   font-size: 80%;
 }
-

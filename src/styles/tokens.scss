@@ -4,3 +4,16 @@ $outsider: #46d5ff;
 $minion: #ff6900;
 $demon: #ce0100;
 $traveler: #cc04ff;
+
+// Shared static chrome. Keep these as Sass tokens until a runtime theme needs
+// CSS custom properties; they compile to the existing visual values.
+$surface-panel: rgba(0, 0, 0, 0.5);
+$surface-modal: rgba(0, 0, 0, 0.8);
+$surface-modal-maximized: rgba(0, 0, 0, 0.95);
+$border-panel: 3px solid black;
+$radius-panel: 10px;
+$shadow-panel: 0 0 10px rgba(0, 0, 0, 0.5);
+$shadow-panel-solid: 0 0 10px black;
+$shadow-popover: 0 0 5px rgba(0, 0, 0, 0.5);
+$color-notification: rgb(255, 51, 85);
+$duration-fast: 200ms;

@@ -1,3 +1,5 @@
+@use "tokens" as *;
+
 /* chat with ST */
 #townsquare .chatMin {
   position: absolute;
@@ -6,7 +8,7 @@
   transform-origin: bottom right;
   width: 15%;
   height: 5%;
-  border-radius: 10px;
+  border-radius: $radius-panel;
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -37,7 +39,7 @@
   position: absolute;
   left: 40%;
   bottom: 10%;
-  background: rgb(255, 51, 85);
+  background: $color-notification;
   border-radius: 100%;
   width: 20px;
   height: 20px;
@@ -53,7 +55,7 @@
   background-color: #0000007f;
   // width: 30%;
   // height: 40%;
-  border-radius: 10px;
+  border-radius: $radius-panel;
   border: 3px solid #8a7864;
   z-index: 60;
   display: flex;
@@ -64,7 +66,7 @@
   position: absolute;
   left: 50%;
   bottom: 10%;
-  background: rgb(255, 51, 85);
+  background: $color-notification;
   border-radius: 100%;
   width: 20px;
   height: 20px;

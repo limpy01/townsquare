@@ -6,7 +6,7 @@
   width: 100%;
   cursor: pointer;
   opacity: 1;
-  transition: opacity 200ms;
+  transition: opacity $duration-fast;
   display: flex;
   top: 0;
   align-items: center;
@@ -34,14 +34,14 @@
     width: 350px;
     z-index: 25;
     font-size: 70%;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 10px;
-    border: 3px solid black;
+    background: $surface-panel;
+    border-radius: $radius-panel;
+    border: $border-panel;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
     text-align: left;
     align-items: center;
     opacity: 0;
-    transition: opacity 200ms ease-in-out;
+    transition: opacity $duration-fast ease-in-out;
 
     &:before {
       transform: rotate(-90deg);
@@ -105,7 +105,7 @@
     font-weight: bold;
     opacity: 1;
     pointer-events: all;
-    transition: opacity 200ms;
+    transition: opacity $duration-fast;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -142,4 +142,3 @@
     }
   }
 }
-

@@ -1,12 +1,14 @@
+@use "tokens" as *;
+
 .intro {
   text-align: center;
   width: 50%;
   font-size: 120%;
   position: absolute;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 3px solid black;
-  border-radius: 10px;
+  background: $surface-panel;
+  border: $border-panel;
+  border-radius: $radius-panel;
   z-index: 3;
   display: flex;
   justify-content: center;
@@ -21,9 +23,9 @@
     top: 100%;
     margin-top: 2vh;
     padding: 10px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 3px solid black;
-    border-radius: 10px;
+    background: $surface-panel;
+    border: $border-panel;
+    border-radius: $radius-panel;
     &:hover {
       color: red;
     }
@@ -41,8 +43,8 @@
     margin-bottom: 2vh;
     max-width: 192px;
     border-radius: 50%;
-    box-shadow: 0 0 10px black;
-    border: 3px solid black;
+    box-shadow: $shadow-panel-solid;
+    border: $border-panel;
   }
   .footer {
     font-size: 60%;

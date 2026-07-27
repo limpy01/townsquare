@@ -1,6 +1,6 @@
 # 现代化迁移状态看板
 
-最后更新：2026-07-27（MIG-058 已完成：响应式规则已归属至样式域并由无选择器编排层保持原顺序；聊天等全局覆盖层已收口至魔典根节点）
+最后更新：2026-07-27（MIG-059 已完成：面板视觉常量已建立为编译期 Sass token，并替换魔典与玩家样式域中明确重复的值）
 历史基线提交：`e0f1d34`
 本次复盘基线：MIG-054（多客户端核心会话链路）
 详细复盘：[`migration-review.md`](./migration-review.md)
@@ -48,6 +48,7 @@ MIG-049 至 MIG-055 的 transport、persistence、legacy bridge、socket 领域�
 | MIG-056 | 已完成 | 归档魔典全局样式                             | MIG-055  | `TownSquare.vue` 的根布局、夜间顺序与聊天/公告等覆盖层样式分别迁入 `town-square-layout.scss`、`night-order.scss` 与 `town-square-overlays.scss`；保留原有 Sass 输出顺序、DOM、选择器和值 |
 | MIG-057 | 已完成 | 归档玩家座位全局样式                         | MIG-056  | `Player.vue` 的座位骨架、状态/投票标记和提醒标记样式分别迁入 `player-seat.scss`、`player-status.scss` 与 `player-reminders.scss`；保留原有 Sass 输出顺序、DOM、选择器和值 |
 | MIG-058 | 已完成 | 收口全局响应式与覆盖层边界                   | MIG-057  | 字体、菜单、玩家和魔典响应式规则迁入各自的 `*-responsive.scss`，`media.scss` 仅按历史顺序编排 mixin；聊天、折叠与触控提醒选择器限制在 `#townsquare`/`#townsquare-app` 根节点；重复的 `#version` 声明并入实际拥有节点的 TownSquare 覆盖层 |
+| MIG-059 | 已完成 | 建立渐进式静态视觉 token                     | MIG-058  | `tokens.scss` 新增面板表面、边框、圆角、阴影、提示色与短动画时长等 Sass token；仅替换魔典/玩家样式域中视觉值完全一致的重复声明，不扩张未被运行时主题消费的 CSS 自定义属性 |
 
 ### 当前阻塞与风险
 
