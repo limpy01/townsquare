@@ -1,0 +1,135 @@
+/***** Ability text *****/
+#townsquare.public .circle .ability {
+  display: none;
+}
+.circle .player .shroud:hover ~ .token .ability,
+.circle .player .token:hover .ability {
+  opacity: 1;
+}
+
+/**** Night reminders ****/
+.player .night-order {
+  z-index: 3;
+}
+
+.player.dead .night-order em {
+  color: #ddd;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, gray 100%);
+}
+
+/***** Reminder token *****/
+.circle .reminder {
+  background: url("../assets/reminder.png") center center;
+  background-size: 100%;
+  width: 50%;
+  height: 0;
+  padding-bottom: 50%;
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 5px 0 0 -25%;
+  border-radius: 50%;
+  border: 3px solid black;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  transition: all 200ms;
+  cursor: pointer;
+
+  .text {
+    line-height: 90%;
+    color: black;
+    font-size: 50%;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 50%;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 15%;
+    text-shadow:
+      0 1px 1px #f6dfbd,
+      0 -1px 1px #f6dfbd,
+      1px 0 1px #f6dfbd,
+      -1px 0 1px #f6dfbd;
+  }
+
+  .icon,
+  &:after {
+    content: " ";
+    position: absolute;
+    top: 0;
+    width: 90%;
+    height: 90%;
+    background-size: 100%;
+    background-position: center 0;
+    background-repeat: no-repeat;
+    background-image: url("../assets/icons/plus.png");
+    transition: opacity 200ms;
+  }
+
+  &:after {
+    background-image: url("../assets/icons/x.png");
+    opacity: 0;
+    top: 5%;
+  }
+
+  &.add {
+    opacity: 0;
+    top: 30px;
+    &:after {
+      display: none;
+    }
+    .icon {
+      top: 5%;
+    }
+  }
+
+  &.custom {
+    .icon {
+      display: none;
+    }
+    .text {
+      font-size: 70%;
+      word-break: break-word;
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      align-content: center;
+      justify-content: center;
+      border-radius: 50%;
+      top: 0;
+    }
+  }
+
+  &:hover:before {
+    opacity: 0;
+  }
+  &:hover:after {
+    opacity: 1;
+  }
+}
+
+.circle .reminderHoverTarget {
+  opacity: 0;
+  width: calc(50% + 8px);
+  padding-top: calc(50% + 38px);
+  margin-top: calc(-25% - 33px);
+  margin-left: calc(-25% - 1px);
+  border-radius: 0 0 999px 999px;
+  pointer-events: auto;
+  transform: none !important;
+  z-index: -1;
+}
+
+.circle li:hover .reminder.add {
+  opacity: 1;
+  top: 0;
+}
+.circle li:hover .reminder.add:before {
+  opacity: 1;
+}
+
+#townsquare.public .reminder {
+  opacity: 0;
+  pointer-events: none;
+}
