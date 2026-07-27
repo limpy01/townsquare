@@ -63,6 +63,19 @@ describe("session socket message decoder", () => {
     expect(encodeSessionMessage("feedback", 42, 42)).toBe('["feedback",42,42]');
   });
 
+  it("uses the v1 direct-empty recipient for room-wide game-state delivery", () => {
+    const session = new LiveSession();
+    const send = vi.spyOn(session, "_send");
+
+    session._sendDirect("", "gs", { gamestate: [] });
+
+    expect(send).toHaveBeenCalledWith(
+      "direct",
+      { "": ["gs", { gamestate: [] }] },
+      false,
+    );
+  });
+
   it("releases ping and outbound queue timers when disconnected", () => {
     vi.useFakeTimers();
     const session = new LiveSession();
@@ -275,7 +288,7 @@ describe("session socket message decoder", () => {
       .mockResolvedValue(true);
 
     session.checkAllowJoin();
-    await vi.advanceTimersByTimeAsync(1_000);
+    await vi.advanceTimersByTimeAsync(6_000);
 
     expect(showInputModal).toHaveBeenCalledWith({
       inputType: "alert",

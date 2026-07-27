@@ -397,7 +397,7 @@ export class LiveSession {
     params: unknown,
     feedback: LegacyFeedback = false,
   ) {
-    if (playerId) {
+    if (playerId !== null && playerId !== undefined) {
       this._send("direct", { [playerId]: [command, params] }, feedback);
     } else {
       this._send(command, params, feedback);
@@ -890,7 +890,7 @@ export class LiveSession {
         this._identity.setSessionId("");
         this._identity.setSpectator(false);
       }
-    }, 1000);
+    }, 6000);
   }
 
   /**

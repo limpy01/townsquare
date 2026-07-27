@@ -131,6 +131,18 @@ test("forwards host broadcasts and player messages to the storyteller", async (t
     [0, "player-a", "Player"],
     false,
   ]);
+
+  host.send(["nomination", [0, 1]]);
+  assert.deepEqual(await player.next((message) => message[0] === "nomination"), [
+    "nomination",
+    [0, 1],
+  ]);
+
+  player.send(["vote", [0, true, false]]);
+  assert.deepEqual(await host.next((message) => message[0] === "vote"), [
+    "vote",
+    [0, true, false],
+  ]);
 });
 
 test("preserves v1 role delivery, voting, and group chat message shapes", async (t) => {

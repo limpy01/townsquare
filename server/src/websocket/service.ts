@@ -340,8 +340,14 @@ export function createWebsocketService({
       if (command === "direct")
         return handleDirect(socket, currentRoom, params, feedback);
       if (command === "uploadFile") return handleUpload(socket, params);
-      if (!socket.isHost && !["ping", "setTalking"].includes(command)) return;
-      broadcast(currentRoom, socket, message, command === "ping");
+      if (!socket.isHost && !["ping", "setTalking", "vote"].includes(command))
+        return;
+      broadcast(
+        currentRoom,
+        socket,
+        rawMessage,
+        command === "ping" || !socket.isHost,
+      );
     });
     socket.on("close", () => {
       const currentRoom = rooms.get(socket.roomId);
