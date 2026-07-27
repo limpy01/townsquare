@@ -1,8 +1,8 @@
 # 现代化迁移状态看板
 
-最后更新：2026-07-26（MIG-049/050/052/053 已完成：transport 行为边界已锁定，socket 已直接使用 Pinia，legacy command/runtime bridge 已删除，业务领域已拆为独立会话控制器）
+最后更新：2026-07-27（MIG-054 已完成：多客户端座位认领/离开、重连与角色分发 E2E、v1 投票/群聊协议集成，以及连接状态机和 session controller 回归均已补充）
 历史基线提交：`e0f1d34`
-本次复盘 HEAD：`50d1fe0`
+本次复盘基线：MIG-054（多客户端核心会话链路）
 详细复盘：[`migration-review.md`](./migration-review.md)
 
 ## 迁移目标
@@ -33,22 +33,23 @@
 
 ## 当前执行队列
 
-MIG-049 至 MIG-053 的 transport、persistence、legacy bridge 与 socket 领域收口均已完成。后续迁移工作转入测试矩阵、样式/资源治理和交付演练。
+MIG-049 至 MIG-054 的 transport、persistence、legacy bridge、socket 领域收口与首个多客户端业务链路均已完成。后续迁移工作转入扩展业务测试矩阵、样式/资源治理和交付演练。
 
-| ID      | 状态   | 目标                                         | 前置条件 | 验收                                                                                                                                                                          |
-| ------- | ------ | -------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MIG-048 | 已完成 | 在 Node 24.18.0 下重建可信基线，并校准账本   | 无       | Node 24.18.0 / npm 11.9.0 下 `npm ci`、类型检查、单元、集成、E2E、视觉与构建均通过                                                                                            |
-| MIG-049 | 已完成 | 为会话 transport 增加 characterization tests | MIG-048  | 连接、异常/正常关闭、重连、join timeout、timer、outbox 顺序及 player/voting 入站状态机均由单测锁定，保持 v1 协议                                                              |
-| MIG-050 | 已完成 | 拆分 session transport                       | MIG-049  | URL、timing、WebSocket client、reconnect policy、outbox controller 与五个入站领域 handler 已独立且有单测；socket 只保留协议编排                                               |
-| MIG-051 | 已完成 | 建立独立的 persistence repository            | MIG-050  | 初始化恢复、旧值解析、写入投影与类型边界已独立；`persistence.ts` 缩至 19 行浏览器适配器；旧存档、损坏值、迁移失败、群聊/投票/角色状态回归通过                                 |
-| MIG-052 | 已完成 | 删除 legacy command/effect/mutation bridge   | MIG-051  | 已删除 `legacy-effects`、`mutation-bus`、`legacy-commands.ts`、runtime projection 及全部旧 command 调用；socket、组件、持久化 hydration 与大厅 transport 均直接消费 Pinia     |
-| MIG-053 | 已完成 | 按领域收口 session socket                    | MIG-052  | 聊天、投票、游戏状态、玩家状态、角色/魔典投递和席位领域已迁为独立 controller；`socket.ts` 缩至约 1,323 行，仅保留协议收发、连接生命周期与跨领域协调；保持 v1 协议与持久化格式 |
+| ID      | 状态   | 目标                                         | 前置条件 | 验收                                                                                                                                                                                                                       |
+| ------- | ------ | -------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MIG-048 | 已完成 | 在 Node 25.3.0 下重建可信基线，并校准账本    | 无       | Node 25.3.0 / npm 11.9.0 下 `npm ci`、类型检查、单元、集成、E2E、视觉与构建均通过                                                                                                                                          |
+| MIG-049 | 已完成 | 为会话 transport 增加 characterization tests | MIG-048  | 连接、异常/正常关闭、重连、join timeout、timer、outbox 顺序及 player/voting 入站状态机均由单测锁定，保持 v1 协议                                                                                                           |
+| MIG-050 | 已完成 | 拆分 session transport                       | MIG-049  | URL、timing、WebSocket client、reconnect policy、outbox controller 与五个入站领域 handler 已独立且有单测；socket 只保留协议编排                                                                                            |
+| MIG-051 | 已完成 | 建立独立的 persistence repository            | MIG-050  | 初始化恢复、旧值解析、写入投影与类型边界已独立；`persistence.ts` 缩至 19 行浏览器适配器；旧存档、损坏值、迁移失败、群聊/投票/角色状态回归通过                                                                              |
+| MIG-052 | 已完成 | 删除 legacy command/effect/mutation bridge   | MIG-051  | 已删除 `legacy-effects`、`mutation-bus`、`legacy-commands.ts`、runtime projection 及全部旧 command 调用；socket、组件、持久化 hydration 与大厅 transport 均直接消费 Pinia                                                  |
+| MIG-053 | 已完成 | 按领域收口 session socket                    | MIG-052  | 聊天、投票、游戏状态、玩家状态、角色/魔典投递和席位领域已迁为独立 controller；`socket.ts` 缩至约 1,323 行，仅保留协议收发、连接生命周期与跨领域协调；保持 v1 协议与持久化格式                                              |
+| MIG-054 | 已完成 | 锁定多客户端会话核心流程与 controller 边界   | MIG-053  | Playwright 覆盖说书人建房、第二浏览器加入、认领/离开座位、重连及角色分发；服务端集成覆盖提名、秘密投票、投票、结束提名与群聊 v1 payload；socket/controller 单测覆盖座位确认同步、outbox、timer、重连、投票、角色和群聊动作 |
 
 ### 当前阻塞与风险
 
-- `socket.ts` 已完成业务领域收口，但连接、授权、重连、ping/pong、outbox 与 timer 的协议编排仍需提高专属覆盖率；
-- 入口 JS 距预算上限仅约 1.3 KB，新的功能或依赖可能立即导致构建失败；
-- E2E、移动端视觉、旧客户端交叉兼容与生产发布演练尚不足；
+- `socket.ts` 的连接、授权 timeout、重连、ping/pong、outbox 顺序/去重与 timer 清理已有专属回归；其余 controller（特别是 chat、player delivery、voting 与 game-state）的 lines/branches 覆盖仍需持续提升；
+- 非首屏 modal 已改为按需加载；当前入口 JS 为 1,692,889 bytes。按当前决定，JS 门禁暂调为 2 MB（仍比原 1.8 MB 门禁低约 107 KB）；后续资源治理阶段须重新收紧该临时门槛；
+- 已有首个多客户端 E2E；移动端视觉、完整投票 UI、私聊/群聊 UI、旧客户端交叉兼容与生产发布演练仍不足；
 - 是否需要迁入 `apps/web`、`apps/server` workspace 尚未决策；MIG-048 的结论是保持当前目录，待 transport 与 persistence 风险收敛后再单独修订规划或实施目录重排。
 
 ## 已完成工作单元（历史索引）
@@ -106,17 +107,17 @@ MIG-049 至 MIG-053 的 transport、persistence、legacy bridge 与 socket 领�
 
 ## 当前验证基线
 
-- 项目固定 Node `25.3.0` 和 npm `11.9.0`；2026-07-26 已在该版本下执行完整 `npm run check`，其中包括 173 个单元/组件测试、13 个服务端集成、4 个 Chromium E2E、3 个视觉回归和生产构建，全部通过。
-- `npm run test:server` 通过；当前包含 13 个 HTTP、room、lobby、queue、未知 command、嵌套 payload 和版本信息集成测试。
-- `npm run build` 通过；入口 JS 为 1,798,698 bytes / 1,800,000 bytes，入口 CSS 为 249,956 bytes / 260,000 bytes。JS 预算仅余约 1.3 KB，需要优先进行代码拆分。
+- 项目固定 Node `25.3.0` 和 npm `11.9.0`；MIG-054 已在该版本下通过 178 个单元/组件测试、14 个服务端集成和 6 个 Chromium E2E；完整质量门将在本批结尾重新执行。
+- `npm run test:server` 通过；当前包含 14 个 HTTP、room、lobby、queue、v1 角色/投票/群聊 payload、未知 command、嵌套 payload 和版本信息集成测试。
+- `npm run build` 通过；非首屏 modal 改为按需加载后，入口 JS 为 1,692,889 bytes / 2,000,000 bytes，入口 CSS 为 232,873 bytes / 260,000 bytes。JS 门禁为当前批次临时放宽，后续资源治理须收紧。
 - ESLint 当前为 0 error、0 warning；格式基线仍记录 23 个历史文件，Stylelint 仍记录 628 条历史告警。
-- Vitest 当前为 53 个测试文件、173 个测试；上次全局覆盖率为 statements 39.75%、branches 32.01%、functions 58.89%、lines 41.48%，本批新增 persistence、统一游戏事件、Menu、TownSquare、Player 与 Vote 状态机测试，但尚未重新生成全局覆盖报告。contracts/domain 已达到高覆盖率门禁，`socket.ts` 仍仅有 15.14% lines、7.85% branches；persistence 尚未设置专属门禁。
+- Vitest 当前为 54 个测试文件、178 个测试；MIG-054 后全局覆盖率为 statements 49.22%、branches 38.07%、functions 57.10%、lines 52.59%。contracts/domain 已达到高覆盖率门禁；`socket.ts` 当前为 44.44% lines、38.18% branches，连接/重连、timeout、ping/pong、timer 与 outbox 已有专属回归，领域 controller 仍需继续提高覆盖。
 - 当前前端为 Vue 3 + Vite + Pinia；服务端为 TypeScript、Express 5 与 `ws`。历史 Vuex/Vue CLI 记录仅用于说明迁移路径。
 - Playwright `1.61.1`：首页与创建房间流程可在 Chromium 中验证；`test:visual:update` 是唯一可写截图基线的命令，`test:visual` 仅比较。Chromium CI 作业会执行交互与视觉回归，失败时保留 Playwright 报告和追踪产物。
 - MIG-009 已将开发、构建与 E2E 启动链切换到 Vue 3 和 Vite；后续 MIG-010 已完成 Pinia 替换并移除 Vuex。`VITE_API_BASE`/`VITE_WS_BASE` 保持原有后端连接行为，Vue 3 移除的 filter、`$set` 与销毁钩子均已替换。当前视觉测试以 800 像素阈值覆盖首页、创建房间弹窗以及说书人白天/夜晚状态。
 - `MIG-LAW-001` 已补齐：服务端常规启动和 `--version` 均输出版权与 GPL 许可证告知；帮助菜单新增“法律与署名”入口，Playwright 覆盖其弹窗、版权和上游来源文本。
 - 服务端入口已移除 `@ts-nocheck`：为连接、房间、待投递消息、原始 WebSocket 数据、TLS 和监听地址建立了 TypeScript 类型，并继续使用 v1 旧数组 envelope decoder。HTTP/avatar 与完整的 lobby、room、离线消息队列 WebSocket 生命周期已分别拆入独立模块；入口现在只负责配置、HTTP 组装、TLS 与 upgrade 绑定。
-- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、173 个单元/组件测试、13 个 HTTP/WS/CLI 集成测试、4 个浏览器流程、3 个视觉测试和生产构建均会执行；CI 同步运行非浏览器质量门、浏览器流程与视觉回归。
+- `npm run check` 已成为本地整体验收门：格式与 lint 基线、运行时 TypeScript 源码扩展名、TypeScript、178 个单元/组件测试、14 个 HTTP/WS/CLI 集成测试、6 个浏览器流程、3 个视觉测试和生产构建均会执行；CI 同步运行非浏览器质量门、浏览器流程与视觉回归。
 
 ## 历史记录（仅供追溯）
 
@@ -193,7 +194,7 @@ MIG-049 至 MIG-053 的 transport、persistence、legacy bridge 与 socket 领�
 - CI 基线作业现在执行运行时源码扩展名门禁，浏览器作业会执行交互与视觉回归，并保留 Playwright 报告和失败追踪作为构建产物；更新视觉基线仍必须显式运行 `test:visual:update`。
 - 浏览器 session transport 会在调用入站 dispatcher 前使用共享协议 schema 拒绝畸形服务端消息；Vite 在开发期直连该 contracts 子入口，避免 workspace 构建产物过期导致的校验偏差。
 - 遗留 transport 的 Pinia 状态投影已补齐自定义剧本状态、阵营别名和首夜/其他夜顺序；发送完整游戏状态与独立剧本同步命令现在读取到与原 Vuex state 相同的字段。
-- 生产构建会校验当前入口 JS（1.8 MB）和 CSS（260 KB）的基线预算，后续代码拆分或资源优化可以收紧预算，但不会在迁移过程中无声扩大首屏产物。
+- 生产构建会校验当前入口 JS（临时 2 MB）和 CSS（260 KB）的基线预算；当前批次明确放宽 JS 门禁，后续代码拆分或资源优化应重新收紧预算。
 - 样式基础层已开始建立：Sass 阵营色移动到 `styles/tokens`，全局 CSS 变量提供同值映射；现有组件仍经兼容入口读取原变量，避免在 DOM/CSS 归档前改变视觉。
 - Playwright 已覆盖真实创建房间并进入说书人魔典的链路，验证昵称、房间号、座位初始化和本地测试后端的 WebSocket host 授权可以协同完成。
 - 所有前端动态角色与剧本图片现在均经 Vite 的 `import.meta.glob` 资源映射解析，移除了 Webpack `require` 运行时依赖；房主进入魔典时会正确显示剧本图片。
@@ -273,14 +274,14 @@ MIG-049 至 MIG-053 的 transport、persistence、legacy bridge 与 socket 领�
 
 ## 详细风险清单
 
-- `socket.ts` 与各领域 controller 的回归仍需继续扩展，尚未建立连接状态机和领域 controller 的专属覆盖率门槛；
+- `socket.ts` 的连接状态机及各领域 controller 已有专属回归；尚未建立按文件强制执行的覆盖率门槛，chat、player delivery、voting 与 game-state 的分支仍需继续补强；
 - `src/store/socket.ts` 已缩至约 1,323 行，保留会话生命周期与协议协调；聊天、投票、游戏状态、玩家、投递及席位逻辑均已独立；
 - `src/store/persistence.ts` 已缩为 19 行 browser adapter；其 hydration、codec 与 writer 已独立，并经显式游戏事件通道连接外部副作用，但尚未达到专属覆盖率目标；
 - `legacy-effects`、mutation bus、`emitLegacyMutation`、`legacy-commands.ts` 与 runtime store 投影均已删除；Menu、TownSquare、Player、Vote、持久化 hydration、大厅 transport 与 socket 均直接消费 Pinia；
 - Menu、Player 与 TownSquare 仍是约 1,400–1,500 行的展示与交互编排组件，但本批要求的高风险行为域已完成拆分；
-- E2E 尚未覆盖真实玩家加入、认领座位、角色分发、投票、聊天、重连、自定义剧本和旧存档恢复；
+- E2E 已覆盖真实玩家加入、认领/离开座位、重连和角色分发；投票、私聊/群聊目前由 controller 与服务端协议集成锁定，尚未形成完整玩家 UI 的端到端链路；自定义剧本和旧存档恢复仍未覆盖；
 - 视觉回归尚未覆盖玩家视图、主要弹窗和移动端视口；
-- Stylelint 仍有 628 条历史告警，入口 JS 已接近 1.8 MB 预算上限；
+- Stylelint 仍有 628 条历史告警；入口 JS 目前为 1,692,889 bytes，临时门禁为 2 MB，资源治理完成前不应再继续放宽；
 - 服务端限流、payload、origin、graceful shutdown、指标和维护流程尚缺完整验证；
 - 旧客户端交叉兼容、canary、监控、备份和回滚尚无实际演练证据。
 

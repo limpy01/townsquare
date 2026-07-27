@@ -183,6 +183,23 @@ describe("session socket message decoder", () => {
     expect(useSessionIdentityStore(pinia).claimedSeat).toBe(-1);
   });
 
+  it("resynchronizes players after the storyteller confirms a seat change", () => {
+    const session = new LiveSession();
+    (session as unknown as { _isSpectator: boolean })._isSpectator = false;
+    const players = usePlayersStore(pinia);
+    players.add("empty");
+    const sendGamestate = vi.spyOn(session, "sendGamestate");
+
+    session._updateSeat([0, "player-1", "Player", "avatar.webp"]);
+
+    expect(players.players[0]).toMatchObject({
+      id: "player-1",
+      name: "Player",
+      image: "avatar.webp",
+    });
+    expect(sendGamestate).toHaveBeenCalledOnce();
+  });
+
   it("reconnects an interrupted socket after the documented delay", async () => {
     vi.useFakeTimers();
     vi.stubGlobal("WebSocket", FakeWebSocket);

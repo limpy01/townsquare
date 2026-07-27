@@ -48,7 +48,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import {
+  computed,
+  defineAsyncComponent,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+} from "vue";
 import { parseDynamicInitResponse } from "@townsquare/contracts/dynamic-init";
 import { useLobbyStore } from "./stores/lobby";
 import { useInteractionStore } from "./stores/interaction";
@@ -68,21 +74,44 @@ import TownSquare from "./components/TownSquare.vue";
 import TownInfo from "./components/TownInfo.vue";
 import Menu from "./components/Menu.vue";
 import ImageCropper from "./components/ImageCropper.vue";
-import RolesModal from "./components/modals/RolesModal.vue";
-import DrawModal from "./components/modals/DrawModal.vue";
-import EditionModal from "./components/modals/EditionModal.vue";
 import Intro from "./components/Intro.vue";
-import ReferenceModal from "./components/modals/ReferenceModal.vue";
 import Vote from "./components/Vote.vue";
 import Gradients from "./components/Gradients.vue";
-import NightOrderModal from "./components/modals/NightOrderModal.vue";
-import FabledModal from "./components/modals/FabledModal.vue";
-import VoteHistoryModal from "./components/modals/VoteHistoryModal.vue";
-import GameStateModal from "./components/modals/GameStateModal.vue";
 import InputModal from "./components/modals/InputModal.vue";
-import GroupChatModal from "./components/modals/GroupChatModal.vue";
-import VersionModal from "./components/modals/VersionModal.vue";
-import LegalModal from "./components/modals/LegalModal.vue";
+
+const RolesModal = defineAsyncComponent(
+  () => import("./components/modals/RolesModal.vue"),
+);
+const DrawModal = defineAsyncComponent(
+  () => import("./components/modals/DrawModal.vue"),
+);
+const EditionModal = defineAsyncComponent(
+  () => import("./components/modals/EditionModal.vue"),
+);
+const ReferenceModal = defineAsyncComponent(
+  () => import("./components/modals/ReferenceModal.vue"),
+);
+const NightOrderModal = defineAsyncComponent(
+  () => import("./components/modals/NightOrderModal.vue"),
+);
+const FabledModal = defineAsyncComponent(
+  () => import("./components/modals/FabledModal.vue"),
+);
+const VoteHistoryModal = defineAsyncComponent(
+  () => import("./components/modals/VoteHistoryModal.vue"),
+);
+const GameStateModal = defineAsyncComponent(
+  () => import("./components/modals/GameStateModal.vue"),
+);
+const GroupChatModal = defineAsyncComponent(
+  () => import("./components/modals/GroupChatModal.vue"),
+);
+const VersionModal = defineAsyncComponent(
+  () => import("./components/modals/VersionModal.vue"),
+);
+const LegalModal = defineAsyncComponent(
+  () => import("./components/modals/LegalModal.vue"),
+);
 
 const grimoire = useGrimoireStore();
 const session = useSessionIdentityStore();

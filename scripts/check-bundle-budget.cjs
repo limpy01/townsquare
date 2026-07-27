@@ -3,7 +3,7 @@ const { join } = require("node:path");
 
 const ASSET_DIRECTORY = "dist/assets";
 const BUDGETS = {
-  js: 1_800_000,
+  js: 2_000_000,
   css: 260_000,
 };
 

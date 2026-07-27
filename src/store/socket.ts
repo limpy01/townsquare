@@ -1079,6 +1079,7 @@ export class LiveSession {
    */
   _updateSeat([index, value, name, image]: LegacyClaimPayload): void {
     this._seatController.updateSeat([index, value, name, image]);
+    if (!this._isSpectator) this.sendGamestate();
   }
 
   /**

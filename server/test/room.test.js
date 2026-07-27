@@ -133,6 +133,83 @@ test("forwards host broadcasts and player messages to the storyteller", async (t
   ]);
 });
 
+test("preserves v1 role delivery, voting, and group chat message shapes", async (t) => {
+  const { wsBase } = await createTestService(t);
+  const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
+  const player = await openClient(`${wsBase}/ws/42/player-a`);
+
+  host.send([
+    "direct",
+    {
+      "player-a": [
+        "player",
+        { index: 0, property: "role", value: "washerwoman" },
+      ],
+    },
+  ]);
+  assert.deepEqual(await player.next((message) => message[0] === "player"), [
+    "player",
+    { index: 0, property: "role", value: "washerwoman" },
+    false,
+  ]);
+
+  host.send(["direct", { "player-a": ["nomination", [0, 1]] }]);
+  assert.deepEqual(
+    await player.next((message) => message[0] === "nomination"),
+    ["nomination", [0, 1], false],
+  );
+  host.send(["direct", { "player-a": ["secretVote", true] }]);
+  assert.deepEqual(
+    await player.next((message) => message[0] === "secretVote"),
+    ["secretVote", true, false],
+  );
+  host.send(["direct", { "player-a": ["vote", [0, true, true]] }]);
+  assert.deepEqual(await player.next((message) => message[0] === "vote"), [
+    "vote",
+    [0, true, true],
+    false,
+  ]);
+  host.send(["direct", { "player-a": ["nomination", null] }]);
+  assert.deepEqual(
+    await player.next((message) => message[0] === "nomination"),
+    ["nomination", null, false],
+  );
+
+  host.send([
+    "direct",
+    { "player-a": ["addGroupChat", ["player-a", "player-b"]] },
+  ]);
+  assert.deepEqual(
+    await player.next((message) => message[0] === "addGroupChat"),
+    ["addGroupChat", ["player-a", "player-b"], false],
+  );
+  host.send([
+    "direct",
+    {
+      "player-a": [
+        "chat",
+        {
+          message: "Storyteller: group hello",
+          sendingPlayerId: "host-a",
+          receivingPlayerId: "player-a",
+        },
+      ],
+    },
+  ]);
+  assert.deepEqual(await player.next((message) => message[0] === "chat"), [
+    "chat",
+    {
+      message: "Storyteller: group hello",
+      sendingPlayerId: "host-a",
+      receivingPlayerId: "player-a",
+    },
+    false,
+  ]);
+
+  host.socket.terminate();
+  player.socket.terminate();
+});
+
 test("rejects unknown WebSocket commands before they are broadcast", async (t) => {
   const { wsBase } = await createTestService(t);
   const host = await openClient(`${wsBase}/ws/42/host-a/host?auth=host-secret`);
