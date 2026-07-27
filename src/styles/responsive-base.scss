@@ -1,0 +1,27 @@
+@mixin desktop {
+  html,
+  body {
+    font-size: 1.1em;
+  }
+}
+
+@mixin tablet {
+  html,
+  body {
+    font-size: 1em;
+  }
+}
+
+@mixin phone-landscape {
+  html,
+  body {
+    font-size: 0.9em;
+  }
+}
+
+@mixin phone {
+  html,
+  body {
+    font-size: 0.8em;
+  }
+}

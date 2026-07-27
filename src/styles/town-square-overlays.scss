@@ -1,5 +1,5 @@
 /* chat with ST */
-.chatMin {
+#townsquare .chatMin {
   position: absolute;
   right: 10px;
   bottom: 0px;
@@ -12,28 +12,28 @@
   flex-direction: column;
 }
 
-.chatMin .title {
+#townsquare .chatMin .title {
   padding: 10px;
   background-color: #000;
   user-select: none;
 }
 
-.chatMin .title .open {
+#townsquare .chatMin .title .open {
   position: absolute;
   right: 20px;
   font-weight: bold;
   cursor: pointer;
 }
 
-.chatMin .content {
+#townsquare .chatMin .content {
   display: none;
 }
 
-.chatMin .chatbox {
+#townsquare .chatMin .chatbox {
   display: none;
 }
 // New message bubble
-.chatMin .newMessage {
+#townsquare .chatMin .newMessage {
   position: absolute;
   left: 40%;
   bottom: 10%;
@@ -45,7 +45,7 @@
   font-size: 80%;
 }
 
-.chat {
+#townsquare .chat {
   position: absolute;
   right: 10px;
   bottom: 10px;
@@ -60,7 +60,7 @@
   flex-direction: column;
 }
 // New message bubble
-.chat .newMessage {
+#townsquare .chat .newMessage {
   position: absolute;
   left: 50%;
   bottom: 10%;
@@ -72,36 +72,36 @@
   font-size: 80%;
 }
 
-.chat .title {
+#townsquare .chat .title {
   padding: 10px;
   background-color: #000;
   user-select: none;
 }
 
-.chat .title em {
+#townsquare .chat .title em {
   color: #888;
   cursor: pointer;
   font-size: 80%;
 }
 
-.chat .title .group {
+#townsquare .chat .title .group {
   position: inherit;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-.chat .title .close {
+#townsquare .chat .title .close {
   position: absolute;
   right: 20px;
   font-weight: bold;
   cursor: pointer;
 }
 
-.chat.alert .title {
+#townsquare .chat.alert .title {
   background-color: #a00;
 }
 
-.chat.alert .title::after {
+#townsquare .chat.alert .title::after {
   font-size: 70%;
   font-weight: bold;
   position: absolute;
@@ -109,7 +109,7 @@
   bottom: 10px;
 }
 
-.chat .content {
+#townsquare .chat .content {
   padding: 5px;
   font-size: 80%;
   background-color: #131313;
@@ -121,14 +121,14 @@
   flex-direction: column-reverse;
 }
 
-.chat .chatbox {
+#townsquare .chat .chatbox {
   padding: 5px;
   display: flex;
   height: fit-content;
   background-color: #131313;
 }
 
-.chat .chatbox .edit {
+#townsquare .chat .chatbox .edit {
   flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
@@ -139,11 +139,11 @@
   color: #fff;
 }
 
-.chat .chatbox .edit:focus {
+#townsquare .chat .chatbox .edit:focus {
   outline: none;
 }
 
-.chat .chatbox .send {
+#townsquare .chat .chatbox .send {
   background-color: #4a7ec6;
   color: white;
   border: solid;
@@ -152,11 +152,11 @@
   cursor: pointer;
 }
 
-.turnedIcon45 {
+#townsquare .turnedIcon45 {
   transform: rotate(45deg);
 }
 
-.toBottom {
+#townsquare .toBottom {
   margin: auto;
   width: 40px;
   height: 20px;
@@ -173,11 +173,14 @@
 
 #version {
   position: fixed;
-  bottom: 0;
+  text-align: right;
   right: 0;
+  bottom: 0;
+  font-size: 60%;
+  opacity: 0.5;
   background-color: transparent;
   color: white;
-  padding: 0px;
+  padding: 0;
 }
 
 #version a {
@@ -191,7 +194,7 @@
   left: 4px;
   background-color: transparent;
   color: white;
-  padding: 0px;
+  padding: 0;
   font-size: 0.6rem;
   opacity: 0.75;
 }

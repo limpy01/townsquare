@@ -17,15 +17,6 @@
   }
 }
 
-#version {
-  position: absolute;
-  text-align: right;
-  right: 10px;
-  bottom: 10px;
-  font-size: 60%;
-  opacity: 0.5;
-}
-
 .blur-enter-active,
 .blur-leave-active {
   transition: all 250ms;

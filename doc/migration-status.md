@@ -1,6 +1,6 @@
 # 现代化迁移状态看板
 
-最后更新：2026-07-27（MIG-057 已完成：玩家座位、状态/投票与提醒样式已按原输出顺序归档；未改模板、选择器或视觉值）
+最后更新：2026-07-27（MIG-058 已完成：响应式规则已归属至样式域并由无选择器编排层保持原顺序；聊天等全局覆盖层已收口至魔典根节点）
 历史基线提交：`e0f1d34`
 本次复盘基线：MIG-054（多客户端核心会话链路）
 详细复盘：[`migration-review.md`](./migration-review.md)
@@ -47,6 +47,7 @@ MIG-049 至 MIG-055 的 transport、persistence、legacy bridge、socket 领域�
 | MIG-055 | 已完成 | 补齐投票/群聊跨客户端链路与协议守卫         | MIG-054  | Playwright 覆盖玩家公开与闭眼投票入口、主持人关闭投票及群聊创建；服务端固定 host 广播保持 v1 数组 envelope，并将玩家 `vote`/`setTalking` 仅转发给 host；controller 测试覆盖秘密投票掩码、群聊成员状态、私聊接收边界与玩家权限 |
 | MIG-056 | 已完成 | 归档魔典全局样式                             | MIG-055  | `TownSquare.vue` 的根布局、夜间顺序与聊天/公告等覆盖层样式分别迁入 `town-square-layout.scss`、`night-order.scss` 与 `town-square-overlays.scss`；保留原有 Sass 输出顺序、DOM、选择器和值 |
 | MIG-057 | 已完成 | 归档玩家座位全局样式                         | MIG-056  | `Player.vue` 的座位骨架、状态/投票标记和提醒标记样式分别迁入 `player-seat.scss`、`player-status.scss` 与 `player-reminders.scss`；保留原有 Sass 输出顺序、DOM、选择器和值 |
+| MIG-058 | 已完成 | 收口全局响应式与覆盖层边界                   | MIG-057  | 字体、菜单、玩家和魔典响应式规则迁入各自的 `*-responsive.scss`，`media.scss` 仅按历史顺序编排 mixin；聊天、折叠与触控提醒选择器限制在 `#townsquare`/`#townsquare-app` 根节点；重复的 `#version` 声明并入实际拥有节点的 TownSquare 覆盖层 |
 
 ### 当前阻塞与风险
 
