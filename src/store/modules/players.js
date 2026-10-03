@@ -113,6 +113,10 @@ const actions = {
         chatGroup
       }));
       commit("setFabled", { fabled: [] });
+      // 新开一局：身份/阵营尚未重新分发，复位标志位。
+      // 否则重连补发会依据上一局遗留的 true 提前泄露摆牌阶段的新角色。
+      commit("session/distributeRoles", false, { root: true });
+      commit("session/distributeTypes", false, { root: true });
     }
     commit("set", players);
     commit("setBluff");
@@ -129,6 +133,9 @@ const mutations = {
     state.players = [];
     state.bluffs = [];
     this.commit("players/setFabled", { fabled: [], emptyFabled });
+    // 移除全部座位即新的一局，复位分发标志，避免重连时按遗留状态提前补发身份。
+    this.commit("session/distributeRoles", false);
+    this.commit("session/distributeTypes", false);
     // state.fabled = [];
   },
   set(state, players = []) {
