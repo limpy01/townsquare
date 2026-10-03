@@ -791,8 +791,63 @@ class LiveSession {
           isWraith: player.isWraith,
           isUsingWraith: player.isUsingWraith
         });
+        // 结构变化（清角色、增删/交换座位）的 lightweight 广播只负责"收回"：
+        // 说书人侧该座位已无角色时，显式清空玩家本地残留的上一副牌。
+        // 这里绝不能补发新身份——摆牌阶段 isRolesDistributed 仍可能是上一局
+        // 遗留的 true，按标志补发会在说书人点"分发"前提前泄露角色。
+        if (isLightweight && !playerId) {
+          const index = this._store.state.players.players.indexOf(player);
+          this._clearPrivateRoleIfEmpty(player.id, index);
+        }
+        // 玩家（重新）连接的定向单发才按说书人当前状态补发其应见的身份/阵营。
+        if (playerId) {
+          const index = this._store.state.players.players.indexOf(player);
+          this._resyncPrivateState(player.id, index);
+        }
       });
     }
+  }
+
+  /**
+   * lightweight 结构广播的收回逻辑：说书人侧该座位已无角色时，
+   * 通知玩家清空本地（含 localStorage）残留的旧角色。
+   */
+  _clearPrivateRoleIfEmpty(playerId, playerIndex) {
+    const player = this._store.state.players.players[playerIndex];
+    if (!player || player.id !== playerId) return;
+    if (player.role && player.role.id) return;
+    this._sendDirect(playerId, "player", {
+      index: playerIndex,
+      property: "role",
+      value: ""
+    });
+  }
+
+  /**
+   * 玩家（重新）连接时，让其私密角色与说书人当前状态对齐。
+   * gamestate 对非旅行者不含 roleId，身份只在"分发"瞬间或经此重连补发；
+   * 同房间新开一局后玩家刷新，若 ST 已清角色则对齐为空，避免停留在旧牌。
+   */
+  _resyncPrivateState(playerId, playerIndex) {
+    const { session, players } = this._store.state;
+    const player = players.players[playerIndex];
+    if (!player || player.id !== playerId) return;
+    const role = player.role;
+    const roleId = role && role.id;
+    let privateRole = "";
+    if (roleId && role.team === "traveler") {
+      // 旅行者角色公开，与 gamestate 中的 traveler roleId 保持一致
+      privateRole = roleId;
+    } else if (roleId && session.isRolesDistributed) {
+      privateRole = roleId;
+    } else if (roleId && session.isTypesDistributed) {
+      privateRole = role.team + "s";
+    }
+    this._sendDirect(playerId, "player", {
+      index: playerIndex,
+      property: "role",
+      value: privateRole
+    });
   }
 
   /**
